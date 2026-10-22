@@ -3,10 +3,38 @@
         xmlns:vm="using:Hermes.App.ViewModels"
         xmlns:c="using:Hermes.App.Controls"
         xmlns:v="using:Hermes.App.Views"
+        xmlns:sbv="using:Hermes.App.Views.Sidebar"
         x:Class="Hermes.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Hermes" Width="1440" Height="900" MinWidth="900" MinHeight="560"
         WindowStartupLocation="CenterScreen">
+  <Window.Styles>
+    <!-- sidebar rail -->
+    <Style Selector="ToggleButton.rail">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Width" Value="80" />
+      <Setter Property="Height" Value="60" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+    <Style Selector="ToggleButton.rail:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource BgHoverBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="ToggleButton.rail:checked /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource BgSelectedBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="ToggleButton.rail TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+  </Window.Styles>
+
   <Grid RowDefinitions="44,*">
     <!-- header -->
     <Border Background="{DynamicResource BgSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
@@ -24,53 +52,129 @@
           </Button>
         </StackPanel>
         <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-          <Button Classes="icon" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Toggle light / dark theme">
+          <!-- environment selector -->
+          <ComboBox ItemsSource="{Binding EnvironmentOptions}" SelectedItem="{Binding SelectedEnvironment}" Width="220" MinHeight="30"
+                    ToolTip.Tip="Active environment" />
+          <Button Name="QuickLookButton" Classes="icon" Width="30" Height="30" ToolTip.Tip="Environment quick look">
+            <PathIcon Data="{StaticResource IconEye}" />
+            <Button.Flyout>
+              <Flyout Placement="BottomEdgeAlignedRight">
+                <StackPanel Width="520" Spacing="10" Margin="4">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Classes="section" Text="{Binding QuickLookEnvironmentTitle}" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="link" Content="Edit" Command="{Binding EditActiveEnvironmentCommand}"
+                            IsVisible="{Binding HasActiveEnvironment}" />
+                  </Grid>
+                  <v:QuickLookTable DataContext="{Binding QuickLookEnvironment}"
+                                    IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).HasActiveEnvironment}" />
+                  <Separator />
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Classes="section" Text="Globals" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="link" Content="Edit" Command="{Binding EditGlobalsCommand}" />
+                  </Grid>
+                  <v:QuickLookTable DataContext="{Binding QuickLookGlobals}" />
+                </StackPanel>
+              </Flyout>
+            </Button.Flyout>
+          </Button>
+          <Border Width="1" Height="20" Background="{DynamicResource BorderBrush}" Margin="6,0" />
+          <Button Classes="icon" Width="30" Height="30" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Toggle light / dark theme">
             <PathIcon Data="{StaticResource IconSun}" />
           </Button>
         </StackPanel>
       </Grid>
     </Border>
 
-    <!-- main area -->
-    <Grid Grid.Row="1" RowDefinitions="Auto,*">
-      <!-- tab strip -->
-      <Border Background="{DynamicResource BgSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-        <Grid ColumnDefinitions="Auto,Auto,*">
-          <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding Tabs}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <StackPanel Orientation="Horizontal" />
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:TabViewModelBase">
-                  <v:TabHeader />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
-          <Button Grid.Column="1" Classes="icon" Margin="4,0" Command="{Binding NewRequestCommand}" ToolTip.Tip="New tab (Ctrl+T)">
-            <PathIcon Data="{StaticResource IconPlus}" />
-          </Button>
-        </Grid>
+    <Grid Grid.Row="1" Name="BodyGrid" ColumnDefinitions="80,300,*">
+      <!-- rail -->
+      <Border Background="{DynamicResource BgSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+        <StackPanel>
+          <ToggleButton Classes="rail" IsChecked="{Binding IsCollectionsPane, Mode=OneWay}" ToolTip.Tip="Collections"
+                        Command="{Binding ShowPaneCommand}" CommandParameter="{x:Static vm:SidebarPane.Collections}">
+            <StackPanel Spacing="4">
+              <PathIcon Data="{StaticResource IconCollections}" Width="17" Height="17" />
+              <TextBlock Text="Collections" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton Classes="rail" IsChecked="{Binding IsEnvironmentsPane, Mode=OneWay}" ToolTip.Tip="Environments"
+                        Command="{Binding ShowPaneCommand}" CommandParameter="{x:Static vm:SidebarPane.Environments}">
+            <StackPanel Spacing="4">
+              <PathIcon Data="{StaticResource IconEnvironment}" Width="17" Height="17" />
+              <TextBlock Text="Environments" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton Classes="rail" IsChecked="{Binding IsHistoryPane, Mode=OneWay}" ToolTip.Tip="History"
+                        Command="{Binding ShowPaneCommand}" CommandParameter="{x:Static vm:SidebarPane.History}">
+            <StackPanel Spacing="4">
+              <PathIcon Data="{StaticResource IconHistory}" Width="17" Height="17" />
+              <TextBlock Text="History" />
+            </StackPanel>
+          </ToggleButton>
+        </StackPanel>
       </Border>
 
-      <!-- active tab -->
-      <ContentControl Grid.Row="1" Content="{Binding ActiveTab}">
-        <ContentControl.DataTemplates>
-          <DataTemplate DataType="vm:RequestTabViewModel">
-            <v:RequestTabView />
-          </DataTemplate>
-        </ContentControl.DataTemplates>
-      </ContentControl>
+      <!-- sidebar pane -->
+      <Border Grid.Column="1" Name="SidebarHost" Background="{DynamicResource BgPrimaryBrush}" BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="0,0,1,0" IsVisible="{Binding IsSidebarVisible}">
+        <Panel>
+          <sbv:CollectionsPaneView DataContext="{Binding Collections}" IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsCollectionsPane}" />
+          <sbv:EnvironmentsPaneView DataContext="{Binding Environments}" IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEnvironmentsPane}" />
+          <sbv:HistoryPaneView DataContext="{Binding History}" IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsHistoryPane}" />
+        </Panel>
+      </Border>
+      <GridSplitter Grid.Column="1" Name="SidebarSplitter" Width="5" HorizontalAlignment="Right" Background="Transparent"
+                    ResizeDirection="Columns" IsVisible="{Binding IsSidebarVisible}" />
 
-      <!-- no tabs -->
-      <StackPanel Grid.Row="1" IsVisible="{Binding !HasTabs}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-        <PathIcon Data="{StaticResource IconLogo}" Width="64" Height="64" Foreground="{DynamicResource TextTertiaryBrush}" />
-        <TextBlock Classes="secondary" Text="Open a request from the sidebar or create a new one" HorizontalAlignment="Center" />
-        <Button Classes="accent" HorizontalAlignment="Center" Content="New Request" Command="{Binding NewRequestCommand}" />
-      </StackPanel>
+      <!-- main area -->
+      <Grid Grid.Column="2" RowDefinitions="Auto,*">
+        <!-- tab strip -->
+        <Border Background="{DynamicResource BgSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+          <Grid ColumnDefinitions="Auto,Auto,*">
+            <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+              <ItemsControl ItemsSource="{Binding Tabs}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:TabViewModelBase">
+                    <v:TabHeader />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+            <Button Grid.Column="1" Classes="icon" Margin="4,0" Command="{Binding NewRequestCommand}" ToolTip.Tip="New tab (Ctrl+T)">
+              <PathIcon Data="{StaticResource IconPlus}" />
+            </Button>
+          </Grid>
+        </Border>
+
+        <!-- active tab -->
+        <ContentControl Grid.Row="1" Content="{Binding ActiveTab}">
+          <ContentControl.DataTemplates>
+            <DataTemplate DataType="vm:RequestTabViewModel">
+              <v:RequestTabView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:CollectionTabViewModel">
+              <v:CollectionTabView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:FolderTabViewModel">
+              <v:FolderTabView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:EnvironmentTabViewModel">
+              <v:EnvironmentTabView />
+            </DataTemplate>
+          </ContentControl.DataTemplates>
+        </ContentControl>
+
+        <!-- no tabs -->
+        <StackPanel Grid.Row="1" IsVisible="{Binding !HasTabs}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+          <PathIcon Data="{StaticResource IconLogo}" Width="64" Height="64" Foreground="{DynamicResource TextTertiaryBrush}" />
+          <TextBlock Classes="secondary" Text="Open a request from the sidebar or create a new one" HorizontalAlignment="Center" />
+          <Button Classes="accent" HorizontalAlignment="Center" Content="New Request" Command="{Binding NewRequestCommand}" />
+        </StackPanel>
+      </Grid>
     </Grid>
   </Grid>
 </Window>

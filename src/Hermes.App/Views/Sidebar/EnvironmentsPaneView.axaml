@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sb="using:Hermes.App.ViewModels.Sidebar"
+             xmlns:sbv="using:Hermes.App.Views.Sidebar"
+             x:Class="Hermes.App.Views.Sidebar.EnvironmentsPaneView"
+             x:DataType="sb:EnvironmentsPaneViewModel">
+  <UserControl.Styles>
+    <Style Selector="ListBoxItem" x:DataType="sb:EnvironmentItemViewModel">
+      <Setter Property="IsVisible" Value="{Binding IsVisible}" />
+      <Setter Property="Padding" Value="8,0" />
+      <Setter Property="MinHeight" Value="32" />
+    </Style>
+    <Style Selector="Button.rowMenu">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="ListBoxItem:pointerover Button.rowMenu">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*">
+    <Grid ColumnDefinitions="Auto,*" Margin="8,8,8,6">
+      <Button Classes="icon" Command="{Binding NewEnvironmentCommand}" ToolTip.Tip="Create new environment">
+        <PathIcon Data="{StaticResource IconPlus}" />
+      </Button>
+      <TextBox Grid.Column="1" Margin="6,0,0,0" Text="{Binding Filter}" Watermark="Search environments" MinHeight="28" Padding="8,3">
+        <TextBox.InnerLeftContent>
+          <PathIcon Data="{StaticResource IconSearch}" Width="13" Height="13" Margin="8,0,0,0" Foreground="{DynamicResource TextTertiaryBrush}" />
+        </TextBox.InnerLeftContent>
+      </TextBox>
+    </Grid>
+
+    <ListBox Grid.Row="1" Name="List" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" Background="Transparent" Padding="4,0">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="sb:EnvironmentItemViewModel">
+          <Grid ColumnDefinitions="Auto,*,Auto,Auto" Background="Transparent" Tapped="OnItemTapped" ContextRequested="OnContextRequested">
+            <PathIcon Data="{StaticResource IconEnvironment}" Width="14" Height="14" Margin="0,0,10,0"
+                      Foreground="{DynamicResource TextSecondaryBrush}" />
+            <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                       IsVisible="{Binding !IsRenaming}" FontWeight="{Binding IsGlobals, Converter={x:Static sbv:EnvironmentsPaneView.BoldIf}}" />
+            <TextBox Grid.Column="1" Text="{Binding Name, Mode=OneWay}" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1"
+                     KeyDown="OnRenameKeyDown" LostFocus="OnRenameLostFocus" PropertyChanged="OnRenameBoxPropertyChanged" />
+            <Border Grid.Column="2" IsVisible="{Binding IsActive}" Background="{DynamicResource VarResolvedBgBrush}" CornerRadius="3"
+                    Padding="6,1" Margin="6,0" VerticalAlignment="Center" ToolTip.Tip="Active environment">
+              <TextBlock Text="Active" FontSize="11" Foreground="{DynamicResource AccentBrush}" />
+            </Border>
+            <Button Grid.Column="3" Classes="icon rowMenu" Width="22" Height="22" Padding="3" Click="OnMenuClick" ToolTip.Tip="More actions">
+              <PathIcon Data="{StaticResource IconMore}" Width="13" Height="13" />
+            </Button>
+          </Grid>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </Grid>
+</UserControl>

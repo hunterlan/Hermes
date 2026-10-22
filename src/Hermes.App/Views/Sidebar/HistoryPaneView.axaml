@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sb="using:Hermes.App.ViewModels.Sidebar"
+             xmlns:c="using:Hermes.App.Controls"
+             x:Class="Hermes.App.Views.Sidebar.HistoryPaneView"
+             x:DataType="sb:HistoryPaneViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.historyRow">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="CornerRadius" Value="3" />
+      <Setter Property="Padding" Value="8,0" />
+    </Style>
+    <Style Selector="Border.historyRow:pointerover">
+      <Setter Property="Background" Value="{DynamicResource BgHoverBrush}" />
+    </Style>
+    <Style Selector="Button.rowMenu">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="Border.historyRow:pointerover Button.rowMenu">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*">
+    <Grid ColumnDefinitions="*,Auto" Margin="8,8,8,6">
+      <TextBox Text="{Binding Filter}" Watermark="Search history" MinHeight="28" Padding="8,3">
+        <TextBox.InnerLeftContent>
+          <PathIcon Data="{StaticResource IconSearch}" Width="13" Height="13" Margin="8,0,0,0" Foreground="{DynamicResource TextTertiaryBrush}" />
+        </TextBox.InnerLeftContent>
+      </TextBox>
+      <Button Grid.Column="1" Classes="icon" Margin="6,0,0,0" Command="{Binding ClearAllCommand}" ToolTip.Tip="Clear all history">
+        <PathIcon Data="{StaticResource IconDelete}" />
+      </Button>
+    </Grid>
+
+    <TextBlock Grid.Row="1" IsVisible="{Binding IsEmpty}" Classes="secondary" TextWrapping="Wrap" TextAlignment="Center" Margin="24,40"
+               Text="Requests you send will appear here." />
+
+    <ScrollViewer Grid.Row="1" IsVisible="{Binding !IsEmpty}">
+      <ItemsControl ItemsSource="{Binding Groups}" Margin="4,0,4,8">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="sb:HistoryGroupViewModel">
+            <StackPanel>
+              <TextBlock Classes="section" Text="{Binding Title}" Margin="8,10,8,4" />
+              <ItemsControl ItemsSource="{Binding Items}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="sb:HistoryItemViewModel">
+                    <Border Classes="historyRow" Tapped="OnItemTapped" ToolTip.Tip="{Binding Tooltip}" ContextRequested="OnContextRequested">
+                      <Grid ColumnDefinitions="44,*,Auto,Auto" MinHeight="30">
+                        <c:MethodBadge Method="{Binding Method}" Compact="True" FontSize="10" HorizontalAlignment="Left" />
+                        <TextBlock Grid.Column="1" Text="{Binding Url}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="2" Text="{Binding Status}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0"
+                                   Classes.success="{Binding IsSuccess}" Classes.error="{Binding IsError}" />
+                        <Button Grid.Column="3" Classes="icon rowMenu" Width="22" Height="22" Padding="3" Click="OnDeleteClick" ToolTip.Tip="Delete">
+                          <PathIcon Data="{StaticResource IconClose}" Width="11" Height="11" />
+                        </Button>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

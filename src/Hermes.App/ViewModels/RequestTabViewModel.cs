@@ -544,6 +544,18 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
             Name = "Untitled Request";
     }
 
+    /// <summary>The request was renamed from the sidebar. A clean tab stays clean.</summary>
+    public void ApplyExternalRename(string name)
+    {
+        var wasDirty = IsDirty;
+        Name = name;
+        if (!wasDirty)
+        {
+            _savedSnapshot = CurrentSnapshot();
+            UpdateDirty();
+        }
+    }
+
     public override SessionTab ToSession() => new()
     {
         Kind = SessionTabKind.Request,

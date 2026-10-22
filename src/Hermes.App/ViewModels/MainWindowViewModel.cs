@@ -2,28 +2,55 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Services;
+using Hermes.App.ViewModels.Sidebar;
 using Hermes.Core.Models;
 using Hermes.Core.Serialization;
 
 namespace Hermes.App.ViewModels;
 
-public sealed partial class MainWindowViewModel : ObservableObject
+public enum SidebarPane
+{
+    Collections,
+    Environments,
+    History,
+}
+
+/// <summary>Entry in the environment selector; <see cref="Model"/> is null for "No Environment".</summary>
+public sealed record EnvironmentOption(string Name, EnvironmentModel? Model)
+{
+    public override string ToString() => Name;
+}
+
+/// <summary>Row in the environment quick-look popup.</summary>
+public sealed record QuickLookVariable(string Key, string InitialValue, string CurrentValue);
+
+public sealed record QuickLookSection(IReadOnlyList<QuickLookVariable> Rows)
+{
+    public bool IsEmpty => Rows.Count == 0;
+}
+
+public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
 {
     private readonly TabServices _services;
+    private bool _syncingEnvironment;
 
     public MainWindowViewModel(TabServices services)
     {
         _services = services;
+        Collections = new CollectionsPaneViewModel(services.Workspace, services.Dialogs, this);
+        Environments = new EnvironmentsPaneViewModel(services.Workspace, services.Dialogs, this);
+        History = new HistoryPaneViewModel(services.Workspace, services.Dialogs, this);
+
         Workspace.VariablesChanged += () =>
         {
             foreach (var tab in Tabs)
                 tab.OnVariablesChanged();
+            RefreshEnvironmentOptions();
         };
-        Workspace.CollectionChanged += _ =>
-        {
-            foreach (var tab in Tabs)
-                tab.OnWorkspaceChanged();
-        };
+        Workspace.EnvironmentsChanged += RefreshEnvironmentOptions;
+        Workspace.CollectionChanged += _ => NotifyWorkspaceChanged();
+        Workspace.CollectionsListChanged += NotifyWorkspaceChanged;
+        RefreshEnvironmentOptions();
 
         NewRequest();
     }
@@ -31,11 +58,133 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private WorkspaceService Workspace => _services.Workspace;
     private DialogService Dialogs => _services.Dialogs;
 
+    public CollectionsPaneViewModel Collections { get; }
+    public EnvironmentsPaneViewModel Environments { get; }
+    public HistoryPaneViewModel History { get; }
+
     public ObservableCollection<TabViewModelBase> Tabs { get; } = [];
 
     [ObservableProperty] public partial TabViewModelBase? ActiveTab { get; set; }
+    [ObservableProperty] public partial SidebarPane SelectedPane { get; set; }
+    [ObservableProperty] public partial bool IsSidebarVisible { get; set; } = true;
 
     public bool HasTabs => Tabs.Count > 0;
+    public bool IsCollectionsPane => SelectedPane == SidebarPane.Collections;
+    public bool IsEnvironmentsPane => SelectedPane == SidebarPane.Environments;
+    public bool IsHistoryPane => SelectedPane == SidebarPane.History;
+
+    partial void OnSelectedPaneChanged(SidebarPane value)
+    {
+        OnPropertyChanged(nameof(IsCollectionsPane));
+        OnPropertyChanged(nameof(IsEnvironmentsPane));
+        OnPropertyChanged(nameof(IsHistoryPane));
+    }
+
+    [RelayCommand]
+    private void ShowPane(SidebarPane pane)
+    {
+        // Clicking the selected pane again collapses the sidebar, like Postman.
+        if (pane == SelectedPane && IsSidebarVisible)
+        {
+            IsSidebarVisible = false;
+            return;
+        }
+        SelectedPane = pane;
+        IsSidebarVisible = true;
+    }
+
+    private void NotifyWorkspaceChanged()
+    {
+        foreach (var tab in Tabs)
+            tab.OnWorkspaceChanged();
+    }
+
+    // ---- environment selector ----
+
+    public ObservableCollection<EnvironmentOption> EnvironmentOptions { get; } = [];
+
+    [ObservableProperty] public partial EnvironmentOption? SelectedEnvironment { get; set; }
+
+    public QuickLookSection QuickLookEnvironment { get; private set; } = new([]);
+    public QuickLookSection QuickLookGlobals { get; private set; } = new([]);
+    public string QuickLookEnvironmentTitle => Workspace.ActiveEnvironment?.Name ?? "No environment selected";
+    public bool HasActiveEnvironment => Workspace.ActiveEnvironment is not null;
+
+    partial void OnSelectedEnvironmentChanged(EnvironmentOption? value)
+    {
+        if (!_syncingEnvironment)
+            Workspace.ActiveEnvironment = value?.Model;
+    }
+
+    private void RefreshEnvironmentOptions()
+    {
+        _syncingEnvironment = true;
+        try
+        {
+            EnvironmentOptions.Clear();
+            EnvironmentOptions.Add(new EnvironmentOption("No Environment", null));
+            foreach (var env in Workspace.Environments)
+                EnvironmentOptions.Add(new EnvironmentOption(env.Name, env));
+            SelectedEnvironment = EnvironmentOptions.FirstOrDefault(o => o.Model == Workspace.ActiveEnvironment) ?? EnvironmentOptions[0];
+        }
+        finally
+        {
+            _syncingEnvironment = false;
+        }
+
+        static QuickLookSection Rows(EnvironmentModel? env) => new(
+            env?.Variables.Where(v => v.Enabled && v.Key.Length > 0)
+                .Select(v => new QuickLookVariable(v.Key, Mask(v, v.Value), Mask(v, v.EffectiveValue)))
+                .ToList() ?? []);
+
+        static string Mask(Variable v, string value) => v.Type == VariableType.Secret && value.Length > 0 ? "••••••" : value;
+
+        QuickLookEnvironment = Rows(Workspace.ActiveEnvironment);
+        QuickLookGlobals = Rows(Workspace.Globals);
+        OnPropertyChanged(nameof(QuickLookEnvironment));
+        OnPropertyChanged(nameof(QuickLookGlobals));
+        OnPropertyChanged(nameof(QuickLookEnvironmentTitle));
+        OnPropertyChanged(nameof(HasActiveEnvironment));
+    }
+
+    [RelayCommand]
+    private void EditActiveEnvironment()
+    {
+        if (Workspace.ActiveEnvironment is { } env)
+            OpenEnvironment(env);
+    }
+
+    [RelayCommand]
+    private void EditGlobals() => OpenEnvironment(Workspace.Globals);
+
+    // ---- ITabHost ----
+
+    void ITabHost.OpenRequest(HttpRequestModel model) => OpenRequest(model);
+
+    public void OpenCollection(CollectionModel collection) =>
+        OpenOrFocus(collection.Id, () => new CollectionTabViewModel(_services, collection));
+
+    public void OpenFolder(FolderModel folder) =>
+        OpenOrFocus(folder.Id, () => new FolderTabViewModel(_services, folder));
+
+    public void OpenEnvironment(EnvironmentModel environment) =>
+        OpenOrFocus(environment.Id, () => new EnvironmentTabViewModel(_services, environment));
+
+    public void OpenDraft(HttpRequestModel model) =>
+        AddTab(new RequestTabViewModel(_services, model, ModelCloner.Serialize(HttpRequestModel.CreateNew())));
+
+    public void CloseTabsFor(IEnumerable<Guid> entityIds)
+    {
+        var ids = entityIds.ToHashSet();
+        foreach (var tab in Tabs.Where(t => ids.Contains(t.EntityId)).ToList())
+            RemoveTab(tab);
+    }
+
+    public void OnRequestRenamed(Guid requestId, string name)
+    {
+        if (Tabs.OfType<RequestTabViewModel>().FirstOrDefault(t => t.RequestId == requestId) is { } tab)
+            tab.ApplyExternalRename(name);
+    }
 
     partial void OnActiveTabChanged(TabViewModelBase? oldValue, TabViewModelBase? newValue)
     {

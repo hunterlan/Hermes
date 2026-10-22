@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sb="using:Hermes.App.ViewModels.Sidebar"
+             xmlns:c="using:Hermes.App.Controls"
+             x:Class="Hermes.App.Views.Sidebar.CollectionsPaneView"
+             x:DataType="sb:CollectionsPaneViewModel">
+  <UserControl.Styles>
+    <Style Selector="TreeViewItem" x:DataType="sb:TreeNodeViewModel">
+      <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+      <Setter Property="IsVisible" Value="{Binding IsVisible}" />
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="Button.rowMenu">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="Grid.row:pointerover Button.rowMenu">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Border.dropTarget">
+      <Setter Property="Background" Value="{DynamicResource VarResolvedBgBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*">
+    <Grid ColumnDefinitions="Auto,*" Margin="8,8,8,6">
+      <Button Classes="icon" Command="{Binding NewCollectionCommand}" ToolTip.Tip="Create new collection">
+        <PathIcon Data="{StaticResource IconPlus}" />
+      </Button>
+      <TextBox Grid.Column="1" Margin="6,0,0,0" Text="{Binding Filter}" Watermark="Search collections" MinHeight="28" Padding="8,3">
+        <TextBox.InnerLeftContent>
+          <PathIcon Data="{StaticResource IconSearch}" Width="13" Height="13" Margin="8,0,0,0" Foreground="{DynamicResource TextTertiaryBrush}" />
+        </TextBox.InnerLeftContent>
+      </TextBox>
+    </Grid>
+
+    <StackPanel Grid.Row="1" IsVisible="{Binding IsEmpty}" Margin="24,40" Spacing="10">
+      <TextBlock Text="Create a collection for your requests" FontWeight="SemiBold" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
+      <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"
+                 Text="A collection lets you group related requests and easily set common authorization and variables for all requests in it." />
+      <Button Classes="ghost" HorizontalAlignment="Center" Content="Create Collection" Command="{Binding NewCollectionCommand}"
+              BorderThickness="1" BorderBrush="{DynamicResource BorderStrongBrush}" />
+    </StackPanel>
+
+    <TreeView Grid.Row="1" Name="Tree" ItemsSource="{Binding Collections}" SelectedItem="{Binding SelectedNode}"
+              DragDrop.AllowDrop="True" IsVisible="{Binding !IsEmpty}" Padding="4,0">
+      <TreeView.ItemTemplate>
+        <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="sb:TreeNodeViewModel">
+          <Border Classes.dropTarget="{Binding IsDropTarget}" CornerRadius="3" Background="Transparent"
+                  PointerPressed="OnRowPointerPressed" PointerMoved="OnRowPointerMoved" PointerReleased="OnRowPointerReleased"
+                  ContextRequested="OnRowContextRequested">
+            <Grid Classes="row" ColumnDefinitions="Auto,*,Auto" MinHeight="28" Background="Transparent">
+              <Panel Width="40" VerticalAlignment="Center">
+                <PathIcon Data="{StaticResource IconCollections}" Width="14" Height="14" HorizontalAlignment="Left"
+                          Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsCollection}" />
+                <PathIcon Data="{StaticResource IconFolderOutline}" Width="14" Height="14" HorizontalAlignment="Left"
+                          Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsFolder}" />
+                <c:MethodBadge Method="{Binding $self.DataContext, Converter={x:Static sb:SidebarConverters.MethodOf}}" Compact="True" FontSize="10"
+                               HorizontalAlignment="Left" IsVisible="{Binding IsRequest}" />
+              </Panel>
+              <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                         IsVisible="{Binding !IsRenaming}" />
+              <TextBox Grid.Column="1" Text="{Binding Name, Mode=OneWay}" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1"
+                       KeyDown="OnRenameKeyDown" LostFocus="OnRenameLostFocus" PropertyChanged="OnRenameBoxPropertyChanged" />
+              <Button Grid.Column="2" Classes="icon rowMenu" Width="22" Height="22" Padding="3" Click="OnRowMenuClick" ToolTip.Tip="More actions">
+                <PathIcon Data="{StaticResource IconMore}" Width="13" Height="13" />
+              </Button>
+            </Grid>
+          </Border>
+        </TreeDataTemplate>
+      </TreeView.ItemTemplate>
+    </TreeView>
+  </Grid>
+</UserControl>

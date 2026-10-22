@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             x:Class="Hermes.App.Views.QuickLookTable"
+             x:DataType="vm:QuickLookSection">
+  <Panel>
+    <TextBlock Classes="tertiary" FontSize="12" Text="No variables" IsVisible="{Binding IsEmpty}" />
+    <StackPanel IsVisible="{Binding !IsEmpty}">
+      <Grid ColumnDefinitions="*,*,*" Margin="0,0,0,4">
+        <TextBlock Classes="tertiary" FontSize="11" Text="VARIABLE" />
+        <TextBlock Grid.Column="1" Classes="tertiary" FontSize="11" Text="INITIAL VALUE" />
+        <TextBlock Grid.Column="2" Classes="tertiary" FontSize="11" Text="CURRENT VALUE" />
+      </Grid>
+      <ItemsControl ItemsSource="{Binding Rows}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:QuickLookVariable">
+            <Grid ColumnDefinitions="*,*,*" Margin="0,3">
+              <TextBlock Text="{Binding Key}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" />
+              <TextBlock Grid.Column="1" Text="{Binding InitialValue}" TextTrimming="CharacterEllipsis" Classes="secondary" />
+              <TextBlock Grid.Column="2" Text="{Binding CurrentValue}" TextTrimming="CharacterEllipsis" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </Panel>
+</UserControl>
