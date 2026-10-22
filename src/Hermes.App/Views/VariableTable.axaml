@@ -32,7 +32,7 @@
             <Border Classes="tableRow">
               <Grid ColumnDefinitions="34,*,110,*,*,34" MinHeight="31">
                 <CheckBox IsChecked="{Binding Enabled}" IsVisible="{Binding !IsPlaceholder}" HorizontalAlignment="Center" MinWidth="0" Padding="0" />
-                <TextBox Grid.Column="1" Classes="cell" Text="{Binding Key}" Watermark="Add new variable" />
+                <TextBox Grid.Column="1" Classes="cell" Text="{Binding Key}" PlaceholderText="Add new variable" />
                 <Border Grid.Column="2" Classes="cellSep">
                   <ComboBox SelectedIndex="{Binding IsSecret, Converter={x:Static v:KeyValueTable.BoolToIndex}}" BorderThickness="0"
                             Background="Transparent" HorizontalAlignment="Stretch" MinHeight="28" FontSize="12">

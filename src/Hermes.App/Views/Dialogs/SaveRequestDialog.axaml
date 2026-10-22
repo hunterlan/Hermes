@@ -31,7 +31,7 @@
       </Panel>
     </Border>
     <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto" Margin="0,10,0,0" IsVisible="{Binding IsCreatingCollection}">
-      <TextBox Text="{Binding NewCollectionName}" Watermark="Collection name" />
+      <TextBox Text="{Binding NewCollectionName}" PlaceholderText="Collection name" />
       <Button Grid.Column="1" Content="Create" Classes="accent" Margin="8,0,0,0" Command="{Binding CreateCollectionCommand}" />
       <Button Grid.Column="2" Content="Cancel" Margin="8,0,0,0" Click="CancelNewCollection" />
     </Grid>

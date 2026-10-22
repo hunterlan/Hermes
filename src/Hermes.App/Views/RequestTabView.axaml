@@ -49,7 +49,7 @@
           </ComboBox>
           <Border Grid.Column="1" Background="{DynamicResource BorderBrush}" />
           <c:VariableTextBox Grid.Column="2" Name="UrlBox" Margin="10,0" Text="{Binding Url}" Variables="{Binding Variables}"
-                             Watermark="Enter URL or paste cURL" SubmitCommand="{Binding SendCommand}" AllowMultilineInput="True" />
+                             PlaceholderText="Enter URL or paste cURL" SubmitCommand="{Binding SendCommand}" AllowMultilineInput="True" />
         </Grid>
       </Border>
       <Button Grid.Column="1" Classes="send" Margin="8,0,0,0" Height="38" Command="{Binding SendCommand}" ToolTip.Tip="Send (Ctrl+Enter)">
@@ -183,7 +183,7 @@
                   <TextBlock Text="Request timeout (ms)" FontWeight="SemiBold" />
                   <TextBlock Classes="secondary" FontSize="12" Text="Overrides the app-wide timeout for this request. Empty = use app setting, 0 = no timeout." />
                 </StackPanel>
-                <TextBox Grid.Column="1" Text="{Binding TimeoutText}" Width="120" Watermark="Default" />
+                <TextBox Grid.Column="1" Text="{Binding TimeoutText}" Width="120" PlaceholderText="Default" />
               </Grid>
             </StackPanel>
           </ScrollViewer>

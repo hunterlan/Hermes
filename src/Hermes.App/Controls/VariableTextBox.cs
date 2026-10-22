@@ -27,8 +27,8 @@ public sealed class VariableTextBox : UserControl
     public static readonly StyledProperty<VariableScope?> VariablesProperty =
         AvaloniaProperty.Register<VariableTextBox, VariableScope?>(nameof(Variables));
 
-    public static readonly StyledProperty<string?> WatermarkProperty =
-        AvaloniaProperty.Register<VariableTextBox, string?>(nameof(Watermark));
+    public static readonly StyledProperty<string?> PlaceholderTextProperty =
+        AvaloniaProperty.Register<VariableTextBox, string?>(nameof(PlaceholderText));
 
     public static readonly StyledProperty<ICommand?> SubmitCommandProperty =
         AvaloniaProperty.Register<VariableTextBox, ICommand?>(nameof(SubmitCommand));
@@ -85,7 +85,7 @@ public sealed class VariableTextBox : UserControl
         Content = new Panel { Children = { _watermark, _editor } };
         ToolTip.SetPlacement(this, PlacementMode.Pointer);
         ToolTip.SetShowDelay(this, 300);
-        UpdateWatermark();
+        UpdatePlaceholderText();
     }
 
     public string? Text
@@ -100,10 +100,10 @@ public sealed class VariableTextBox : UserControl
         set => SetValue(VariablesProperty, value);
     }
 
-    public string? Watermark
+    public string? PlaceholderText
     {
-        get => GetValue(WatermarkProperty);
-        set => SetValue(WatermarkProperty, value);
+        get => GetValue(PlaceholderTextProperty);
+        set => SetValue(PlaceholderTextProperty, value);
     }
 
     public ICommand? SubmitCommand
@@ -168,16 +168,16 @@ public sealed class VariableTextBox : UserControl
                     _editor.CaretOffset = Math.Min(caret, text.Length);
                 }
             }
-            UpdateWatermark();
+            UpdatePlaceholderText();
         }
         else if (change.Property == VariablesProperty)
         {
             _colorizer.Scope = change.GetNewValue<VariableScope?>();
             _editor.TextArea.TextView.Redraw();
         }
-        else if (change.Property == WatermarkProperty)
+        else if (change.Property == PlaceholderTextProperty)
         {
-            UpdateWatermark();
+            UpdatePlaceholderText();
         }
         else if (change.Property == IsReadOnlyProperty)
         {
@@ -189,10 +189,10 @@ public sealed class VariableTextBox : UserControl
         }
     }
 
-    private void UpdateWatermark()
+    private void UpdatePlaceholderText()
     {
-        _watermark.Text = Watermark;
-        _watermark.IsVisible = string.IsNullOrEmpty(Text) && !string.IsNullOrEmpty(Watermark);
+        _watermark.Text = PlaceholderText;
+        _watermark.IsVisible = string.IsNullOrEmpty(Text) && !string.IsNullOrEmpty(PlaceholderText);
     }
 
     private void OnEditorTextChanged(object? sender, EventArgs e)

@@ -26,7 +26,7 @@
           </TextBlock>
           <TextBlock Classes="section" Text="Description" Margin="0,8,0,0" />
           <TextBox Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="140" MinWidth="560"
-                   VerticalContentAlignment="Top" Watermark="Add a description to explain what this collection is for" />
+                   VerticalContentAlignment="Top" PlaceholderText="Add a description to explain what this collection is for" />
         </StackPanel>
       </TabItem>
       <TabItem Header="Authorization">

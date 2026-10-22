@@ -41,23 +41,23 @@
         <!-- basic -->
         <Grid Classes="form" IsVisible="{Binding IsBasic}" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto">
           <TextBlock Classes="label" Text="Username" />
-          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding BasicUsername}" Watermark="Username" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding BasicUsername}" PlaceholderText="Username" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
           <TextBlock Grid.Row="1" Classes="label" Text="Password" />
-          <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding BasicPassword}" PasswordChar="•" RevealPassword="False" Watermark="Password" Classes="revealPasswordButton" />
+          <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding BasicPassword}" PasswordChar="•" RevealPassword="False" PlaceholderText="Password" Classes="revealPasswordButton" />
         </Grid>
 
         <!-- bearer -->
         <Grid Classes="form" IsVisible="{Binding IsBearer}" ColumnDefinitions="140,*">
           <TextBlock Classes="label" Text="Token" />
-          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding BearerToken}" Watermark="Token" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding BearerToken}" PlaceholderText="Token" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
         </Grid>
 
         <!-- api key -->
         <Grid Classes="form" IsVisible="{Binding IsApiKey}" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto">
           <TextBlock Classes="label" Text="Key" />
-          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding ApiKeyKey}" Watermark="Key" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding ApiKeyKey}" PlaceholderText="Key" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
           <TextBlock Grid.Row="1" Classes="label" Text="Value" />
-          <Border Grid.Row="1" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding ApiKeyValue}" Watermark="Value" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+          <Border Grid.Row="1" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding ApiKeyValue}" PlaceholderText="Value" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
           <TextBlock Grid.Row="2" Classes="label" Text="Add to" />
           <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding ApiKeyLocations}" SelectedItem="{Binding SelectedApiKeyLocation}" HorizontalAlignment="Stretch" />
         </Grid>
@@ -70,7 +70,7 @@
               <Grid Classes="form" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto">
                 <TextBlock Classes="label" Text="Access Token" />
                 <Grid Grid.Column="1" ColumnDefinitions="*,Auto">
-                  <Border Classes="input"><c:VariableTextBox Text="{Binding OAuthAccessToken}" Watermark="Token" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+                  <Border Classes="input"><c:VariableTextBox Text="{Binding OAuthAccessToken}" PlaceholderText="Token" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
                   <Button Grid.Column="1" Classes="ghost" Content="Clear" Margin="6,0,0,0" Command="{Binding ClearTokenCommand}" />
                 </Grid>
                 <TextBlock Grid.Row="1" Classes="label" Text="Header Prefix" />
@@ -90,16 +90,16 @@
                          ToolTip.Tip="Must be a loopback URL (http://localhost:PORT/...) so Hermes can receive the code." />
 
                 <TextBlock Grid.Row="2" Classes="label" Text="Auth URL" IsVisible="{Binding IsAuthCodeGrant}" />
-                <Border Grid.Row="2" Grid.Column="1" Classes="input" IsVisible="{Binding IsAuthCodeGrant}"><c:VariableTextBox Text="{Binding OAuthAuthUrl}" Watermark="https://example.com/oauth/authorize" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+                <Border Grid.Row="2" Grid.Column="1" Classes="input" IsVisible="{Binding IsAuthCodeGrant}"><c:VariableTextBox Text="{Binding OAuthAuthUrl}" PlaceholderText="https://example.com/oauth/authorize" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
 
                 <TextBlock Grid.Row="3" Classes="label" Text="Access Token URL" />
-                <Border Grid.Row="3" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding OAuthTokenUrl}" Watermark="https://example.com/oauth/token" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+                <Border Grid.Row="3" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding OAuthTokenUrl}" PlaceholderText="https://example.com/oauth/token" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
 
                 <TextBlock Grid.Row="4" Classes="label" Text="Client ID" />
-                <Border Grid.Row="4" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding OAuthClientId}" Watermark="Client ID" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+                <Border Grid.Row="4" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding OAuthClientId}" PlaceholderText="Client ID" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
 
                 <TextBlock Grid.Row="5" Classes="label" Text="Client Secret" />
-                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding OAuthClientSecret}" PasswordChar="•" Classes="revealPasswordButton" Watermark="Client Secret" />
+                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding OAuthClientSecret}" PasswordChar="•" Classes="revealPasswordButton" PlaceholderText="Client Secret" />
 
                 <TextBlock Grid.Row="6" Classes="label" Text="Username" IsVisible="{Binding IsPasswordGrant}" />
                 <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding OAuthUsername}" IsVisible="{Binding IsPasswordGrant}" />
@@ -107,10 +107,10 @@
                 <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding OAuthPassword}" PasswordChar="•" Classes="revealPasswordButton" IsVisible="{Binding IsPasswordGrant}" />
 
                 <TextBlock Grid.Row="8" Classes="label" Text="Scope" />
-                <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding OAuthScope}" Watermark="e.g. read:org" />
+                <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding OAuthScope}" PlaceholderText="e.g. read:org" />
 
                 <TextBlock Grid.Row="9" Classes="label" Text="State" IsVisible="{Binding IsAuthCodeGrant}" />
-                <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding OAuthState}" Watermark="Generated if empty" IsVisible="{Binding IsAuthCodeGrant}" />
+                <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding OAuthState}" PlaceholderText="Generated if empty" IsVisible="{Binding IsAuthCodeGrant}" />
 
                 <TextBlock Grid.Row="10" Classes="label" Text="PKCE" IsVisible="{Binding IsAuthCodeGrant}" />
                 <CheckBox Grid.Row="10" Grid.Column="1" IsChecked="{Binding OAuthUsePkce}" Content="Use PKCE (SHA-256)" IsVisible="{Binding IsAuthCodeGrant}" />

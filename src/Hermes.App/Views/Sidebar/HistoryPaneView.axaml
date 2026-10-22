@@ -23,7 +23,7 @@
 
   <Grid RowDefinitions="Auto,*">
     <Grid ColumnDefinitions="*,Auto" Margin="8,8,8,6">
-      <TextBox Text="{Binding Filter}" Watermark="Search history" MinHeight="28" Padding="8,3">
+      <TextBox Text="{Binding Filter}" PlaceholderText="Search history" MinHeight="28" Padding="8,3">
         <TextBox.InnerLeftContent>
           <PathIcon Data="{StaticResource IconSearch}" Width="13" Height="13" Margin="8,0,0,0" Foreground="{DynamicResource TextTertiaryBrush}" />
         </TextBox.InnerLeftContent>
