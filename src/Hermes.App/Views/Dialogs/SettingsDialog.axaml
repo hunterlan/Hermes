@@ -1,0 +1,99 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hermes.App.ViewModels"
+        x:Class="Hermes.App.Views.Dialogs.SettingsDialog"
+        x:DataType="vm:SettingsDialogViewModel"
+        Title="Settings" Width="640" Height="640"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+  <Window.Styles>
+    <Style Selector="Grid.setting">
+      <Setter Property="Margin" Value="0,0,0,16" />
+    </Style>
+    <Style Selector="Grid.setting TextBlock.title">
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Grid.setting TextBlock.hint">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+  </Window.Styles>
+  <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+    <TextBlock Classes="h1" Text="Settings" Margin="0,0,0,16" />
+    <ScrollViewer Grid.Row="1">
+      <StackPanel Margin="0,0,12,0">
+        <TextBlock Classes="section" Text="APPEARANCE" Margin="0,0,0,10" />
+        <Grid Classes="setting" ColumnDefinitions="*,220">
+          <StackPanel><TextBlock Classes="title" Text="Theme" /></StackPanel>
+          <ComboBox Grid.Column="1" ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" HorizontalAlignment="Stretch" />
+        </Grid>
+        <Grid Classes="setting" ColumnDefinitions="*,220">
+          <StackPanel>
+            <TextBlock Classes="title" Text="Layout" />
+            <TextBlock Classes="hint" Text="Where the response pane is shown." />
+          </StackPanel>
+          <ComboBox Grid.Column="1" ItemsSource="{Binding Layouts}" SelectedItem="{Binding SelectedLayout}" HorizontalAlignment="Stretch" />
+        </Grid>
+
+        <TextBlock Classes="section" Text="REQUESTS" Margin="0,8,0,10" />
+        <Grid Classes="setting" ColumnDefinitions="*,Auto">
+          <StackPanel>
+            <TextBlock Classes="title" Text="Request timeout (ms)" />
+            <TextBlock Classes="hint" Text="How long to wait for a response. 0 means wait forever." />
+          </StackPanel>
+          <TextBox Grid.Column="1" Width="140" Text="{Binding TimeoutText}" />
+        </Grid>
+        <Grid Classes="setting" ColumnDefinitions="*,Auto">
+          <StackPanel>
+            <TextBlock Classes="title" Text="SSL certificate verification" />
+            <TextBlock Classes="hint" Text="Verify server certificates. Individual requests can override this." />
+          </StackPanel>
+          <ToggleSwitch Grid.Column="1" IsChecked="{Binding VerifySsl}" OnContent="" OffContent="" />
+        </Grid>
+        <Grid Classes="setting" ColumnDefinitions="*,Auto">
+          <StackPanel>
+            <TextBlock Classes="title" Text="Automatically follow redirects" />
+            <TextBlock Classes="hint" Text="Individual requests can override this." />
+          </StackPanel>
+          <ToggleSwitch Grid.Column="1" IsChecked="{Binding FollowRedirects}" OnContent="" OffContent="" />
+        </Grid>
+        <Grid Classes="setting" ColumnDefinitions="*,Auto">
+          <StackPanel>
+            <TextBlock Classes="title" Text="Max response size for pretty view (MB)" />
+            <TextBlock Classes="hint" Text="Larger responses are shown as raw text without highlighting to stay responsive." />
+          </StackPanel>
+          <TextBox Grid.Column="1" Width="140" Text="{Binding MaxPrettySizeText}" />
+        </Grid>
+        <Grid Classes="setting" ColumnDefinitions="*,Auto">
+          <StackPanel>
+            <TextBlock Classes="title" Text="Cookies" />
+            <TextBlock Classes="hint" Text="{Binding CookieStatus}" IsVisible="{Binding CookieStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+          <Button Grid.Column="1" Content="Clear all cookies" Command="{Binding ClearCookiesCommand}" />
+        </Grid>
+
+        <TextBlock Classes="section" Text="DATA" Margin="0,8,0,10" />
+        <Grid Classes="setting" ColumnDefinitions="*,Auto">
+          <StackPanel>
+            <TextBlock Classes="title" Text="History retention (days)" />
+          </StackPanel>
+          <TextBox Grid.Column="1" Width="140" Text="{Binding HistoryRetentionText}" />
+        </Grid>
+        <Grid Classes="setting" RowDefinitions="Auto,Auto,Auto">
+          <TextBlock Classes="title" Text="Data folder" />
+          <TextBlock Grid.Row="1" Classes="hint" Text="Collections, environments, history and session are stored here as JSON files." Margin="0,0,0,6" />
+          <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+            <TextBox Text="{Binding DataDirectory}" />
+            <Button Grid.Column="1" Content="Browse…" Margin="8,0,0,0" Command="{Binding BrowseDataDirectoryCommand}" />
+          </Grid>
+        </Grid>
+        <TextBlock Text="Restart Hermes to use the new data folder." Foreground="{DynamicResource AccentBrush}" FontSize="12"
+                   IsVisible="{Binding DataDirectoryChanged}" Margin="0,-8,0,8" />
+      </StackPanel>
+    </ScrollViewer>
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,14,0,0">
+      <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True" />
+      <Button Classes="accent" Content="Save" Command="{Binding SaveCommand}" IsDefault="True" />
+    </StackPanel>
+  </Grid>
+</Window>

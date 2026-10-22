@@ -1,0 +1,93 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Hermes.App.Services;
+using Hermes.Core.Http;
+using Hermes.Core.Models;
+using Hermes.Core.Storage;
+
+namespace Hermes.App.ViewModels;
+
+public sealed partial class SettingsDialogViewModel : ObservableObject
+{
+    private readonly SettingsService _settings;
+    private readonly DialogService _dialogs;
+    private readonly HttpClientProvider _http;
+    private readonly string _currentDataDirectory;
+
+    public SettingsDialogViewModel(SettingsService settings, DialogService dialogs, HttpClientProvider http, string currentDataDirectory)
+    {
+        _settings = settings;
+        _dialogs = dialogs;
+        _http = http;
+        _currentDataDirectory = currentDataDirectory;
+
+        var s = settings.Current;
+        SelectedTheme = Themes.First(t => t.Value == s.Theme);
+        SelectedLayout = Layouts.First(l => l.Value == s.Layout);
+        TimeoutText = s.RequestTimeoutMs.ToString();
+        VerifySsl = s.VerifySsl;
+        FollowRedirects = s.FollowRedirects;
+        MaxPrettySizeText = s.MaxPrettyResponseSizeMb.ToString();
+        HistoryRetentionText = s.HistoryRetentionDays.ToString();
+        DataDirectory = string.IsNullOrWhiteSpace(s.DataDirectory) ? AppPaths.DefaultDataDirectory : s.DataDirectory;
+    }
+
+    public IReadOnlyList<Option<ThemePreference>> Themes { get; } =
+        [new("Dark", ThemePreference.Dark), new("Light", ThemePreference.Light), new("Sync with OS", ThemePreference.System)];
+
+    public IReadOnlyList<Option<ResponseLayout>> Layouts { get; } =
+        [new("Response below request", ResponseLayout.Vertical), new("Response beside request", ResponseLayout.Horizontal)];
+
+    [ObservableProperty] public partial Option<ThemePreference> SelectedTheme { get; set; }
+    [ObservableProperty] public partial Option<ResponseLayout> SelectedLayout { get; set; }
+    [ObservableProperty] public partial string TimeoutText { get; set; }
+    [ObservableProperty] public partial bool VerifySsl { get; set; }
+    [ObservableProperty] public partial bool FollowRedirects { get; set; }
+    [ObservableProperty] public partial string MaxPrettySizeText { get; set; }
+    [ObservableProperty] public partial string HistoryRetentionText { get; set; }
+    [ObservableProperty] public partial string DataDirectory { get; set; }
+    [ObservableProperty] public partial string CookieStatus { get; set; } = "";
+
+    public bool DataDirectoryChanged => !string.Equals(Path.GetFullPath(DataDirectory), Path.GetFullPath(_currentDataDirectory), StringComparison.Ordinal);
+
+    partial void OnDataDirectoryChanged(string value) => OnPropertyChanged(nameof(DataDirectoryChanged));
+
+    public event Action<bool>? CloseRequested;
+
+    [RelayCommand]
+    private async Task BrowseDataDirectory()
+    {
+        if (await _dialogs.PickFolderAsync("Choose data folder") is { } folder)
+            DataDirectory = folder;
+    }
+
+    [RelayCommand]
+    private void ClearCookies()
+    {
+        _http.ClearCookies();
+        CookieStatus = "All cookies cleared.";
+    }
+
+    [RelayCommand]
+    private void Save()
+    {
+        static int Parse(string text, int fallback, int min) => int.TryParse(text, out var v) && v >= min ? v : fallback;
+
+        var current = _settings.Current;
+        _settings.Update(new AppSettings
+        {
+            Theme = SelectedTheme.Value,
+            Layout = SelectedLayout.Value,
+            RequestTimeoutMs = Parse(TimeoutText, current.RequestTimeoutMs, 0),
+            VerifySsl = VerifySsl,
+            FollowRedirects = FollowRedirects,
+            MaxPrettyResponseSizeMb = Parse(MaxPrettySizeText, current.MaxPrettyResponseSizeMb, 1),
+            HistoryRetentionDays = Parse(HistoryRetentionText, current.HistoryRetentionDays, 1),
+            DataDirectory = DataDirectory == AppPaths.DefaultDataDirectory ? null : DataDirectory,
+        });
+        CloseRequested?.Invoke(true);
+    }
+
+    [RelayCommand]
+    private void Cancel() => CloseRequested?.Invoke(false);
+}

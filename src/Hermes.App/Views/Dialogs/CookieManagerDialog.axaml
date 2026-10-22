@@ -1,0 +1,54 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hermes.App.ViewModels"
+        x:Class="Hermes.App.Views.Dialogs.CookieManagerDialog"
+        x:DataType="vm:CookieManagerViewModel"
+        Title="Manage cookies" Width="760" Height="520"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,14">
+      <StackPanel Spacing="2">
+        <TextBlock Classes="h1" Text="Cookies" />
+        <TextBlock Classes="secondary" Text="Cookies set by servers are stored and sent with later requests to the same domain." />
+      </StackPanel>
+      <Button Grid.Column="1" Content="Clear all" Command="{Binding ClearAllCommand}" VerticalAlignment="Center" />
+    </Grid>
+
+    <TextBlock Grid.Row="1" Classes="secondary" Text="No cookies yet." IsVisible="{Binding IsEmpty}"
+               HorizontalAlignment="Center" VerticalAlignment="Center" />
+    <ScrollViewer Grid.Row="1" IsVisible="{Binding !IsEmpty}">
+      <ItemsControl ItemsSource="{Binding Domains}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:CookieDomainViewModel">
+            <StackPanel Margin="0,0,8,14">
+              <TextBlock Text="{Binding Domain}" FontWeight="SemiBold" Margin="0,0,0,6" />
+              <Border Classes="table">
+                <ItemsControl ItemsSource="{Binding Cookies}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CookieRowViewModel">
+                      <Border Classes="tableRow">
+                        <Grid ColumnDefinitions="2*,3*,*,2*,*,34" MinHeight="30">
+                          <SelectableTextBlock Text="{Binding Name}" Margin="8,6" FontWeight="SemiBold" />
+                          <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" Margin="8,6" TextWrapping="Wrap" />
+                          <TextBlock Grid.Column="2" Text="{Binding Path}" Margin="8,6" Classes="secondary" />
+                          <TextBlock Grid.Column="3" Text="{Binding Expires}" Margin="8,6" Classes="secondary" />
+                          <TextBlock Grid.Column="4" Text="{Binding Flags}" Margin="8,6" Classes="tertiary" FontSize="11" />
+                          <Button Grid.Column="5" Classes="icon" CommandParameter="{Binding}" ToolTip.Tip="Delete"
+                                  Command="{Binding $parent[Window].((vm:CookieManagerViewModel)DataContext).DeleteCommand}">
+                            <PathIcon Data="{StaticResource IconDelete}" />
+                          </Button>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <Button Grid.Row="2" HorizontalAlignment="Right" Content="Close" Margin="0,14,0,0" IsCancel="True" Click="OnClose" />
+  </Grid>
+</Window>
