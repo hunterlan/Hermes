@@ -1,0 +1,75 @@
+{
+  "info": {
+    "_postman_id": "1b6e3c1e-6b8e-4d63-9a6e-1b2c3d4e5f60",
+    "name": "Sample API",
+    "description": "Demo collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://httpbin.org", "type": "string" },
+    { "key": "token", "value": "abc", "type": "string" }
+  ],
+  "event": [
+    { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["console.log('hi')"] } }
+  ],
+  "item": [
+    {
+      "name": "Users",
+      "auth": { "type": "basic", "basic": [{ "key": "username", "value": "u" }, { "key": "password", "value": "p" }] },
+      "item": [
+        {
+          "name": "Get user",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "X-Off", "value": "1", "disabled": true }],
+            "url": {
+              "raw": "{{baseUrl}}/users/:id?verbose=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", ":id"],
+              "query": [{ "key": "verbose", "value": "true" }, { "key": "debug", "value": "1", "disabled": true }],
+              "variable": [{ "key": "id", "value": "42" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create user",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": { "mode": "raw", "raw": "{\"name\":\"{{$randomFirstName}}\"}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/post"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Upload",
+      "request": {
+        "method": "POST",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "file", "type": "file", "src": "/tmp/a.png" },
+            { "key": "note", "value": "hello", "type": "text" }
+          ]
+        },
+        "url": "{{baseUrl}}/post"
+      }
+    },
+    {
+      "name": "GraphQL",
+      "request": {
+        "method": "POST",
+        "body": { "mode": "graphql", "graphql": { "query": "{ me { id } }", "variables": "" } },
+        "url": "{{baseUrl}}/graphql"
+      }
+    }
+  ]
+}

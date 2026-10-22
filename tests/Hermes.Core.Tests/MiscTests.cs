@@ -1,0 +1,109 @@
+using System.Net;
+using Hermes.Core.Auth;
+using Hermes.Core.Formatting;
+using Hermes.Core.Models;
+using Hermes.Core.Serialization;
+using Hermes.Core.Storage;
+
+namespace Hermes.Core.Tests;
+
+public class StorageTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "hermes-tests-" + Guid.NewGuid());
+
+    [Fact]
+    public void Collections_environments_history_and_session_persist()
+    {
+        var repo = new WorkspaceRepository(_dir);
+        var collection = new CollectionModel { Name = "C" };
+        var folder = new FolderModel { Name = "F" };
+        folder.Items.Add(new HttpRequestModel { Name = "R", Url = "http://x" });
+        collection.Items.Add(folder);
+        repo.SaveCollection(collection);
+        repo.SaveEnvironment(new EnvironmentModel { Name = "E", Variables = [new Variable("a", "1")] });
+        repo.AppendHistory(new HistoryEntry { Request = new HttpRequestModel { Url = "http://h" }, StatusCode = 200 });
+        repo.SaveSession(new SessionState { ActiveTabIndex = 2 });
+
+        var fresh = new WorkspaceRepository(_dir);
+        var loaded = Assert.Single(fresh.LoadCollections());
+        var loadedRequest = Assert.IsType<HttpRequestModel>(Assert.IsType<FolderModel>(loaded.Items[0]).Items[0]);
+        Assert.Equal("http://x", loadedRequest.Url);
+        Assert.Equal("1", Assert.Single(fresh.LoadEnvironments()).Variables[0].Value);
+        Assert.Equal(200, Assert.Single(fresh.LoadHistory(30)).StatusCode);
+        Assert.Equal(2, fresh.LoadSession().ActiveTabIndex);
+
+        fresh.DeleteCollection(collection.Id);
+        Assert.Empty(fresh.LoadCollections());
+    }
+
+    [Fact]
+    public void Corrupt_files_are_reported_not_thrown()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "collections"));
+        File.WriteAllText(Path.Combine(_dir, "collections", "bad.json"), "{ nope");
+        var repo = new WorkspaceRepository(_dir);
+        Assert.Empty(repo.LoadCollections());
+        Assert.Single(repo.LoadErrors);
+    }
+
+    [Fact]
+    public void Duplicate_gives_new_ids()
+    {
+        var folder = new FolderModel { Items = [new HttpRequestModel()] };
+        var copy = (FolderModel)ModelCloner.Duplicate(folder);
+        Assert.NotEqual(folder.Id, copy.Id);
+        Assert.NotEqual(folder.Items[0].Id, copy.Items[0].Id);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_dir))
+            Directory.Delete(_dir, true);
+    }
+}
+
+public class FormatterAndOAuthTests
+{
+    [Fact]
+    public void Formats_valid_json()
+    {
+        Assert.Equal("{\n  \"a\": [\n    1,\n    2\n  ]\n}", BodyFormatter.FormatJson("{\"a\":[1,2]}").ReplaceLineEndings("\n"));
+    }
+
+    [Fact]
+    public void Formats_json_with_unquoted_variables()
+    {
+        var formatted = BodyFormatter.FormatJson("{\"id\":{{id}},\"tags\":[]}");
+        Assert.Equal("{\n  \"id\": {{id}},\n  \"tags\": []\n}", formatted);
+    }
+
+    [Fact]
+    public void Formats_xml()
+    {
+        Assert.True(BodyFormatter.TryFormatXml("<a><b>1</b></a>", out var xml));
+        Assert.Contains("\n  <b>1</b>", xml.ReplaceLineEndings("\n"));
+        Assert.False(BodyFormatter.TryFormatXml("<a>", out _));
+    }
+
+    [Fact]
+    public void Pkce_challenge_matches_rfc7636_example()
+    {
+        Assert.Equal("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+            OAuth2Service.CreateCodeChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"));
+    }
+
+    [Fact]
+    public void Parses_token_responses()
+    {
+        var ok = OAuth2Service.ParseTokenResponse("{\"access_token\":\"t\",\"expires_in\":3600,\"refresh_token\":\"r\"}", HttpStatusCode.OK);
+        Assert.Equal("t", ok.AccessToken);
+        Assert.Equal("r", ok.RefreshToken);
+        Assert.NotNull(ok.ExpiresAt);
+
+        var form = OAuth2Service.ParseTokenResponse("access_token=abc&token_type=bearer", HttpStatusCode.OK);
+        Assert.Equal("abc", form.AccessToken);
+
+        var error = OAuth2Service.ParseTokenResponse("{\"error\":\"invalid_client\",\"error_description\":\"bad\"}", HttpStatusCode.BadRequest);
+        Assert.Equal("invalid_client: bad", error.Error);
+    }
+}
