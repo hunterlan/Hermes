@@ -1,0 +1,81 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:c="using:Hermes.App.Controls"
+             xmlns:v="using:Hermes.App.Views"
+             x:Class="Hermes.App.Views.KeyValueTable"
+             x:DataType="vm:KeyValueListViewModel">
+  <StackPanel Spacing="6">
+    <Border Classes="table" IsVisible="{Binding !IsBulkEdit}">
+      <StackPanel>
+        <!-- header -->
+        <Border Classes="tableHeader">
+          <Grid ColumnDefinitions="34,*,*,*,34">
+            <TextBlock Grid.Column="1" Classes="section" Text="Key" VerticalAlignment="Center" Margin="8,0" />
+            <Border Grid.Column="2" Classes="cellSep">
+              <TextBlock Classes="section" Text="Value" VerticalAlignment="Center" Margin="8,0" />
+            </Border>
+            <Border Grid.Column="3" Grid.ColumnSpan="2" Classes="cellSep">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="section" Text="Description" VerticalAlignment="Center" Margin="8,0" />
+                <Button Grid.Column="1" Classes="link" Content="Bulk Edit" FontSize="12" Margin="8,0"
+                        Command="{Binding ToggleBulkEditCommand}" IsVisible="{Binding !KeysReadOnly}" />
+              </Grid>
+            </Border>
+          </Grid>
+        </Border>
+        <ItemsControl ItemsSource="{Binding Rows}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:KeyValueRowViewModel">
+              <Border Classes="tableRow">
+                <Grid ColumnDefinitions="34,*,*,*,34" MinHeight="31">
+                  <CheckBox IsChecked="{Binding Enabled}" IsVisible="{Binding ShowCheckBox}"
+                            HorizontalAlignment="Center" MinWidth="0" Padding="0" />
+                  <Grid Grid.Column="1" ColumnDefinitions="*,Auto">
+                    <TextBox Classes="cell" Text="{Binding Key}" Watermark="Key"
+                             IsReadOnly="{Binding Owner.KeysReadOnly}" />
+                    <ComboBox Grid.Column="1" IsVisible="{Binding Owner.AllowFiles}" MinHeight="24" FontSize="11"
+                              Padding="6,0" Margin="2,0,4,0" VerticalAlignment="Center" BorderThickness="0"
+                              Background="Transparent"
+                              SelectedIndex="{Binding IsFile, Converter={x:Static v:KeyValueTable.BoolToIndex}}">
+                      <ComboBoxItem>Text</ComboBoxItem>
+                      <ComboBoxItem>File</ComboBoxItem>
+                    </ComboBox>
+                  </Grid>
+                  <Border Grid.Column="2" Classes="cellSep">
+                    <Panel>
+                      <c:VariableTextBox Text="{Binding Value}" Watermark="Value" Margin="8,0" IsVisible="{Binding !IsFile}"
+                                         Variables="{Binding $parent[v:KeyValueTable].Variables}" />
+                      <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding IsFile}" Margin="4,0">
+                        <Button Classes="ghost" Content="Select file" Command="{Binding PickFileCommand}" FontSize="12" />
+                        <TextBlock Grid.Column="1" Text="{Binding Value}" VerticalAlignment="Center" Margin="6,0"
+                                   TextTrimming="CharacterEllipsis" Classes="secondary" />
+                      </Grid>
+                    </Panel>
+                  </Border>
+                  <Border Grid.Column="3" Classes="cellSep">
+                    <TextBox Classes="cell" Text="{Binding Description}" Watermark="Description" />
+                  </Border>
+                  <Button Grid.Column="4" Classes="icon" Command="{Binding RemoveCommand}" IsVisible="{Binding CanRemove}"
+                          ToolTip.Tip="Delete">
+                    <PathIcon Data="{StaticResource IconDelete}" />
+                  </Button>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Border>
+
+    <!-- bulk edit -->
+    <StackPanel Spacing="6" IsVisible="{Binding IsBulkEdit}">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Classes="tertiary" Text="Rows are separated by new lines. Keys and values are separated by ':'. Prepend '//' to disable a row." VerticalAlignment="Center" TextWrapping="Wrap" />
+        <Button Grid.Column="1" Classes="link" Content="Key-Value Edit" Command="{Binding ToggleBulkEditCommand}" />
+      </Grid>
+      <TextBox Classes="mono" Text="{Binding BulkText}" AcceptsReturn="True" MinHeight="160" TextWrapping="NoWrap"
+               VerticalContentAlignment="Top" />
+    </StackPanel>
+  </StackPanel>
+</UserControl>

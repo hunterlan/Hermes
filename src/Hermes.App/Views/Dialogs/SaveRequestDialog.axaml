@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hermes.App.ViewModels"
+        x:Class="Hermes.App.Views.Dialogs.SaveRequestDialog"
+        x:DataType="vm:SaveRequestDialogViewModel"
+        Title="Save request" Width="520" Height="520"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+  <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" Margin="20">
+    <TextBlock Classes="h1" Text="Save request" Margin="0,0,0,14" />
+    <StackPanel Grid.Row="1" Spacing="6" Margin="0,0,0,14">
+      <TextBlock Classes="section" Text="Request name" />
+      <TextBox Name="NameBox" Text="{Binding Name}" />
+    </StackPanel>
+    <TextBlock Grid.Row="2" Classes="section" Text="Save to" Margin="0,0,0,6" />
+    <Border Grid.Row="3" Classes="table">
+      <Panel>
+        <TreeView ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}">
+          <TreeView.ItemTemplate>
+            <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:SaveTargetNode">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Width="14" Height="14" Data="{StaticResource IconCollections}" IsVisible="{Binding !IsFolder}" Foreground="{DynamicResource TextSecondaryBrush}" />
+                <PathIcon Width="14" Height="14" Data="{StaticResource IconFolderOutline}" IsVisible="{Binding IsFolder}" Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+              </StackPanel>
+            </TreeDataTemplate>
+          </TreeView.ItemTemplate>
+        </TreeView>
+        <TextBlock Classes="secondary" IsVisible="{Binding HasNoCollections}" TextWrapping="Wrap"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20" TextAlignment="Center"
+                   Text="You don't have any collections yet. Create one to save this request." />
+      </Panel>
+    </Border>
+    <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto" Margin="0,10,0,0" IsVisible="{Binding IsCreatingCollection}">
+      <TextBox Text="{Binding NewCollectionName}" Watermark="Collection name" />
+      <Button Grid.Column="1" Content="Create" Classes="accent" Margin="8,0,0,0" Command="{Binding CreateCollectionCommand}" />
+      <Button Grid.Column="2" Content="Cancel" Margin="8,0,0,0" Click="CancelNewCollection" />
+    </Grid>
+    <Grid Grid.Row="5" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,14,0,0">
+      <Button Classes="link" Content="+ New Collection" Command="{Binding StartNewCollectionCommand}" />
+      <Button Grid.Column="2" Content="Cancel" Command="{Binding CancelCommand}" Margin="0,0,8,0" />
+      <Button Grid.Column="3" Classes="accent" Content="{Binding SaveButtonText}" Command="{Binding SaveCommand}" IsDefault="True" />
+    </Grid>
+  </Grid>
+</Window>

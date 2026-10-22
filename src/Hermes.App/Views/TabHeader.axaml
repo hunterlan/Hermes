@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:c="using:Hermes.App.Controls"
+             x:Class="Hermes.App.Views.TabHeader"
+             x:DataType="vm:TabViewModelBase">
+  <UserControl.Styles>
+    <Style Selector="Border#Root">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Border#Root:pointerover">
+      <Setter Property="Background" Value="{DynamicResource BgHoverBrush}" />
+    </Style>
+    <Style Selector="Border#Root.active">
+      <Setter Property="Background" Value="{DynamicResource BgPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <!-- Close button on hover (or on the active clean tab); otherwise the unsaved-changes dot. -->
+    <Style Selector="Button#CloseButton">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="Border#Root:pointerover Button#CloseButton, Border#Root.active:not(.dirty) Button#CloseButton">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Border#Root:pointerover Ellipse#DirtyDot">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Name="Root" Classes.active="{Binding IsActive}" Classes.dirty="{Binding IsDirty}" BorderThickness="0,2,0,0" Height="38"
+          MinWidth="120" MaxWidth="240" Padding="12,0,6,0" PointerPressed="OnPointerPressed" PointerReleased="OnPointerReleased"
+          ToolTip.Tip="{Binding Title}">
+    <Border.ContextMenu>
+      <ContextMenu>
+        <MenuItem Header="Duplicate Tab" Click="OnDuplicate" />
+        <Separator />
+        <MenuItem Header="Close Tab" InputGesture="Ctrl+W" Click="OnClose" />
+        <MenuItem Header="Close Other Tabs" Click="OnCloseOthers" />
+        <MenuItem Header="Close All Tabs" Click="OnCloseAll" />
+      </ContextMenu>
+    </Border.ContextMenu>
+    <Grid ColumnDefinitions="Auto,*,Auto">
+      <Panel Margin="0,0,8,0" VerticalAlignment="Center">
+        <c:MethodBadge Method="{Binding Method}" Compact="True" FontSize="11" IsVisible="{Binding Method, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <TextBlock Text="{Binding KindLabel}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiaryBrush}"
+                   IsVisible="{Binding KindLabel, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      </Panel>
+      <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+      <Panel Grid.Column="2" Width="24" Height="24" Margin="6,0,0,0">
+        <Ellipse Name="DirtyDot" Width="8" Height="8" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding IsDirty}" IsHitTestVisible="False" />
+        <Button Name="CloseButton" Classes="icon" Width="22" Height="22" Padding="4" Click="OnClose" ToolTip.Tip="Close (Ctrl+W)">
+          <PathIcon Data="{StaticResource IconClose}" Width="11" Height="11" />
+        </Button>
+      </Panel>
+    </Grid>
+  </Border>
+</UserControl>

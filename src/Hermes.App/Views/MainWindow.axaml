@@ -1,0 +1,76 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hermes.App.ViewModels"
+        xmlns:c="using:Hermes.App.Controls"
+        xmlns:v="using:Hermes.App.Views"
+        x:Class="Hermes.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Hermes" Width="1440" Height="900" MinWidth="900" MinHeight="560"
+        WindowStartupLocation="CenterScreen">
+  <Grid RowDefinitions="44,*">
+    <!-- header -->
+    <Border Background="{DynamicResource BgSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="12,0">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <PathIcon Data="{StaticResource IconLogo}" Foreground="{DynamicResource AccentBrush}" Width="20" Height="20" />
+          <TextBlock Text="Hermes" FontWeight="Bold" FontSize="15" VerticalAlignment="Center" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="24,0,0,0" VerticalAlignment="Center">
+          <Button Classes="ghost" Command="{Binding NewRequestCommand}" ToolTip.Tip="New request (Ctrl+T)">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Width="14" Height="14" Data="{StaticResource IconPlus}" />
+              <TextBlock Text="New" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+          <Button Classes="icon" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Toggle light / dark theme">
+            <PathIcon Data="{StaticResource IconSun}" />
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- main area -->
+    <Grid Grid.Row="1" RowDefinitions="Auto,*">
+      <!-- tab strip -->
+      <Border Background="{DynamicResource BgSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+        <Grid ColumnDefinitions="Auto,Auto,*">
+          <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Tabs}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TabViewModelBase">
+                  <v:TabHeader />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <Button Grid.Column="1" Classes="icon" Margin="4,0" Command="{Binding NewRequestCommand}" ToolTip.Tip="New tab (Ctrl+T)">
+            <PathIcon Data="{StaticResource IconPlus}" />
+          </Button>
+        </Grid>
+      </Border>
+
+      <!-- active tab -->
+      <ContentControl Grid.Row="1" Content="{Binding ActiveTab}">
+        <ContentControl.DataTemplates>
+          <DataTemplate DataType="vm:RequestTabViewModel">
+            <v:RequestTabView />
+          </DataTemplate>
+        </ContentControl.DataTemplates>
+      </ContentControl>
+
+      <!-- no tabs -->
+      <StackPanel Grid.Row="1" IsVisible="{Binding !HasTabs}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+        <PathIcon Data="{StaticResource IconLogo}" Width="64" Height="64" Foreground="{DynamicResource TextTertiaryBrush}" />
+        <TextBlock Classes="secondary" Text="Open a request from the sidebar or create a new one" HorizontalAlignment="Center" />
+        <Button Classes="accent" HorizontalAlignment="Center" Content="New Request" Command="{Binding NewRequestCommand}" />
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>

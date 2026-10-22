@@ -1,0 +1,154 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:c="using:Hermes.App.Controls"
+             xmlns:core="using:Hermes.Core.Models"
+             x:Class="Hermes.App.Views.ResponseView"
+             x:DataType="vm:ResponseViewModel">
+  <Panel>
+    <!-- empty state -->
+    <StackPanel IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+      <PathIcon Data="{StaticResource IconLogo}" Width="56" Height="56" Foreground="{DynamicResource TextTertiaryBrush}" />
+      <TextBlock Classes="secondary" Text="Enter the URL and click Send to get a response" HorizontalAlignment="Center" />
+    </StackPanel>
+
+    <!-- loading -->
+    <StackPanel IsVisible="{Binding IsLoading}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" ZIndex="2">
+      <ProgressBar IsIndeterminate="True" Width="200" />
+      <TextBlock Classes="secondary" Text="Sending request…" HorizontalAlignment="Center" />
+    </StackPanel>
+
+    <!-- error -->
+    <StackPanel IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                Spacing="8" MaxWidth="560" Margin="20">
+      <TextBlock Classes="h1" Text="Could not send request" HorizontalAlignment="Center" />
+      <SelectableTextBlock Classes="error" Text="{Binding Error}" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" Foreground="{DynamicResource ErrorBrush}" />
+    </StackPanel>
+
+    <!-- response -->
+    <Grid RowDefinitions="*" IsVisible="{Binding HasResponse}" Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}">
+      <TabControl Padding="0" Margin="0">
+        <TabItem Header="Body">
+          <Grid RowDefinitions="Auto,*">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,6">
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <ToggleButton Classes="ghost" Content="Pretty" IsChecked="{Binding IsPretty, Mode=OneWay}"
+                              Command="{Binding SetViewModeCommand}" CommandParameter="{x:Static vm:ResponseViewMode.Pretty}" />
+                <ToggleButton Classes="ghost" Content="Raw" IsChecked="{Binding IsRaw, Mode=OneWay}"
+                              Command="{Binding SetViewModeCommand}" CommandParameter="{x:Static vm:ResponseViewMode.Raw}" />
+                <ToggleButton Classes="ghost" Content="Preview" IsChecked="{Binding IsPreview, Mode=OneWay}"
+                              Command="{Binding SetViewModeCommand}" CommandParameter="{x:Static vm:ResponseViewMode.Preview}" />
+                <TextBlock Classes="tertiary" Text="Large response: showing raw text" FontSize="12" VerticalAlignment="Center" Margin="10,0"
+                           IsVisible="{Binding IsTooLargeForPretty}" />
+              </StackPanel>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2">
+                <Button Classes="icon" Command="{Binding CopyCommand}" ToolTip.Tip="Copy response body">
+                  <PathIcon Data="{StaticResource IconCopy}" />
+                </Button>
+                <Button Classes="icon" Command="{Binding SaveToFileCommand}" ToolTip.Tip="Save response to file">
+                  <PathIcon Data="{StaticResource IconDownload}" />
+                </Button>
+              </StackPanel>
+            </Grid>
+            <Border Grid.Row="1" Classes="table" IsVisible="{Binding IsTextView}">
+              <c:CodeEditor Text="{Binding DisplayText, Mode=OneWay}" Language="{Binding DisplayLanguage}" IsReadOnly="True" />
+            </Border>
+            <Border Grid.Row="1" Classes="table" IsVisible="{Binding IsPreview}">
+              <Panel>
+                <ScrollViewer IsVisible="{Binding HasPreviewImage}" HorizontalScrollBarVisibility="Auto">
+                  <Image Source="{Binding PreviewImage}" Stretch="None" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                </ScrollViewer>
+                <ScrollViewer IsVisible="{Binding !HasPreviewImage}">
+                  <SelectableTextBlock Text="{Binding RawText}" TextWrapping="Wrap" Margin="12" />
+                </ScrollViewer>
+              </Panel>
+            </Border>
+          </Grid>
+        </TabItem>
+        <TabItem>
+          <TabItem.Header>
+            <TextBlock><Run Text="Cookies" /><Run Text="{Binding CookiesBadge}" Foreground="{DynamicResource SuccessBrush}" /></TextBlock>
+          </TabItem.Header>
+          <Panel>
+            <TextBlock Classes="secondary" Text="No cookies received from the server" IsVisible="{Binding !Cookies.Count}" Margin="4,12" />
+            <Border Classes="table" VerticalAlignment="Top" IsVisible="{Binding Cookies.Count}" Margin="0,6,0,0">
+              <StackPanel>
+                <Border Classes="tableHeader">
+                  <Grid ColumnDefinitions="2*,3*,2*,*,2*,Auto,Auto">
+                    <TextBlock Classes="section" Text="Name" Margin="8,0" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="section" Text="Value" Margin="8,0" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Classes="section" Text="Domain" Margin="8,0" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="3" Classes="section" Text="Path" Margin="8,0" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="4" Classes="section" Text="Expires" Margin="8,0" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="5" Classes="section" Text="HttpOnly" Margin="8,0" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="6" Classes="section" Text="Secure" Margin="8,0" VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+                <ItemsControl ItemsSource="{Binding Cookies}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="core:ResponseCookie">
+                      <Border Classes="tableRow" MinHeight="30">
+                        <Grid ColumnDefinitions="2*,3*,2*,*,2*,Auto,Auto">
+                          <SelectableTextBlock Text="{Binding Name}" Margin="8,6" />
+                          <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" Margin="8,6" TextWrapping="Wrap" />
+                          <SelectableTextBlock Grid.Column="2" Text="{Binding Domain}" Margin="8,6" />
+                          <SelectableTextBlock Grid.Column="3" Text="{Binding Path}" Margin="8,6" />
+                          <SelectableTextBlock Grid.Column="4" Text="{Binding Expires, StringFormat={}{0:g}, FallbackValue=Session, TargetNullValue=Session}" Margin="8,6" />
+                          <CheckBox Grid.Column="5" IsChecked="{Binding HttpOnly}" IsEnabled="False" Margin="18,0" />
+                          <CheckBox Grid.Column="6" IsChecked="{Binding Secure}" IsEnabled="False" Margin="12,0" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+          </Panel>
+        </TabItem>
+        <TabItem>
+          <TabItem.Header>
+            <TextBlock><Run Text="Headers" /><Run Text="{Binding HeadersBadge}" Foreground="{DynamicResource SuccessBrush}" /></TextBlock>
+          </TabItem.Header>
+          <ScrollViewer>
+            <Border Classes="table" VerticalAlignment="Top" Margin="0,6,0,0">
+              <StackPanel>
+                <Border Classes="tableHeader">
+                  <Grid ColumnDefinitions="*,2*">
+                    <TextBlock Classes="section" Text="Key" Margin="8,0" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="section" Text="Value" Margin="8,0" VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+                <ItemsControl ItemsSource="{Binding Headers}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="core:KeyValueItem">
+                      <Border Classes="tableRow">
+                        <Grid ColumnDefinitions="*,2*">
+                          <SelectableTextBlock Text="{Binding Key}" Margin="8,6" FontWeight="SemiBold" TextWrapping="Wrap" />
+                          <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" Margin="8,6" TextWrapping="Wrap" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+          </ScrollViewer>
+        </TabItem>
+      </TabControl>
+
+      <!-- status summary, top-right next to the tab headers -->
+      <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,4,0">
+        <TextBlock FontWeight="SemiBold"
+                   Classes.success="{Binding IsSuccess}" Classes.redirect="{Binding IsRedirect}" Classes.error="{Binding IsClientOrServerError}">
+          <Run Text="Status: " Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="Normal" /><Run Text="{Binding StatusText}" />
+        </TextBlock>
+        <TextBlock ToolTip.Tip="{Binding TimingDetails}">
+          <Run Text="Time: " Foreground="{DynamicResource TextSecondaryBrush}" /><Run Text="{Binding TimeText}" Foreground="{DynamicResource SuccessBrush}" />
+        </TextBlock>
+        <TextBlock ToolTip.Tip="{Binding SizeDetails}">
+          <Run Text="Size: " Foreground="{DynamicResource TextSecondaryBrush}" /><Run Text="{Binding SizeText}" Foreground="{DynamicResource SuccessBrush}" />
+        </TextBlock>
+      </StackPanel>
+    </Grid>
+  </Panel>
+</UserControl>

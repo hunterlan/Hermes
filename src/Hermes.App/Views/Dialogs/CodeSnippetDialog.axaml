@@ -1,0 +1,27 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hermes.App.ViewModels"
+        xmlns:c="using:Hermes.App.Controls"
+        x:Class="Hermes.App.Views.Dialogs.CodeSnippetDialog"
+        x:DataType="vm:CodeSnippetViewModel"
+        Title="Code snippet" Width="760" Height="480"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+      <StackPanel Spacing="2">
+        <TextBlock Classes="h1" Text="Code snippet" />
+        <TextBlock Classes="secondary" Text="cURL, with variables and auth resolved" />
+      </StackPanel>
+      <Button Grid.Column="1" VerticalAlignment="Center" Command="{Binding CopyCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Width="14" Height="14" Data="{StaticResource IconCopy}" />
+          <TextBlock Text="{Binding CopyText}" />
+        </StackPanel>
+      </Button>
+    </Grid>
+    <Border Grid.Row="1" Classes="table" Background="{DynamicResource BgSecondaryBrush}">
+      <c:CodeEditor Text="{Binding Code, Mode=OneWay}" Language="text" IsReadOnly="True" WordWrap="True" ShowLineNumbers="False" />
+    </Border>
+    <Button Grid.Row="2" HorizontalAlignment="Right" Margin="0,12,0,0" Content="Close" IsCancel="True" Click="OnClose" />
+  </Grid>
+</Window>

@@ -1,19 +1,55 @@
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Hermes.App.Services;
+using Hermes.App.ViewModels;
+using Hermes.App.Views;
+using Hermes.Core.Auth;
+using Hermes.Core.Http;
+using Hermes.Core.Storage;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hermes.App;
 
 public partial class App : Application
 {
+    public static IServiceProvider Services { get; private set; } = null!;
+
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     public override void OnFrameworkInitializationCompleted()
     {
+        Services = ConfigureServices();
+        Services.GetRequiredService<SettingsService>().ApplyTheme();
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            desktop.MainWindow = new Window { Title = "Hermes", Width = 1280, Height = 800 };
+        {
+            var window = new MainWindow { DataContext = Services.GetRequiredService<MainWindowViewModel>() };
+            Services.GetRequiredService<DialogService>().Owner = window;
+            desktop.MainWindow = window;
+            desktop.ShutdownRequested += (_, _) => Services.GetRequiredService<HttpClientProvider>().Dispose();
+        }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static ServiceProvider ConfigureServices()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<SettingsService>();
+        services.AddSingleton(sp =>
+        {
+            var settings = sp.GetRequiredService<SettingsService>().Current;
+            var dataDir = string.IsNullOrWhiteSpace(settings.DataDirectory) ? AppPaths.DefaultDataDirectory : settings.DataDirectory;
+            return new WorkspaceRepository(dataDir);
+        });
+        services.AddSingleton<WorkspaceService>();
+        services.AddSingleton<HttpClientProvider>();
+        services.AddSingleton<RequestExecutor>();
+        services.AddSingleton<OAuth2Service>();
+        services.AddSingleton<DialogService>();
+        services.AddSingleton<TabServices>();
+        services.AddSingleton<MainWindowViewModel>();
+        return services.BuildServiceProvider();
     }
 }

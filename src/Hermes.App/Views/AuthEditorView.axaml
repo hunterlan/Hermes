@@ -1,0 +1,136 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:c="using:Hermes.App.Controls"
+             xmlns:v="using:Hermes.App.Views"
+             x:Class="Hermes.App.Views.AuthEditorView"
+             x:DataType="vm:AuthEditorViewModel">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.label">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,0,16,0" />
+    </Style>
+    <Style Selector="Grid.form > :is(Control)">
+      <Setter Property="Margin" Value="0,4" />
+    </Style>
+    <Style Selector="Border.input">
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="8,0" />
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="Background" Value="{DynamicResource BgInputBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid ColumnDefinitions="300,*">
+    <!-- type selection -->
+    <StackPanel Spacing="10" Margin="0,0,24,0">
+      <TextBlock Classes="section" Text="Auth Type" />
+      <ComboBox ItemsSource="{Binding Types}" SelectedItem="{Binding SelectedType}" HorizontalAlignment="Stretch" />
+      <TextBlock Classes="secondary" Text="{Binding TypeDescription}" TextWrapping="Wrap" FontSize="12" />
+    </StackPanel>
+
+    <Border Grid.Column="1" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0" Padding="24,0,0,0">
+      <Panel>
+        <!-- inherit / none -->
+        <TextBlock Classes="secondary" IsVisible="{Binding IsInherit}" Text="{Binding TypeDescription}" TextWrapping="Wrap" />
+        <TextBlock Classes="secondary" IsVisible="{Binding IsNone}" Text="This request does not use any authorization." />
+
+        <!-- basic -->
+        <Grid Classes="form" IsVisible="{Binding IsBasic}" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto">
+          <TextBlock Classes="label" Text="Username" />
+          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding BasicUsername}" Watermark="Username" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+          <TextBlock Grid.Row="1" Classes="label" Text="Password" />
+          <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding BasicPassword}" PasswordChar="•" RevealPassword="False" Watermark="Password" Classes="revealPasswordButton" />
+        </Grid>
+
+        <!-- bearer -->
+        <Grid Classes="form" IsVisible="{Binding IsBearer}" ColumnDefinitions="140,*">
+          <TextBlock Classes="label" Text="Token" />
+          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding BearerToken}" Watermark="Token" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+        </Grid>
+
+        <!-- api key -->
+        <Grid Classes="form" IsVisible="{Binding IsApiKey}" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto">
+          <TextBlock Classes="label" Text="Key" />
+          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding ApiKeyKey}" Watermark="Key" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+          <TextBlock Grid.Row="1" Classes="label" Text="Value" />
+          <Border Grid.Row="1" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding ApiKeyValue}" Watermark="Value" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+          <TextBlock Grid.Row="2" Classes="label" Text="Add to" />
+          <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding ApiKeyLocations}" SelectedItem="{Binding SelectedApiKeyLocation}" HorizontalAlignment="Stretch" />
+        </Grid>
+
+        <!-- oauth2 -->
+        <ScrollViewer IsVisible="{Binding IsOAuth2}">
+          <StackPanel Spacing="14" Margin="0,0,12,12">
+            <StackPanel Spacing="8">
+              <TextBlock Classes="section" Text="Current Token" />
+              <Grid Classes="form" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto">
+                <TextBlock Classes="label" Text="Access Token" />
+                <Grid Grid.Column="1" ColumnDefinitions="*,Auto">
+                  <Border Classes="input"><c:VariableTextBox Text="{Binding OAuthAccessToken}" Watermark="Token" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+                  <Button Grid.Column="1" Classes="ghost" Content="Clear" Margin="6,0,0,0" Command="{Binding ClearTokenCommand}" />
+                </Grid>
+                <TextBlock Grid.Row="1" Classes="label" Text="Header Prefix" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OAuthHeaderPrefix}" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Classes="tertiary" FontSize="12" Text="{Binding TokenExpiry}" />
+              </Grid>
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+              <TextBlock Classes="section" Text="Configure New Token" />
+              <Grid Classes="form" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                <TextBlock Classes="label" Text="Grant Type" />
+                <ComboBox Grid.Column="1" ItemsSource="{Binding GrantTypes}" SelectedItem="{Binding SelectedGrantType}" HorizontalAlignment="Stretch" />
+
+                <TextBlock Grid.Row="1" Classes="label" Text="Callback URL" IsVisible="{Binding IsAuthCodeGrant}" />
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OAuthRedirectUri}" IsVisible="{Binding IsAuthCodeGrant}"
+                         ToolTip.Tip="Must be a loopback URL (http://localhost:PORT/...) so Hermes can receive the code." />
+
+                <TextBlock Grid.Row="2" Classes="label" Text="Auth URL" IsVisible="{Binding IsAuthCodeGrant}" />
+                <Border Grid.Row="2" Grid.Column="1" Classes="input" IsVisible="{Binding IsAuthCodeGrant}"><c:VariableTextBox Text="{Binding OAuthAuthUrl}" Watermark="https://example.com/oauth/authorize" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+
+                <TextBlock Grid.Row="3" Classes="label" Text="Access Token URL" />
+                <Border Grid.Row="3" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding OAuthTokenUrl}" Watermark="https://example.com/oauth/token" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+
+                <TextBlock Grid.Row="4" Classes="label" Text="Client ID" />
+                <Border Grid.Row="4" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding OAuthClientId}" Watermark="Client ID" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+
+                <TextBlock Grid.Row="5" Classes="label" Text="Client Secret" />
+                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding OAuthClientSecret}" PasswordChar="•" Classes="revealPasswordButton" Watermark="Client Secret" />
+
+                <TextBlock Grid.Row="6" Classes="label" Text="Username" IsVisible="{Binding IsPasswordGrant}" />
+                <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding OAuthUsername}" IsVisible="{Binding IsPasswordGrant}" />
+                <TextBlock Grid.Row="7" Classes="label" Text="Password" IsVisible="{Binding IsPasswordGrant}" />
+                <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding OAuthPassword}" PasswordChar="•" Classes="revealPasswordButton" IsVisible="{Binding IsPasswordGrant}" />
+
+                <TextBlock Grid.Row="8" Classes="label" Text="Scope" />
+                <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding OAuthScope}" Watermark="e.g. read:org" />
+
+                <TextBlock Grid.Row="9" Classes="label" Text="State" IsVisible="{Binding IsAuthCodeGrant}" />
+                <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding OAuthState}" Watermark="Generated if empty" IsVisible="{Binding IsAuthCodeGrant}" />
+
+                <TextBlock Grid.Row="10" Classes="label" Text="PKCE" IsVisible="{Binding IsAuthCodeGrant}" />
+                <CheckBox Grid.Row="10" Grid.Column="1" IsChecked="{Binding OAuthUsePkce}" Content="Use PKCE (SHA-256)" IsVisible="{Binding IsAuthCodeGrant}" />
+
+                <TextBlock Grid.Row="11" Classes="label" Text="Client Authentication" />
+                <ComboBox Grid.Row="11" Grid.Column="1" ItemsSource="{Binding ClientAuthOptions}" SelectedItem="{Binding SelectedClientAuth}" HorizontalAlignment="Stretch" />
+              </Grid>
+              <StackPanel Orientation="Horizontal" Spacing="12" Margin="140,6,0,0">
+                <Button Classes="accent" Command="{Binding GetNewAccessTokenCommand}">
+                  <Panel>
+                    <TextBlock Text="Get New Access Token" IsVisible="{Binding !IsFetchingToken}" />
+                    <TextBlock Text="Cancel" IsVisible="{Binding IsFetchingToken}" />
+                  </Panel>
+                </Button>
+                <TextBlock Text="{Binding TokenStatus}" VerticalAlignment="Center" TextWrapping="Wrap" Classes="secondary" MaxWidth="460" />
+              </StackPanel>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </Panel>
+    </Border>
+  </Grid>
+</UserControl>

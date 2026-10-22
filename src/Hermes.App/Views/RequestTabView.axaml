@@ -1,0 +1,199 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:c="using:Hermes.App.Controls"
+             xmlns:v="using:Hermes.App.Views"
+             xmlns:core="using:Hermes.Core.Models"
+             x:Class="Hermes.App.Views.RequestTabView"
+             x:DataType="vm:RequestTabViewModel">
+  <Grid RowDefinitions="Auto,Auto,*" Margin="16,10,16,0">
+    <!-- breadcrumb + name + actions -->
+    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+      <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <TextBlock Classes="secondary" Text="{Binding Breadcrumb}" IsVisible="{Binding Breadcrumb, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" VerticalAlignment="Center" />
+        <TextBlock Classes="tertiary" Text="/" IsVisible="{Binding Breadcrumb, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" VerticalAlignment="Center" />
+        <Panel>
+          <Button Classes="ghost" Padding="4,2" Command="{Binding StartRenameCommand}" IsVisible="{Binding !IsRenaming}"
+                  Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="Rename">
+            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+          </Button>
+          <TextBox Name="NameBox" Text="{Binding Name}" IsVisible="{Binding IsRenaming}" MinWidth="240" MinHeight="26" Padding="6,2"
+                   LostFocus="OnNameLostFocus" KeyDown="OnNameKeyDown" />
+        </Panel>
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+        <Button Classes="ghost" Command="{Binding SaveCommand}" ToolTip.Tip="Save (Ctrl+S)">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Width="14" Height="14" Data="{StaticResource IconSave}" />
+            <TextBlock Text="Save" />
+          </StackPanel>
+        </Button>
+        <Button Classes="ghost" Command="{Binding SaveAsCommand}" Content="Save As" ToolTip.Tip="Save a copy to a collection" />
+        <Button Classes="icon" Command="{Binding ShowCodeCommand}" ToolTip.Tip="Code snippet (cURL)">
+          <PathIcon Data="{StaticResource IconCode}" />
+        </Button>
+      </StackPanel>
+    </Grid>
+
+    <!-- request bar -->
+    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+      <Border BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1" CornerRadius="4" Background="{DynamicResource BgInputBrush}" Height="38">
+        <Grid ColumnDefinitions="Auto,1,*">
+          <ComboBox Name="MethodBox" ItemsSource="{x:Static vm:RequestTabViewModel.Methods}" SelectedItem="{Binding SelectedMethod}"
+                    Width="118" BorderThickness="0" Background="Transparent" VerticalAlignment="Stretch" FontWeight="SemiBold">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <c:MethodBadge Method="{Binding}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <Border Grid.Column="1" Background="{DynamicResource BorderBrush}" />
+          <c:VariableTextBox Grid.Column="2" Name="UrlBox" Margin="10,0" Text="{Binding Url}" Variables="{Binding Variables}"
+                             Watermark="Enter URL or paste cURL" SubmitCommand="{Binding SendCommand}" AllowMultilineInput="True" />
+        </Grid>
+      </Border>
+      <Button Grid.Column="1" Classes="send" Margin="8,0,0,0" Height="38" Command="{Binding SendCommand}" ToolTip.Tip="Send (Ctrl+Enter)">
+        <TextBlock Text="{Binding SendButtonText}" />
+      </Button>
+    </Grid>
+
+    <!-- request editor / response split -->
+    <Grid Grid.Row="2" Name="SplitGrid" RowDefinitions="*,5,*" MinHeight="200">
+      <TabControl Name="RequestTabs" SelectedIndex="{Binding SelectedEditorTab}" Padding="0,6,0,0">
+        <TabItem>
+          <TabItem.Header>
+            <TextBlock><Run Text="Params" /><Run Text="{Binding ParamsBadge}" Foreground="{DynamicResource SuccessBrush}" /></TextBlock>
+          </TabItem.Header>
+          <ScrollViewer>
+            <StackPanel Spacing="8" Margin="0,0,8,12">
+              <TextBlock Classes="section" Text="Query Params" />
+              <v:KeyValueTable DataContext="{Binding Params}" Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+              <StackPanel Spacing="8" IsVisible="{Binding HasPathVariables}" Margin="0,8,0,0">
+                <TextBlock Classes="section" Text="Path Variables" />
+                <v:KeyValueTable DataContext="{Binding PathVariables}" Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Authorization">
+          <v:AuthEditorView DataContext="{Binding Auth}" Margin="0,6,0,0"
+                            Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+        </TabItem>
+
+        <TabItem>
+          <TabItem.Header>
+            <TextBlock><Run Text="Headers" /><Run Text="{Binding HeadersBadge}" Foreground="{DynamicResource SuccessBrush}" /></TextBlock>
+          </TabItem.Header>
+          <ScrollViewer>
+            <StackPanel Spacing="8" Margin="0,0,8,12">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Classes="section" Text="Headers" VerticalAlignment="Center" />
+                <Button Classes="ghost" FontSize="12" Padding="6,2" Command="{Binding ToggleHiddenHeadersCommand}">
+                  <Panel>
+                    <TextBlock IsVisible="{Binding !ShowHiddenHeaders}"><Run Text="{Binding HiddenHeaders.Count}" /><Run Text=" hidden" /></TextBlock>
+                    <TextBlock IsVisible="{Binding ShowHiddenHeaders}" Text="Hide auto-generated headers" />
+                  </Panel>
+                </Button>
+              </StackPanel>
+              <Border Classes="table" IsVisible="{Binding ShowHiddenHeaders}">
+                <ItemsControl ItemsSource="{Binding HiddenHeaders}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="core:KeyValueItem">
+                      <Border Classes="tableRow" Background="{DynamicResource BgSecondaryBrush}">
+                        <Grid ColumnDefinitions="34,*,2*" MinHeight="30">
+                          <CheckBox IsChecked="True" IsEnabled="False" HorizontalAlignment="Center" MinWidth="0" Padding="0" />
+                          <TextBlock Grid.Column="1" Text="{Binding Key}" VerticalAlignment="Center" Margin="8,0" Classes="secondary" />
+                          <Border Grid.Column="2" Classes="cellSep">
+                            <TextBlock Text="{Binding Value}" VerticalAlignment="Center" Margin="8,0" Classes="secondary" TextTrimming="CharacterEllipsis" />
+                          </Border>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
+              <v:KeyValueTable DataContext="{Binding Headers}" Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Body">
+          <Grid RowDefinitions="Auto,*">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,8">
+              <StackPanel Orientation="Horizontal" Spacing="14">
+                <RadioButton GroupName="BodyMode" Content="none" IsChecked="{Binding IsBodyNone, Mode=OneWay}"
+                             Command="{Binding SetBodyModeCommand}" CommandParameter="{x:Static core:BodyMode.None}" />
+                <RadioButton GroupName="BodyMode" Content="form-data" IsChecked="{Binding IsBodyFormData, Mode=OneWay}"
+                             Command="{Binding SetBodyModeCommand}" CommandParameter="{x:Static core:BodyMode.FormData}" />
+                <RadioButton GroupName="BodyMode" Content="x-www-form-urlencoded" IsChecked="{Binding IsBodyUrlEncoded, Mode=OneWay}"
+                             Command="{Binding SetBodyModeCommand}" CommandParameter="{x:Static core:BodyMode.UrlEncoded}" />
+                <RadioButton GroupName="BodyMode" Content="raw" IsChecked="{Binding IsBodyRaw, Mode=OneWay}"
+                             Command="{Binding SetBodyModeCommand}" CommandParameter="{x:Static core:BodyMode.Raw}" />
+                <RadioButton GroupName="BodyMode" Content="binary" IsChecked="{Binding IsBodyBinary, Mode=OneWay}"
+                             Command="{Binding SetBodyModeCommand}" CommandParameter="{x:Static core:BodyMode.Binary}" />
+                <ComboBox ItemsSource="{x:Static vm:RequestTabViewModel.RawLanguages}" SelectedItem="{Binding SelectedRawLanguage}"
+                          IsVisible="{Binding IsBodyRaw}" MinWidth="110" VerticalAlignment="Center" />
+              </StackPanel>
+              <Button Grid.Column="2" Classes="link" Content="Beautify" Command="{Binding BeautifyCommand}" IsVisible="{Binding IsBodyRaw}" />
+            </Grid>
+
+            <Panel Grid.Row="1">
+              <StackPanel IsVisible="{Binding IsBodyNone}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+                <TextBlock Classes="secondary" Text="This request does not have a body" HorizontalAlignment="Center" />
+                <TextBlock Classes="tertiary" FontSize="12" IsVisible="{Binding HasUnsupportedBody}" HorizontalAlignment="Center"
+                           Text="The imported body uses a mode Hermes doesn't support (e.g. GraphQL); it is kept for export." />
+              </StackPanel>
+              <ScrollViewer IsVisible="{Binding IsBodyFormData}">
+                <v:KeyValueTable DataContext="{Binding FormData}" Margin="0,0,8,12" Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+              </ScrollViewer>
+              <ScrollViewer IsVisible="{Binding IsBodyUrlEncoded}">
+                <v:KeyValueTable DataContext="{Binding UrlEncoded}" Margin="0,0,8,12" Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+              </ScrollViewer>
+              <Border Classes="table" IsVisible="{Binding IsBodyRaw}" Margin="0,0,0,8">
+                <c:CodeEditor Text="{Binding RawBody}" Language="{Binding RawEditorLanguage}" />
+              </Border>
+              <StackPanel IsVisible="{Binding IsBodyBinary}" Orientation="Horizontal" Spacing="10" VerticalAlignment="Top">
+                <Button Content="Select File" Command="{Binding SelectBinaryFileCommand}" />
+                <TextBlock Text="{Binding BinaryFileLabel}" VerticalAlignment="Center" Classes="secondary" />
+              </StackPanel>
+            </Panel>
+          </Grid>
+        </TabItem>
+
+        <TabItem Header="Settings">
+          <ScrollViewer>
+            <StackPanel Spacing="18" Margin="0,8,8,12" MaxWidth="720" HorizontalAlignment="Left">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Automatically follow redirects" FontWeight="SemiBold" />
+                  <TextBlock Classes="secondary" FontSize="12" Text="Follow HTTP 3xx responses as redirects." />
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding FollowRedirects}" OnContent="" OffContent="" />
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Enable SSL certificate verification" FontWeight="SemiBold" />
+                  <TextBlock Classes="secondary" FontSize="12" Text="Verify SSL certificates when sending a request." />
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding VerifySsl}" OnContent="" OffContent="" />
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Request timeout (ms)" FontWeight="SemiBold" />
+                  <TextBlock Classes="secondary" FontSize="12" Text="Overrides the app-wide timeout for this request. Empty = use app setting, 0 = no timeout." />
+                </StackPanel>
+                <TextBox Grid.Column="1" Text="{Binding TimeoutText}" Width="120" Watermark="Default" />
+              </Grid>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+      </TabControl>
+
+      <GridSplitter Grid.Row="1" Name="Splitter" ResizeDirection="Rows" Background="Transparent" />
+      <Border Grid.Row="1" Name="SplitterLine" Height="1" VerticalAlignment="Center" Background="{DynamicResource BorderBrush}" IsHitTestVisible="False" />
+
+      <v:ResponseView Grid.Row="2" Name="ResponsePane" DataContext="{Binding Response}" Margin="0,4,0,8" />
+    </Grid>
+  </Grid>
+</UserControl>
