@@ -71,6 +71,15 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     public TreeNodeViewModel? Find(Guid id) =>
         Collections.SelectMany(c => c.SelfAndDescendants()).FirstOrDefault(n => n.Id == id);
 
+    /// <summary>Expands the path to a node and selects it (when a tab for it becomes active).</summary>
+    public void Reveal(Guid id)
+    {
+        if (Find(id) is not { } node)
+            return;
+        ExpandTo(id);
+        SelectedNode = node;
+    }
+
     private void ExpandTo(Guid id)
     {
         for (var node = Find(id)?.Parent; node is not null; node = node.Parent)

@@ -191,7 +191,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         if (oldValue is not null)
             oldValue.IsActive = false;
         if (newValue is not null)
+        {
             newValue.IsActive = true;
+            if (newValue is not EnvironmentTabViewModel)
+                Collections.Reveal(newValue.EntityId);
+        }
     }
 
     // ---- tabs ----

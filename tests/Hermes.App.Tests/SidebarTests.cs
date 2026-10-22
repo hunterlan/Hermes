@@ -53,6 +53,24 @@ public class SidebarTests
     }
 
     [AvaloniaFact]
+    public void Activating_a_tab_reveals_its_request_in_the_tree()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var collection = Workspace.CreateCollection("Reveal test " + Guid.NewGuid());
+        var folder = new FolderModel { Name = "Nested" };
+        var request = new HttpRequestModel { Name = "Deep" };
+        folder.Items.Add(request);
+        Workspace.AddNode(collection, null, folder);
+
+        vm.OpenRequest(request);
+
+        Assert.Equal(request.Id, vm.Collections.SelectedNode?.Id);
+        Assert.True(vm.Collections.Find(folder.Id)!.IsExpanded);
+        Assert.True(vm.Collections.Find(collection.Id)!.IsExpanded);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void Renaming_request_in_sidebar_updates_clean_tab()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
