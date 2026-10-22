@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:v="using:Hermes.App.Views"
+             x:Class="Hermes.App.Views.VariableTable"
+             x:DataType="vm:VariableListViewModel">
+  <Border Classes="table">
+    <StackPanel>
+      <Border Classes="tableHeader">
+        <Grid ColumnDefinitions="34,*,110,*,*,34">
+          <TextBlock Grid.Column="1" Classes="section" Text="Variable" VerticalAlignment="Center" Margin="8,0" />
+          <Border Grid.Column="2" Classes="cellSep">
+            <TextBlock Classes="section" Text="Type" VerticalAlignment="Center" Margin="8,0" />
+          </Border>
+          <Border Grid.Column="3" Classes="cellSep">
+            <TextBlock Classes="section" Text="Initial value" VerticalAlignment="Center" Margin="8,0"
+                       ToolTip.Tip="Shared value. This is what gets exported." />
+          </Border>
+          <Border Grid.Column="4" Grid.ColumnSpan="2" Classes="cellSep">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="section" Text="Current value" VerticalAlignment="Center" Margin="8,0"
+                         ToolTip.Tip="Local value used when sending requests. Never exported." />
+              <Button Grid.Column="1" Classes="link" FontSize="12" Content="Reset all" Margin="8,0"
+                      Command="{Binding ResetCurrentValuesCommand}" ToolTip.Tip="Reset all current values to their initial values" />
+            </Grid>
+          </Border>
+        </Grid>
+      </Border>
+      <ItemsControl ItemsSource="{Binding Rows}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:VariableRowViewModel">
+            <Border Classes="tableRow">
+              <Grid ColumnDefinitions="34,*,110,*,*,34" MinHeight="31">
+                <CheckBox IsChecked="{Binding Enabled}" IsVisible="{Binding !IsPlaceholder}" HorizontalAlignment="Center" MinWidth="0" Padding="0" />
+                <TextBox Grid.Column="1" Classes="cell" Text="{Binding Key}" Watermark="Add new variable" />
+                <Border Grid.Column="2" Classes="cellSep">
+                  <ComboBox SelectedIndex="{Binding IsSecret, Converter={x:Static v:KeyValueTable.BoolToIndex}}" BorderThickness="0"
+                            Background="Transparent" HorizontalAlignment="Stretch" MinHeight="28" FontSize="12">
+                    <ComboBoxItem>default</ComboBoxItem>
+                    <ComboBoxItem>secret</ComboBoxItem>
+                  </ComboBox>
+                </Border>
+                <Border Grid.Column="3" Classes="cellSep">
+                  <TextBox Classes="cell" Text="{Binding InitialValue}" PasswordChar="{Binding PasswordChar}" />
+                </Border>
+                <Border Grid.Column="4" Classes="cellSep">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBox Classes="cell" Text="{Binding CurrentValue}" PasswordChar="{Binding PasswordChar}" />
+                    <Button Grid.Column="1" Classes="icon" Width="22" Height="22" Padding="3" IsVisible="{Binding IsSecret}"
+                            Command="{Binding ToggleRevealCommand}" ToolTip.Tip="Show / hide value">
+                      <PathIcon Data="{StaticResource IconEye}" Width="13" Height="13" />
+                    </Button>
+                  </Grid>
+                </Border>
+                <Button Grid.Column="5" Classes="icon" Command="{Binding RemoveCommand}" IsVisible="{Binding CanRemove}" ToolTip.Tip="Delete">
+                  <PathIcon Data="{StaticResource IconDelete}" />
+                </Button>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </Border>
+</UserControl>

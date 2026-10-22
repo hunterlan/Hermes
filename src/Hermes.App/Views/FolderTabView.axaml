@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:v="using:Hermes.App.Views"
+             x:Class="Hermes.App.Views.FolderTabView"
+             x:DataType="vm:FolderTabViewModel">
+  <Grid RowDefinitions="Auto,Auto,*" Margin="20,14,20,0">
+    <TextBlock Classes="secondary" Text="{Binding Breadcrumb}" Margin="0,0,0,6" />
+    <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <PathIcon Data="{StaticResource IconFolderOutline}" Width="18" Height="18" Foreground="{DynamicResource TextSecondaryBrush}" />
+        <TextBox Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" MinWidth="260" BorderThickness="0" Background="Transparent" Padding="4,2" />
+      </StackPanel>
+      <Button Grid.Column="1" Classes="ghost" Command="{Binding SaveCommand}" ToolTip.Tip="Save (Ctrl+S)">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Width="14" Height="14" Data="{StaticResource IconSave}" />
+          <TextBlock Text="Save" />
+        </StackPanel>
+      </Button>
+    </Grid>
+
+    <TabControl Grid.Row="2" SelectedIndex="{Binding SelectedSection}" Margin="0,8,0,0">
+      <TabItem Header="Overview">
+        <StackPanel Spacing="10" MaxWidth="820" HorizontalAlignment="Left" Margin="0,10,0,0">
+          <TextBlock Classes="section" Text="Description" />
+          <TextBox Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="140" MinWidth="560"
+                   VerticalContentAlignment="Top" Watermark="Add a description" />
+        </StackPanel>
+      </TabItem>
+      <TabItem Header="Authorization">
+        <StackPanel Spacing="12" Margin="0,10,0,0">
+          <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
+                     Text="This authorization method will be used for every request in this folder that inherits auth from its parent." />
+          <v:AuthEditorView DataContext="{Binding Auth}" />
+        </StackPanel>
+      </TabItem>
+    </TabControl>
+  </Grid>
+</UserControl>

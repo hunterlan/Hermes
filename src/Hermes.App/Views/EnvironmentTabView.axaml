@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:v="using:Hermes.App.Views"
+             x:Class="Hermes.App.Views.EnvironmentTabView"
+             x:DataType="vm:EnvironmentTabViewModel">
+  <Grid RowDefinitions="Auto,Auto,*" Margin="20,14,20,0">
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <PathIcon Data="{StaticResource IconEnvironment}" Width="18" Height="18" Foreground="{DynamicResource TextSecondaryBrush}" />
+        <TextBox Text="{Binding Name}" IsVisible="{Binding CanRename}" FontSize="16" FontWeight="SemiBold" MinWidth="260"
+                 BorderThickness="0" Background="Transparent" Padding="4,2" />
+        <TextBlock Classes="h1" Text="Globals" IsVisible="{Binding IsGlobals}" VerticalAlignment="Center" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+        <Button Classes="ghost" Content="Set active" Command="{Binding SetActiveCommand}" IsVisible="{Binding CanRename}"
+                IsEnabled="{Binding !IsActiveEnvironment}" />
+        <Button Classes="ghost" Command="{Binding SaveCommand}" ToolTip.Tip="Save (Ctrl+S)">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Width="14" Height="14" Data="{StaticResource IconSave}" />
+            <TextBlock Text="Save" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </Grid>
+    <TextBlock Grid.Row="1" Classes="secondary" FontSize="12" Margin="0,8,0,14" TextWrapping="Wrap"
+               Text="Use variables as {{name}} in URLs, headers, bodies and auth. Environment variables override collection variables, which override globals." />
+    <ScrollViewer Grid.Row="2">
+      <v:VariableTable DataContext="{Binding Variables}" Margin="0,0,8,16" VerticalAlignment="Top" />
+    </ScrollViewer>
+  </Grid>
+</UserControl>
