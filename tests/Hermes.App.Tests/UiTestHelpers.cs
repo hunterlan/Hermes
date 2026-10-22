@@ -18,9 +18,14 @@ internal static class UiTestHelpers
             ? dir
             : Path.Combine(AppContext.BaseDirectory, "screenshots");
 
+    /// <summary>
+    /// Opens a main window with a fresh view model (tests run in random order and the DI singleton would leak
+    /// tabs between them), focused on a new request tab.
+    /// </summary>
     public static (MainWindow Window, MainWindowViewModel ViewModel) ShowMainWindow()
     {
-        var vm = App.Services.GetRequiredService<MainWindowViewModel>();
+        var vm = new MainWindowViewModel(App.Services.GetRequiredService<TabServices>());
+        vm.NewRequestCommand.Execute(null);
         var window = new MainWindow { DataContext = vm, Width = 1400, Height = 860 };
         App.Services.GetRequiredService<Services.DialogService>().Owner = window;
         window.Show();
@@ -42,7 +47,7 @@ internal static class UiTestHelpers
         Pump();
         Directory.CreateDirectory(ScreenshotDirectory);
         var path = Path.Combine(ScreenshotDirectory, name + ".png");
-        window.CaptureRenderedFrame()?.Save(path);
+        window.CaptureRenderedFrame()?.Save(path, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
         return path;
     }
 }
