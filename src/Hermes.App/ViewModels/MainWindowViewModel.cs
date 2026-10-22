@@ -52,7 +52,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         Workspace.CollectionsListChanged += NotifyWorkspaceChanged;
         RefreshEnvironmentOptions();
 
-        NewRequest();
+        RestoreSession();
     }
 
     private WorkspaceService Workspace => _services.Workspace;
@@ -312,4 +312,139 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
 
     [RelayCommand]
     private void ToggleTheme() => _services.Settings.ToggleTheme();
+
+    [RelayCommand]
+    private void ToggleSidebar() => IsSidebarVisible = !IsSidebarVisible;
+
+    // ---- dialogs ----
+
+    [RelayCommand]
+    public async Task OpenImport(IReadOnlyList<string>? files = null)
+    {
+        var vm = new ImportDialogViewModel(Dialogs);
+        if (files is not null)
+            vm.AddFiles(files);
+        var result = await Dialogs.ShowDialogAsync<Core.Import.ImportResult>(new Views.Dialogs.ImportDialog { DataContext = vm });
+        if (result is not null)
+            await ApplyImportAsync(result);
+    }
+
+    /// <summary>Adds imported collections/environments to the workspace and opens imported cURL requests.</summary>
+    public async Task ApplyImportAsync(Core.Import.ImportResult result)
+    {
+        foreach (var collection in result.Collections)
+            Workspace.AddCollection(collection);
+        foreach (var environment in result.Environments)
+            Workspace.AddEnvironment(environment);
+        foreach (var request in result.Requests)
+            OpenDraft(request);
+
+        if (result.Collections.Count > 0)
+        {
+            SelectedPane = SidebarPane.Collections;
+            IsSidebarVisible = true;
+            if (Collections.Find(result.Collections[^1].Id) is { } node)
+            {
+                node.IsExpanded = true;
+                Collections.SelectedNode = node;
+            }
+        }
+        else if (result.Environments.Count > 0)
+        {
+            SelectedPane = SidebarPane.Environments;
+            IsSidebarVisible = true;
+        }
+
+        if (result.Errors.Count > 0)
+            await Dialogs.ShowMessageAsync("Some items couldn't be imported", string.Join("\n", result.Errors));
+    }
+
+    [RelayCommand]
+    private async Task OpenSettings()
+    {
+        var vm = new SettingsDialogViewModel(_services.Settings, Dialogs, _services.Http, Workspace.DataDirectory);
+        await Dialogs.ShowDialogAsync<bool>(new Views.Dialogs.SettingsDialog { DataContext = vm });
+        foreach (var tab in Tabs)
+            tab.OnVariablesChanged();
+    }
+
+    [RelayCommand]
+    private async Task OpenCookies() =>
+        await Dialogs.ShowDialogAsync<object>(new Views.Dialogs.CookieManagerDialog { DataContext = new CookieManagerViewModel(_services.Http) });
+
+    // ---- session ----
+
+    [ObservableProperty] public partial double SidebarWidth { get; set; } = 300;
+
+    /// <summary>Persists open tabs (including unsaved drafts), the active environment and layout.</summary>
+    public void SaveSession()
+    {
+        try
+        {
+            Workspace.SaveSession(new SessionState
+            {
+                Tabs = Tabs.Select(t => t.ToSession()).ToList(),
+                ActiveTabIndex = ActiveTab is null ? 0 : Tabs.IndexOf(ActiveTab),
+                ActiveEnvironmentId = Workspace.ActiveEnvironment?.Id,
+                SidebarWidth = SidebarWidth,
+            });
+        }
+        catch (IOException)
+        {
+            // Losing the session is not worth crashing over.
+        }
+    }
+
+    private void RestoreSession()
+    {
+        var session = Workspace.LoadSession();
+        if (session.ActiveEnvironmentId is { } envId && Workspace.FindEnvironment(envId) is { } env && env != Workspace.Globals)
+            Workspace.ActiveEnvironment = env;
+        SidebarWidth = Math.Clamp(session.SidebarWidth, 200, 600);
+
+        foreach (var saved in session.Tabs)
+        {
+            var tab = RestoreTab(saved);
+            if (tab is not null)
+                Tabs.Add(tab);
+        }
+
+        if (Tabs.Count == 0)
+            NewRequest();
+        else
+            ActiveTab = Tabs[Math.Clamp(session.ActiveTabIndex, 0, Tabs.Count - 1)];
+        OnPropertyChanged(nameof(HasTabs));
+    }
+
+    private TabViewModelBase? RestoreTab(SessionTab saved)
+    {
+        var id = saved.EntityId ?? Guid.Empty;
+        switch (saved.Kind)
+        {
+            case SessionTabKind.Request:
+                if (Workspace.Find(id)?.Node is HttpRequestModel persisted)
+                {
+                    // Load the draft (if any) but compare against what's saved, so the tab shows as modified.
+                    return saved.RequestDraft is { } draft
+                        ? new RequestTabViewModel(_services, draft, SnapshotOf(persisted))
+                        : new RequestTabViewModel(_services, ModelCloner.Clone(persisted));
+                }
+                return saved.RequestDraft is { } orphan
+                    ? new RequestTabViewModel(_services, orphan, ModelCloner.Serialize(HttpRequestModel.CreateNew()))
+                    : null;
+
+            case SessionTabKind.Collection:
+                return Workspace.FindCollection(id) is { } collection ? new CollectionTabViewModel(_services, collection) : null;
+            case SessionTabKind.Folder:
+                return Workspace.Find(id)?.Node is FolderModel folder ? new FolderTabViewModel(_services, folder) : null;
+            case SessionTabKind.Environment:
+                return Workspace.FindEnvironment(id) is { } environment ? new EnvironmentTabViewModel(_services, environment) : null;
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>The snapshot a clean tab would have for <paramref name="model"/> (normalised through the view model).</summary>
+    private string SnapshotOf(HttpRequestModel model) =>
+        ModelCloner.Serialize(new RequestTabViewModel(_services, ModelCloner.Clone(model)).BuildModel());
 }
