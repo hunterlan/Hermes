@@ -1,0 +1,71 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="BgPrimaryBrush" Color="#212121" />
+      <SolidColorBrush x:Key="BgSecondaryBrush" Color="#262626" />
+      <SolidColorBrush x:Key="BgTertiaryBrush" Color="#2E2E2E" />
+      <SolidColorBrush x:Key="BgInputBrush" Color="#1A1A1A" />
+      <SolidColorBrush x:Key="BgHoverBrush" Color="#333333" />
+      <SolidColorBrush x:Key="BgSelectedBrush" Color="#3A3A3A" />
+      <SolidColorBrush x:Key="BorderBrush" Color="#363636" />
+      <SolidColorBrush x:Key="BorderStrongBrush" Color="#4A4A4A" />
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E6E6E6" />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#A6A6A6" />
+      <SolidColorBrush x:Key="TextTertiaryBrush" Color="#6B6B6B" />
+      <SolidColorBrush x:Key="AccentBrush" Color="#FF6C37" />
+      <SolidColorBrush x:Key="AccentHoverBrush" Color="#FF8355" />
+      <SolidColorBrush x:Key="SendBrush" Color="#097BED" />
+      <SolidColorBrush x:Key="SendHoverBrush" Color="#2A8FF5" />
+      <SolidColorBrush x:Key="SuccessBrush" Color="#6BDD9A" />
+      <SolidColorBrush x:Key="RedirectBrush" Color="#74AEF6" />
+      <SolidColorBrush x:Key="ErrorBrush" Color="#F79A8E" />
+      <SolidColorBrush x:Key="VarResolvedBrush" Color="#FF8F66" />
+      <SolidColorBrush x:Key="VarResolvedBgBrush" Color="#33FF6C37" />
+      <SolidColorBrush x:Key="VarUnresolvedBrush" Color="#F47A6B" />
+      <SolidColorBrush x:Key="VarUnresolvedBgBrush" Color="#33EB2013" />
+      <SolidColorBrush x:Key="MethodGETBrush" Color="#6BDD9A" />
+      <SolidColorBrush x:Key="MethodPOSTBrush" Color="#FFE47E" />
+      <SolidColorBrush x:Key="MethodPUTBrush" Color="#74AEF6" />
+      <SolidColorBrush x:Key="MethodPATCHBrush" Color="#C0A8E1" />
+      <SolidColorBrush x:Key="MethodDELETEBrush" Color="#F79A8E" />
+      <SolidColorBrush x:Key="MethodHEADBrush" Color="#6BDD9A" />
+      <SolidColorBrush x:Key="MethodOPTIONSBrush" Color="#F15EB0" />
+      <SolidColorBrush x:Key="MethodOTHERBrush" Color="#A6A6A6" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="BgPrimaryBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="BgSecondaryBrush" Color="#F9F9F9" />
+      <SolidColorBrush x:Key="BgTertiaryBrush" Color="#F2F2F2" />
+      <SolidColorBrush x:Key="BgInputBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="BgHoverBrush" Color="#EDEDED" />
+      <SolidColorBrush x:Key="BgSelectedBrush" Color="#E6E6E6" />
+      <SolidColorBrush x:Key="BorderBrush" Color="#E6E6E6" />
+      <SolidColorBrush x:Key="BorderStrongBrush" Color="#CCCCCC" />
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#212121" />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#6B6B6B" />
+      <SolidColorBrush x:Key="TextTertiaryBrush" Color="#A6A6A6" />
+      <SolidColorBrush x:Key="AccentBrush" Color="#FF6C37" />
+      <SolidColorBrush x:Key="AccentHoverBrush" Color="#E5531F" />
+      <SolidColorBrush x:Key="SendBrush" Color="#0265D2" />
+      <SolidColorBrush x:Key="SendHoverBrush" Color="#0053B8" />
+      <SolidColorBrush x:Key="SuccessBrush" Color="#007F31" />
+      <SolidColorBrush x:Key="RedirectBrush" Color="#0053B8" />
+      <SolidColorBrush x:Key="ErrorBrush" Color="#8E1A10" />
+      <SolidColorBrush x:Key="VarResolvedBrush" Color="#D2451A" />
+      <SolidColorBrush x:Key="VarResolvedBgBrush" Color="#22FF6C37" />
+      <SolidColorBrush x:Key="VarUnresolvedBrush" Color="#B91C0E" />
+      <SolidColorBrush x:Key="VarUnresolvedBgBrush" Color="#22EB2013" />
+      <SolidColorBrush x:Key="MethodGETBrush" Color="#007F31" />
+      <SolidColorBrush x:Key="MethodPOSTBrush" Color="#AD7A03" />
+      <SolidColorBrush x:Key="MethodPUTBrush" Color="#0053B8" />
+      <SolidColorBrush x:Key="MethodPATCHBrush" Color="#623497" />
+      <SolidColorBrush x:Key="MethodDELETEBrush" Color="#8E1A10" />
+      <SolidColorBrush x:Key="MethodHEADBrush" Color="#007F31" />
+      <SolidColorBrush x:Key="MethodOPTIONSBrush" Color="#A61468" />
+      <SolidColorBrush x:Key="MethodOTHERBrush" Color="#6B6B6B" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <FontFamily x:Key="MonoFont">Cascadia Code,JetBrains Mono,Fira Code,Consolas,DejaVu Sans Mono,Menlo,monospace</FontFamily>
+</ResourceDictionary>

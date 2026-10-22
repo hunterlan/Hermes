@@ -1,0 +1,25 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Hermes.App.App"
+             RequestedThemeVariant="Dark"
+             Name="Hermes">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://Hermes/Themes/Palette.axaml" />
+        <ResourceInclude Source="avares://Hermes/Themes/Icons.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Dark" Accent="#FF6C37" RegionColor="#212121" />
+        <ColorPaletteResources x:Key="Light" Accent="#FF6C37" RegionColor="#FFFFFF" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
+    <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+    <StyleInclude Source="avares://Hermes/Themes/Styles.axaml" />
+  </Application.Styles>
+</Application>
