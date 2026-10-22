@@ -5,6 +5,16 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <AssemblyName>Hermes</AssemblyName>
     <RootNamespace>Hermes.App</RootNamespace>
+    <Product>Hermes</Product>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <!-- `dotnet publish -r <rid>` produces a self-contained single executable. Trimming stays off: AvaloniaEdit/TextMate use reflection. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
