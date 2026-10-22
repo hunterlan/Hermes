@@ -1,0 +1,52 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hermes.App.ViewModels"
+        x:Class="Hermes.App.Views.Dialogs.ImportDialog"
+        x:DataType="vm:ImportDialogViewModel"
+        Title="Import" Width="640" Height="560"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+  <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" Margin="20">
+    <StackPanel Spacing="2" Margin="0,0,0,14">
+      <TextBlock Classes="h1" Text="Import" />
+      <TextBlock Classes="secondary" Text="Postman Collection v2.0 / v2.1, Postman environment or globals, or a cURL command." />
+    </StackPanel>
+
+    <!-- drop zone -->
+    <Border Grid.Row="1" Name="DropZone" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1" CornerRadius="6"
+            Padding="16" Background="{DynamicResource BgSecondaryBrush}" DragDrop.AllowDrop="True">
+      <StackPanel Spacing="8" HorizontalAlignment="Center">
+        <PathIcon Data="{StaticResource IconImport}" Width="28" Height="28" Foreground="{DynamicResource TextSecondaryBrush}" />
+        <TextBlock HorizontalAlignment="Center" Text="Drop files here" />
+        <Button HorizontalAlignment="Center" Classes="link" Content="or choose files" Command="{Binding ChooseFilesCommand}" />
+      </StackPanel>
+    </Border>
+
+    <ItemsControl Grid.Row="2" ItemsSource="{Binding Files}" Margin="0,8,0,0" IsVisible="{Binding HasFiles}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="x:String">
+          <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+            <TextBlock Text="{Binding}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Classes="secondary" />
+            <Button Grid.Column="1" Classes="icon" Width="22" Height="22" Padding="4" CommandParameter="{Binding}"
+                    Command="{Binding $parent[Window].((vm:ImportDialogViewModel)DataContext).RemoveFileCommand}">
+              <PathIcon Data="{StaticResource IconClose}" Width="10" Height="10" />
+            </Button>
+          </Grid>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <Grid Grid.Row="3" RowDefinitions="Auto,*" Margin="0,14,0,0">
+      <TextBlock Classes="section" Text="Or paste raw text" Margin="0,0,0,6" />
+      <TextBox Grid.Row="1" Classes="mono" Text="{Binding Text}" AcceptsReturn="True" TextWrapping="NoWrap" VerticalContentAlignment="Top"
+               Watermark="curl https://api.example.com …   or Postman JSON" />
+    </Grid>
+
+    <TextBlock Grid.Row="4" Text="{Binding Error}" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" Margin="0,8,0,0"
+               IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,14,0,0">
+      <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True" />
+      <Button Classes="accent" Content="Import" Command="{Binding ImportCommand}" />
+    </StackPanel>
+  </Grid>
+</Window>
