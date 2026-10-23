@@ -9,6 +9,12 @@ collections and switch environments — in a fast native app that stores everyth
 
 **Requests**
 - Multiple tabs with unsaved-changes indicator; open tabs and drafts are restored on restart
+- Preview tabs (single click previews in an italic tab, double click or editing keeps it), pinned tabs, collection
+  prefix on same-named tabs; tabs can be turned off in Settings
+- Composer shows only the sections a request uses; the rest wait as "Not used yet" chips. Headers added
+  automatically are listed inline, and a "Sends to" line shows the resolved URL
+- Confirmation before sending with unresolved variables or to environments marked "Ask before sending"
+- Command palette (Ctrl+K) to find requests by name, method or URL and run any command
 - Methods GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
 - URL bar with `{{variable}}` highlighting (resolved / unresolved) and hover tooltips showing the value
 - Query params table kept in two-way sync with the URL; `:pathVariables` table
@@ -35,6 +41,13 @@ environment > collection > globals. Dynamic variables: `{{$guid}}`, `{{$randomUU
 `{{$isoTimestamp}}`, `{{$randomInt}}`, `{{$randomBoolean}}`, `{{$randomEmail}}`, `{{$randomFirstName}}`,
 `{{$randomLastName}}`, `{{$randomAlphaNumeric}}`.
 
+An environments matrix edits every variable in every environment side by side and flags variables used by
+requests that are empty in the active environment. The auth editor shows where auth is inherited from and which
+items override it.
+
+**Responses** are also saved with each saved request (latest plus five earlier), and the "Sent request" tab shows the
+exact request after variables and auth.
+
 **History** — every sent request, grouped by day, searchable; click to reopen.
 
 **Import / export** — Postman Collection v2.0/v2.1 and Postman environment/globals files (import via dialog or by
@@ -56,6 +69,8 @@ GraphQL/WebSocket/gRPC.
 | Ctrl+T / Ctrl+N | New request tab |
 | Ctrl+W | Close tab (middle-click a tab also closes it) |
 | Ctrl+Tab / Ctrl+Shift+Tab, Ctrl+PgDn / Ctrl+PgUp | Next / previous tab |
+| Ctrl+K | Command palette |
+| Ctrl+E | Switch environment |
 | Ctrl+L | Focus URL bar |
 | Ctrl+O | Import |
 | Ctrl+, | Settings |
@@ -97,6 +112,7 @@ collections/{id}.json      one file per collection
 environments/{id}.json     one file per environment
 globals.json               global variables
 history/yyyy-MM-dd.json    request history, one file per day
+responses/{requestId}.json last responses of a saved request
 session.json               open tabs, drafts, active environment
 ```
 
