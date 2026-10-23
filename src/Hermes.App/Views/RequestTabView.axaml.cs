@@ -49,8 +49,12 @@ public partial class RequestTabView : UserControl
     {
         if (e.PropertyName == nameof(RequestTabViewModel.IsRenaming) && _viewModel?.IsRenaming == true)
         {
-            NameBox.Focus();
-            NameBox.SelectAll();
+            // Deferred: the box only becomes visible once its IsVisible binding has caught up.
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                NameBox.Focus();
+                NameBox.SelectAll();
+            });
         }
     }
 
