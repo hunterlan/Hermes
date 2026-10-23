@@ -56,6 +56,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         Auth.Changed += OnAnyChanged;
         Auth.ScopeProvider = () => CreateContext().BuildScope();
         Auth.InheritedAuthProvider = () => CreateContext().ResolveAuth(Core.Models.AuthConfig.Inherit());
+        Auth.ChainProvider = () => (AuthInheritance.OuterLevels(CreateContext()), "Request", Name);
 
         Response = new ResponseViewModel(services.Dialogs, services.Settings);
         Response.SetSaved(services.Workspace.LoadResponses(model.Id), show: true);

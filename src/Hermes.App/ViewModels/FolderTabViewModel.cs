@@ -20,6 +20,8 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         Auth.Changed += UpdateDirty;
         Auth.ScopeProvider = () => CreateContext()?.BuildScope() ?? Core.Variables.VariableScope.Empty;
         Auth.InheritedAuthProvider = () => CreateContext()?.ResolveAuth(AuthConfig.Inherit()) ?? new Core.Auth.EffectiveAuth(AuthConfig.NoAuth(), null);
+        Auth.ChainProvider = () => (AuthInheritance.OuterLevels(CreateContext()), "Folder", Name);
+        Auth.ContainedItemsProvider = () => _folder.Items;
         Load();
         _snapshot = Snapshot();
     }

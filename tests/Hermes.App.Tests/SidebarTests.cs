@@ -189,7 +189,13 @@ public class SidebarTests
         Assert.Contains(tab.HiddenHeaders, h => h.Key == "Authorization" && h.Value == "Bearer secret-123");
         Assert.Contains("Bearer Token", tab.Auth.InheritedDescription);
 
+        Assert.Equal(["Collection", "Request"], tab.Auth.Chain.Select(n => n.Kind));
+        Assert.True(tab.Auth.Chain[0].IsSource);
+        Assert.Equal("Inherits", tab.Auth.Chain[1].Status);
+
         vm.OpenCollection(collection.Model);
+        collectionTab.SelectedSection = 1;
+        Assert.Equal("Used by 1 request.", collectionTab.Auth.UsageSummary);
         UiTestHelpers.Screenshot(window, "13-collection-settings");
         window.Close();
     }

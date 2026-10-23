@@ -27,7 +27,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
 
     private static readonly Option<AuthType> InheritOption = new("Inherit auth from parent", AuthType.Inherit);
 
-    private static readonly Option<AuthType>[] BaseTypes =
+    internal static readonly Option<AuthType>[] BaseTypes =
     [
         new("No Auth", AuthType.None),
         new("Basic Auth", AuthType.Basic),
@@ -59,6 +59,32 @@ public sealed partial class AuthEditorViewModel : ObservableObject
 
     /// <summary>Supplies the effective auth when "inherit" is selected, for the explanatory text.</summary>
     public Func<EffectiveAuth>? InheritedAuthProvider { get; set; }
+
+    /// <summary>Supplies the levels above the edited item (outermost first) plus its own kind and name, for "where does auth come from".</summary>
+    public Func<(IReadOnlyList<(string Kind, string Name, AuthConfig Auth)> Outer, string Kind, string Name)>? ChainProvider { get; set; }
+
+    /// <summary>For collections and folders: the items whose auth this one supplies.</summary>
+    public Func<IEnumerable<CollectionNode>>? ContainedItemsProvider { get; set; }
+
+    public IReadOnlyList<AuthChainNode> Chain =>
+        ChainProvider?.Invoke() is var (outer, kind, name) ? AuthInheritance.Chain(outer, (kind, name, ToModel())) : [];
+
+    public IReadOnlyList<AuthOverride> Overrides =>
+        ContainedItemsProvider is { } items ? AuthInheritance.Usage(items()).Overrides : [];
+
+    public bool HasOverrides => Overrides.Count > 0;
+
+    public string? UsageSummary
+    {
+        get
+        {
+            if (ContainedItemsProvider is not { } items)
+                return null;
+            var (overrides, inheriting, _) = AuthInheritance.Usage(items());
+            var used = inheriting == 1 ? "Used by 1 request" : $"Used by {inheriting} requests";
+            return overrides.Count == 0 ? $"{used}." : $"{used}. {overrides.Count} {(overrides.Count == 1 ? "overrides" : "override")}.";
+        }
+    }
 
     public event Action? Changed;
 
@@ -146,6 +172,10 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(TypeDescription));
         OnPropertyChanged(nameof(Summary));
+        OnPropertyChanged(nameof(Chain));
+        OnPropertyChanged(nameof(Overrides));
+        OnPropertyChanged(nameof(HasOverrides));
+        OnPropertyChanged(nameof(UsageSummary));
     }
 
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
@@ -162,6 +192,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsOAuth2));
                 OnPropertyChanged(nameof(TypeDescription));
                 OnPropertyChanged(nameof(Summary));
+                OnPropertyChanged(nameof(Chain));
                 break;
             case nameof(SelectedGrantType):
                 OnPropertyChanged(nameof(IsAuthCodeGrant));
@@ -169,7 +200,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
                 break;
         }
 
-        if (!_loading && e.PropertyName is not (nameof(TokenStatus) or nameof(IsFetchingToken) or nameof(TypeDescription) or nameof(Summary))
+        if (!_loading && e.PropertyName is not (nameof(TokenStatus) or nameof(IsFetchingToken) or nameof(TypeDescription) or nameof(Summary) or nameof(Chain) or nameof(Overrides) or nameof(HasOverrides) or nameof(UsageSummary))
             && !e.PropertyName!.StartsWith("Is", StringComparison.Ordinal))
             Changed?.Invoke();
     }
