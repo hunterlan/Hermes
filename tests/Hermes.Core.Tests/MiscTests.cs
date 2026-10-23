@@ -1,9 +1,11 @@
 using System.Net;
 using Hermes.Core.Auth;
 using Hermes.Core.Formatting;
+using Hermes.Core.Http;
 using Hermes.Core.Models;
 using Hermes.Core.Serialization;
 using Hermes.Core.Storage;
+using Hermes.TestSupport;
 
 namespace Hermes.Core.Tests;
 
@@ -201,5 +203,38 @@ public class FormatterAndOAuthTests
 
         var error = OAuth2Service.ParseTokenResponse("{\"error\":\"invalid_client\",\"error_description\":\"bad\"}", HttpStatusCode.BadRequest);
         Assert.Equal("invalid_client: bad", error.Error);
+    }
+
+    [Fact]
+    public void Odd_token_responses_are_failures_not_exceptions()
+    {
+        Assert.NotNull(OAuth2Service.ParseTokenResponse("[1, 2]", HttpStatusCode.OK).Error);
+        Assert.Equal("second", OAuth2Service.ParseTokenResponse("{\"access_token\":\"first\",\"access_token\":\"second\"}", HttpStatusCode.OK).AccessToken);
+        Assert.Equal("b", OAuth2Service.ParseTokenResponse("access_token=a&access_token=b", HttpStatusCode.OK).AccessToken);
+    }
+
+    [Fact]
+    public async Task Token_requests_neither_send_nor_keep_the_users_cookies()
+    {
+        string? cookieSent = null;
+        using var server = new LocalHttpServer(async (ctx, stop) =>
+        {
+            cookieSent = ctx.Request.Headers["Cookie"];
+            ctx.Response.AppendHeader("Set-Cookie", "idp_session=1; Path=/");
+            ctx.Response.ContentType = "application/json";
+            await ctx.Response.OutputStream.WriteAsync("{\"access_token\":\"t\"}"u8.ToArray(), stop);
+            ctx.Response.Close();
+        });
+        using var userClients = new HttpClientProvider();
+        userClients.Cookies.Add(new Uri(server.Url), new Cookie("user_session", "1"));
+        using var oauth = new OAuth2Service();
+
+        var result = await oauth.GetTokenAsync(
+            new OAuth2Auth { GrantType = OAuth2GrantType.ClientCredentials, AccessTokenUrl = server.Url + "token", ClientId = "c" },
+            new Variables.VariableScope(), _ => Task.CompletedTask, verifySsl: true, TestContext.Current.CancellationToken);
+
+        Assert.Equal("t", result.AccessToken);
+        Assert.Null(cookieSent);
+        Assert.DoesNotContain(userClients.GetAllCookies(), c => c.Name == "idp_session");
     }
 }

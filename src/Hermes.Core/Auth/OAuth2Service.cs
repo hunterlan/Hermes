@@ -20,9 +20,15 @@ public sealed class OAuth2TokenResult
     public bool IsSuccess => AccessToken is not null;
 }
 
-public sealed class OAuth2Service(HttpClientProvider clients)
+/// <summary>
+/// Fetches OAuth 2.0 tokens. Token requests use clients of their own, without cookies: cookies the identity
+/// provider sets must not end up in the user's requests, and the user's cookies must not change how it answers.
+/// </summary>
+public sealed class OAuth2Service : IDisposable
 {
     private static readonly TimeSpan AuthorizationTimeout = TimeSpan.FromMinutes(5);
+
+    private readonly HttpClientProvider _clients = new(useCookies: false);
 
     /// <param name="openBrowser">Opens the authorization URL in the system browser (authorization code flow only).</param>
     public async Task<OAuth2TokenResult> GetTokenAsync(OAuth2Auth config, VariableScope scope, Func<Uri, Task> openBrowser,
@@ -86,7 +92,7 @@ public sealed class OAuth2Service(HttpClientProvider clients)
 
         try
         {
-            using var response = await clients.Get(followRedirects: true, verifySsl).SendAsync(request, cancellationToken).ConfigureAwait(false);
+            using var response = await _clients.Get(followRedirects: true, verifySsl).SendAsync(request, cancellationToken).ConfigureAwait(false);
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             return ParseTokenResponse(body, response.StatusCode);
         }
@@ -98,17 +104,21 @@ public sealed class OAuth2Service(HttpClientProvider clients)
 
     internal static OAuth2TokenResult ParseTokenResponse(string body, HttpStatusCode status)
     {
-        Dictionary<string, string> values;
+        // Repeated names keep the last value, so an odd response is reported as a failure, never thrown.
+        var values = new Dictionary<string, string>();
         try
         {
             using var doc = JsonDocument.Parse(body);
-            values = doc.RootElement.EnumerateObject()
-                .ToDictionary(p => p.Name, p => p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString()! : p.Value.GetRawText());
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                return Fail($"Token endpoint returned {(int)status} with an unexpected response: {Truncate(body)}");
+            foreach (var p in doc.RootElement.EnumerateObject())
+                values[p.Name] = p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString()! : p.Value.GetRawText();
         }
         catch (JsonException)
         {
             // Some providers (e.g. GitHub without an Accept header) answer form-encoded.
-            values = UrlUtilities.ParseQuery(body).ToDictionary(kv => Uri.UnescapeDataString(kv.Key), kv => Uri.UnescapeDataString(kv.Value.Replace('+', ' ')));
+            foreach (var pair in UrlUtilities.ParseQuery(body))
+                values[Uri.UnescapeDataString(pair.Key)] = Uri.UnescapeDataString(pair.Value.Replace('+', ' '));
         }
 
         if (values.TryGetValue("error", out var error))
@@ -230,4 +240,6 @@ public sealed class OAuth2Service(HttpClientProvider clients)
     private static string Truncate(string s) => s.Length > 300 ? s[..300] + "…" : s;
 
     private static OAuth2TokenResult Fail(string error) => new() { Error = error };
+
+    public void Dispose() => _clients.Dispose();
 }
