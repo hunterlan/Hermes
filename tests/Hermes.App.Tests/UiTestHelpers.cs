@@ -1,11 +1,10 @@
-using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Threading;
 using Hermes.App.ViewModels;
 using Hermes.App.Views;
+using Hermes.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hermes.App.Tests;
@@ -55,35 +54,17 @@ internal static class UiTestHelpers
 /// <summary>Minimal local HTTP server returning a JSON body.</summary>
 internal sealed class JsonServer : IDisposable
 {
-    private readonly HttpListener _listener = new();
-
-    public JsonServer()
+    private readonly LocalHttpServer _server = new(async (ctx, stop) =>
     {
-        var probe = new TcpListener(IPAddress.Loopback, 0);
-        probe.Start();
-        var port = ((IPEndPoint)probe.LocalEndpoint).Port;
-        probe.Stop();
-        Url = $"http://127.0.0.1:{port}/";
-        _listener.Prefixes.Add(Url);
-        _listener.Start();
-        _ = Task.Run(async () =>
-        {
-            while (_listener.IsListening)
-            {
-                HttpListenerContext ctx;
-                try { ctx = await _listener.GetContextAsync(); }
-                catch { return; }
-                var body = Encoding.UTF8.GetBytes(
-                    $"{{\"method\":\"{ctx.Request.HttpMethod}\",\"path\":\"{ctx.Request.Url!.PathAndQuery}\",\"items\":[1,2,3],\"nested\":{{\"ok\":true}}}}");
-                ctx.Response.ContentType = "application/json";
-                ctx.Response.AppendHeader("Set-Cookie", "session=abc123; Path=/");
-                await ctx.Response.OutputStream.WriteAsync(body);
-                ctx.Response.Close();
-            }
-        });
-    }
+        var body = Encoding.UTF8.GetBytes(
+            $"{{\"method\":\"{ctx.Request.HttpMethod}\",\"path\":\"{ctx.Request.Url!.PathAndQuery}\",\"items\":[1,2,3],\"nested\":{{\"ok\":true}}}}");
+        ctx.Response.ContentType = "application/json";
+        ctx.Response.AppendHeader("Set-Cookie", "session=abc123; Path=/");
+        await ctx.Response.OutputStream.WriteAsync(body, stop);
+        ctx.Response.Close();
+    });
 
-    public string Url { get; }
+    public string Url => _server.Url;
 
-    public void Dispose() => _listener.Close();
+    public void Dispose() => _server.Dispose();
 }
