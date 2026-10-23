@@ -83,15 +83,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     [RelayCommand]
     private void ShowPane(SidebarPane pane)
     {
-        // Clicking the selected pane again collapses the sidebar, like Postman.
-        if (pane == SelectedPane && IsSidebarVisible)
-        {
-            IsSidebarVisible = false;
-            return;
-        }
         SelectedPane = pane;
         IsSidebarVisible = true;
     }
+
+    /// <summary>Folder holding the workspace's plain JSON files (shown in the status bar).</summary>
+    public string DataDirectory => Workspace.DataDirectory;
+
+    public string AppVersion { get; } = "Hermes " + (typeof(MainWindowViewModel).Assembly.GetName().Version?.ToString(2) ?? "");
 
     private void NotifyWorkspaceChanged()
     {
@@ -371,6 +370,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         foreach (var tab in Tabs)
             tab.OnVariablesChanged();
     }
+
+    [RelayCommand]
+    private async Task RevealDataDirectory() => await Dialogs.RevealFolderAsync(DataDirectory);
 
     [RelayCommand]
     private async Task OpenCookies() =>

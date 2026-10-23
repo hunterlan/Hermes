@@ -43,7 +43,8 @@
     </StackPanel>
 
     <TreeView Grid.Row="1" Name="Tree" ItemsSource="{Binding Collections}" SelectedItem="{Binding SelectedNode}"
-              DragDrop.AllowDrop="True" IsVisible="{Binding !IsEmpty}" Padding="4,0">
+              DragDrop.AllowDrop="True" IsVisible="{Binding !IsEmpty}" Padding="4,0"
+              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
       <TreeView.ItemTemplate>
         <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="sb:TreeNodeViewModel">
           <Border Classes.dropTarget="{Binding IsDropTarget}" CornerRadius="3" Background="Transparent"
@@ -58,7 +59,7 @@
                 <c:MethodBadge Method="{Binding $self.DataContext, Converter={x:Static sb:SidebarConverters.MethodOf}}" Compact="True" FontSize="10"
                                HorizontalAlignment="Left" IsVisible="{Binding IsRequest}" />
               </Panel>
-              <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+              <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,5"
                          IsVisible="{Binding !IsRenaming}" />
               <TextBox Grid.Column="1" Text="{Binding Name, Mode=OneWay}" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1"
                        KeyDown="OnRenameKeyDown" LostFocus="OnRenameLostFocus" PropertyChanged="OnRenameBoxPropertyChanged" />

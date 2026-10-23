@@ -40,9 +40,8 @@
                        IsVisible="{Binding !IsRenaming}" FontWeight="{Binding IsGlobals, Converter={x:Static sbv:EnvironmentsPaneView.BoldIf}}" />
             <TextBox Grid.Column="1" Text="{Binding Name, Mode=OneWay}" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1"
                      KeyDown="OnRenameKeyDown" LostFocus="OnRenameLostFocus" PropertyChanged="OnRenameBoxPropertyChanged" />
-            <Border Grid.Column="2" IsVisible="{Binding IsActive}" Background="{DynamicResource VarResolvedBgBrush}" CornerRadius="3"
-                    Padding="6,1" Margin="6,0" VerticalAlignment="Center" ToolTip.Tip="Active environment">
-              <TextBlock Text="Active" FontSize="11" Foreground="{DynamicResource AccentBrush}" />
+            <Border Grid.Column="2" Classes="tag warn" IsVisible="{Binding IsActive}" Margin="6,0" ToolTip.Tip="Active environment">
+              <TextBlock Text="Active" />
             </Border>
             <Button Grid.Column="3" Classes="icon rowMenu" Width="22" Height="22" Padding="3" Click="OnMenuClick" ToolTip.Tip="More actions">
               <PathIcon Data="{StaticResource IconMore}" Width="13" Height="13" />

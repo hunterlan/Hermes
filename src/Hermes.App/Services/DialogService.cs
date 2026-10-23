@@ -91,5 +91,7 @@ public sealed class DialogService
 
     public async Task OpenUrlAsync(Uri uri) => await Top.Launcher.LaunchUriAsync(uri);
 
+    public async Task RevealFolderAsync(string path) => await Top.Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(path));
+
     public static FilePickerFileType JsonFiles { get; } = new("JSON files") { Patterns = ["*.json"], MimeTypes = ["application/json"] };
 }

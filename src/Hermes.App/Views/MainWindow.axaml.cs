@@ -28,7 +28,7 @@ public partial class MainWindow : Window
         Closing += OnClosing;
     }
 
-    private ColumnDefinition SidebarColumn => BodyGrid.ColumnDefinitions[1];
+    private ColumnDefinition SidebarColumn => BodyGrid.ColumnDefinitions[0];
 
     protected override void OnDataContextChanged(EventArgs e)
     {
@@ -132,6 +132,9 @@ public partial class MainWindow : Window
                 break;
             case Key.OemBackslash or Key.OemPipe:
                 vm.ToggleSidebarCommand.Execute(null);
+                break;
+            case Key.E:
+                EnvironmentButton.Flyout?.ShowAt(EnvironmentButton);
                 break;
             case Key.L:
                 this.GetVisualDescendants().OfType<RequestTabView>().FirstOrDefault()?.FocusUrl();
