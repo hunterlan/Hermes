@@ -622,6 +622,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
 
         if (!keepId)
             RequestId = Guid.NewGuid();
+        if (target.IsNewCollection)
+            Services.Workspace.AddCollection(target.Collection);
         Name = target.Name;
         var model = BuildModel();
         Services.Workspace.AddNode(target.Collection, target.Folder, model);
@@ -726,6 +728,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
             UpdateDirty();
         }
     }
+
+    public override bool KeepsDraftInSession => true;
 
     public override SessionTab ToSession() => new()
     {
