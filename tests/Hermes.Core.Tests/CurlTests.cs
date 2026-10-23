@@ -74,4 +74,72 @@ public class CurlTests
         Assert.Equal(original.Body.Raw, parsed.Body.Raw);
         Assert.Contains(parsed.Headers, h => h.Key == "X-Quote" && h.Value == "it's");
     }
+
+    [Fact]
+    public void Generated_curl_keeps_the_method_when_the_body_is_empty()
+    {
+        foreach (var mode in new[] { BodyMode.Raw, BodyMode.UrlEncoded, BodyMode.FormData })
+        {
+            var request = new HttpRequestModel { Method = "POST", Url = "https://api.test/x", Body = { Mode = mode } };
+
+            var curl = CurlGenerator.Generate(RequestPreparer.Prepare(request, RequestContext.Empty, includeDefaultHeaders: false));
+
+            Assert.Contains("--request POST", curl);
+            Assert.Equal("POST", CurlParser.Parse(curl).Method);
+        }
+    }
+
+    [Theory]
+    [InlineData("curl --oauth2-bearer TOKEN https://api.test/x")]
+    [InlineData("curl -E cert.pem https://api.test/x")]
+    [InlineData("curl --aws-sigv4 aws:amz:eu-west-1:s3 https://api.test/x")]
+    [InlineData("curl -Y 1 https://api.test/x")]
+    [InlineData("curl --some-future-option value https://api.test/x")]
+    public void Option_values_are_not_taken_for_the_url(string command) =>
+        Assert.Equal("https://api.test/x", CurlParser.Parse(command).Url);
+
+    [Fact]
+    public void Json_option_posts_json_with_its_headers()
+    {
+        var r = CurlParser.Parse("curl --json '{\"a\":1}' https://api.test/x");
+
+        Assert.Equal("https://api.test/x", r.Url);
+        Assert.Equal("POST", r.Method);
+        Assert.Equal(BodyMode.Raw, r.Body.Mode);
+        Assert.Equal(RawLanguage.Json, r.Body.RawLanguage);
+        Assert.Equal("{\"a\":1}", r.Body.Raw);
+        Assert.Contains(r.Headers, h => h.Key == "Accept" && h.Value == "application/json");
+    }
+
+    [Fact]
+    public void Combined_short_flags_are_all_read()
+    {
+        var r = CurlParser.Parse("curl -sSLk https://api.test/x");
+        Assert.True(r.Settings.FollowRedirects);
+        Assert.False(r.Settings.VerifySsl);
+
+        var post = CurlParser.Parse("curl -sXPOST https://api.test/x");
+        Assert.Equal("POST", post.Method);
+        Assert.Equal("https://api.test/x", post.Url);
+    }
+
+    [Fact]
+    public void Data_from_a_file_is_sent_from_that_file()
+    {
+        var r = CurlParser.Parse("curl -d @payload.json -H 'Content-Type: application/json' https://api.test/x");
+
+        Assert.Equal(BodyMode.Binary, r.Body.Mode);
+        Assert.Equal("payload.json", r.Body.BinaryFilePath);
+        Assert.Equal("POST", r.Method);
+
+        Assert.Equal("@payload.json", CurlParser.Parse("curl --data-raw @payload.json -H 'Content-Type: text/plain' https://api.test/x").Body.Raw);
+    }
+
+    [Fact]
+    public void Bearer_option_becomes_bearer_auth()
+    {
+        var r = CurlParser.Parse("curl --oauth2-bearer abc https://api.test/x");
+        Assert.Equal(AuthType.Bearer, r.Auth.Type);
+        Assert.Equal("abc", r.Auth.Bearer.Token);
+    }
 }

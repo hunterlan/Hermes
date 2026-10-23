@@ -29,7 +29,7 @@ public static class ImportService
             {
                 result.Requests.Add(CurlParser.Parse(text));
             }
-            catch (FormatException ex)
+            catch (Exception ex)
             {
                 result.Errors.Add($"{sourceName}: {ex.Message}");
             }
@@ -56,8 +56,9 @@ public static class ImportService
             else
                 result.Errors.Add($"{sourceName}: unrecognized format. Supported: Postman Collection v2.0/v2.1, Postman environment, cURL.");
         }
-        catch (Exception ex) when (ex is FormatException or InvalidOperationException or JsonException)
+        catch (Exception ex)
         {
+            // Whatever a malformed file makes an importer throw, it is that file's import error, not the app's crash.
             result.Errors.Add($"{sourceName}: {ex.Message}");
         }
     }

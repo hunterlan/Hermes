@@ -31,10 +31,11 @@ public static class RequestPreparer
             TimeoutMs = request.Settings.TimeoutMs ?? context.Settings.RequestTimeoutMs,
         };
 
-        // URL: path variables first (their values may contain variables too), then {{vars}}.
-        var pathValues = request.PathVariables
-            .Where(p => p.Key.Length > 0)
-            .ToDictionary(p => p.Key, p => R(p.Value));
+        // URL: path variables first (their values may contain variables too), then {{vars}}. A repeated name
+        // (possible in imported collections) takes its last value, as in Postman.
+        var pathValues = new Dictionary<string, string>();
+        foreach (var p in request.PathVariables.Where(p => p.Key.Length > 0))
+            pathValues[p.Key] = R(p.Value);
         prepared.Url = UrlUtilities.EnsureScheme(R(UrlUtilities.ReplacePathVariables(request.Url, pathValues)));
 
         foreach (var h in request.Headers)
