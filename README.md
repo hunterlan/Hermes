@@ -108,6 +108,22 @@ dotnet publish src/Hermes.App -c Release -r win-x64     -o dist/win-x64
 dotnet publish src/Hermes.App -c Release -r osx-arm64   -o dist/osx-arm64
 ```
 
+### Releases
+
+`.github/workflows/release.yml` builds installers for x64 and arm64: a Windows setup `.exe` (Inno Setup), a macOS
+`.dmg`, and Linux `.deb` and `.rpm` packages (nfpm). Pushing a tag such as `v0.1.0` runs the tests, builds every
+package and attaches them to a GitHub release with a `SHA256SUMS.txt`; running the workflow by hand builds them as
+workflow artifacts only. The scripts under `packaging/` can also be run locally, e.g.
+`packaging/macos/build-dmg.sh osx-arm64 0.1.0 dist`.
+
+The app icon's source is `packaging/icons/hermes.svg`. After changing it, run `packaging/icons/build-icons.sh` on macOS
+to regenerate the committed `.icns`, Linux PNGs and `src/Hermes.App/Assets/hermes.ico`; the in-app logo is
+`IconLogo` in `src/Hermes.App/Themes/Icons.axaml`.
+
+The macOS app is only ad-hoc signed and not notarized, so on first launch macOS blocks it: right-click Hermes.app →
+Open, or run `xattr -dr com.apple.quarantine /Applications/Hermes.app`. The Windows installer is unsigned, so
+SmartScreen warns before running it.
+
 ## Data
 
 Everything is stored as JSON in the data folder — by default `~/.config/Hermes` (Linux),

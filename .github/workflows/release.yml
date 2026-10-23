@@ -1,0 +1,150 @@
+# Builds installers for Windows (.exe), macOS (.dmg) and Linux (.deb, .rpm).
+# Pushing a tag like v1.2.3 publishes them as a GitHub release; running the workflow by hand
+# only uploads them as workflow artifacts.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to stamp on the packages (e.g. 0.1.0)
+        required: true
+        default: 0.1.0
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - id: version
+        name: Resolve version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then version="${GITHUB_REF_NAME#v}"; else version="$INPUT_VERSION"; fi
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::'$version' is not a version like 1.2.3 or 1.2.3-beta.1"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test
+        run: dotnet test Hermes.slnx -c Release
+
+  windows:
+    needs: prepare
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish
+        run: dotnet publish src/Hermes.App -c Release -r win-${{ matrix.arch }} -p:Version=$env:VERSION -o publish
+
+      - name: Build installer
+        run: |
+          choco install innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Qp "/DAppVersion=$env:VERSION" "/DArch=${{ matrix.arch }}" `
+            "/DSourceDir=$env:GITHUB_WORKSPACE\publish" "/DIconFile=$env:GITHUB_WORKSPACE\src\Hermes.App\Assets\hermes.ico" `
+            "/DOutputDir=$env:GITHUB_WORKSPACE\dist" packaging\windows\hermes.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.arch }}
+          path: dist/*.exe
+          if-no-files-found: error
+
+  macos:
+    needs: prepare
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        rid: [osx-arm64, osx-x64]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build .dmg
+        run: packaging/macos/build-dmg.sh ${{ matrix.rid }} ${{ needs.prepare.outputs.version }} dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.rid }}
+          path: dist/*.dmg
+          if-no-files-found: error
+
+  linux:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rid: [linux-x64, linux-arm64]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install nfpm
+        run: |
+          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+          sudo apt-get update
+          sudo apt-get install -y nfpm
+
+      - name: Build .deb and .rpm
+        run: packaging/linux/build-packages.sh ${{ matrix.rid }} ${{ needs.prepare.outputs.version }} dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.rid }}
+          path: |
+            dist/*.deb
+            dist/*.rpm
+          if-no-files-found: error
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: [prepare, windows, macos, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '{windows,macos,linux}-*'
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: cd dist && sha256sum * > SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          prerelease: ${{ contains(needs.prepare.outputs.version, '-') }}
