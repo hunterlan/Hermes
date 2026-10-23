@@ -158,23 +158,47 @@ public sealed partial class KeyValueListViewModel : ObservableObject
         }
         else
         {
-            var items = new List<KeyValueItem>();
-            foreach (var raw in BulkText.Split('\n'))
-            {
-                var line = raw.TrimEnd('\r');
-                if (line.Trim().Length == 0)
-                    continue;
-                var enabled = !line.StartsWith("//", StringComparison.Ordinal);
-                if (!enabled)
-                    line = line[2..];
-                var colon = line.IndexOf(':');
-                items.Add(colon < 0
-                    ? new KeyValueItem(line.Trim(), "", enabled)
-                    : new KeyValueItem(line[..colon].Trim(), line[(colon + 1)..].TrimStart(), enabled));
-            }
-            Load(items);
+            ApplyBulkText(ParseBulkText(BulkText));
             Changed?.Invoke();
         }
+    }
+
+    private static List<KeyValueItem> ParseBulkText(string text)
+    {
+        var items = new List<KeyValueItem>();
+        foreach (var raw in text.Split('\n'))
+        {
+            var line = raw.TrimEnd('\r');
+            if (line.Trim().Length == 0)
+                continue;
+            var enabled = !line.StartsWith("//", StringComparison.Ordinal);
+            if (!enabled)
+                line = line[2..];
+            var colon = line.IndexOf(':');
+            items.Add(colon < 0
+                ? new KeyValueItem(line.Trim(), "", enabled)
+                : new KeyValueItem(line[..colon].Trim(), line[(colon + 1)..].TrimStart(), enabled));
+        }
+        return items;
+    }
+
+    /// <summary>
+    /// Lines are matched to rows by key, in order (the second "a" line to the second "a" row), so a row keeps what
+    /// the text doesn't show: its description and whether it's a file.
+    /// </summary>
+    private void ApplyBulkText(List<KeyValueItem> lines)
+    {
+        var rowsByKey = Rows.Where(r => !r.IsPlaceholder).GroupBy(r => r.Key, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => new Queue<KeyValueRowViewModel>(g), StringComparer.Ordinal);
+        foreach (var line in lines)
+        {
+            if (rowsByKey.GetValueOrDefault(line.Key) is { Count: > 0 } rows && rows.Dequeue().ToModel() is var row)
+            {
+                line.Description = row.Description;
+                line.Kind = row.Kind;
+            }
+        }
+        Load(lines);
     }
 
     [RelayCommand]
