@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- App icon "Wing": three swept feathers on a dark tile. The tile uses Apple's 824 px body in a 1024 px canvas.
+       Regenerate the rendered icons with packaging/icons/build-icons.sh after changing this file. -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#1C1D22"/>
+  <path d="M340 640L700 320M380 660L720 460M420 680L700 600" fill="none"
+        stroke="#F0B84A" stroke-width="60" stroke-linecap="round"/>
+</svg>

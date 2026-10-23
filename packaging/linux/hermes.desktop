@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Hermes
+GenericName=REST API Client
+Comment=Compose, send and inspect HTTP requests
+Exec=/opt/hermes/Hermes %F
+Icon=hermes
+Terminal=false
+Categories=Development;Network;
+Keywords=REST;HTTP;API;Postman;
+StartupWMClass=Hermes
