@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using Hermes.App.Services;
 using Hermes.App.ViewModels;
 using Hermes.App.Views;
+using Hermes.App.Views.Dialogs;
 using Hermes.Core.Auth;
 using Hermes.Core.Http;
 using Hermes.Core.Secrets;
@@ -16,6 +17,8 @@ public partial class App : Application
 {
     public static IServiceProvider Services { get; private set; } = null!;
 
+    private DataFolderLock? _dataFolderLock;
+
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     public override void OnFrameworkInitializationCompleted()
@@ -25,6 +28,18 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            // Before anything opens the folder's files or its keychain entry.
+            var dataDirectory = DataDirectoryOf(Services.GetRequiredService<SettingsService>());
+            _dataFolderLock = DataFolderLock.TryAcquire(dataDirectory);
+            if (_dataFolderLock is null)
+            {
+                desktop.MainWindow = new MessageDialog("Hermes is already running",
+                    $"Another Hermes window is using the data folder {dataDirectory}. Switch to that window, or close it and start Hermes again.",
+                    [("OK", "ok", "accent")]);
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
+
             var window = new MainWindow { DataContext = Services.GetRequiredService<MainWindowViewModel>() };
             Services.GetRequiredService<DialogService>().Owner = window;
             desktop.MainWindow = window;
@@ -34,6 +49,7 @@ public partial class App : Application
                 // Give queued history writes a moment to land; a slow disk mustn't hold the app open.
                 Services.GetRequiredService<WorkspaceService>().FlushHistoryAsync().Wait(TimeSpan.FromSeconds(2));
                 (Services as IDisposable)?.Dispose();
+                _dataFolderLock.Dispose();
             };
         }
 
@@ -46,8 +62,7 @@ public partial class App : Application
         services.AddSingleton<SettingsService>();
         services.AddSingleton(sp =>
         {
-            var settings = sp.GetRequiredService<SettingsService>().Current;
-            var dataDir = string.IsNullOrWhiteSpace(settings.DataDirectory) ? AppPaths.DefaultDataDirectory : settings.DataDirectory;
+            var dataDir = DataDirectoryOf(sp.GetRequiredService<SettingsService>());
             return new WorkspaceRepository(dataDir, KeychainSecretStore.Create(dataDir));
         });
         services.AddSingleton<WorkspaceService>();
@@ -59,4 +74,7 @@ public partial class App : Application
         services.AddSingleton<MainWindowViewModel>();
         return services.BuildServiceProvider();
     }
+
+    private static string DataDirectoryOf(SettingsService settings) =>
+        string.IsNullOrWhiteSpace(settings.Current.DataDirectory) ? AppPaths.DefaultDataDirectory : settings.Current.DataDirectory;
 }
