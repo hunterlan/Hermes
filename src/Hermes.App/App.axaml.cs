@@ -30,12 +30,21 @@ public partial class App : Application
         {
             // Before anything opens the folder's files or its keychain entry.
             var dataDirectory = DataDirectoryOf(Services.GetRequiredService<SettingsService>());
-            _dataFolderLock = DataFolderLock.TryAcquire(dataDirectory);
-            if (_dataFolderLock is null)
+            string? problem;
+            try
             {
-                desktop.MainWindow = new MessageDialog("Hermes is already running",
-                    $"Another Hermes window is using the data folder {dataDirectory}. Switch to that window, or close it and start Hermes again.",
-                    [("OK", "ok", "accent")]);
+                _dataFolderLock = DataFolderLock.TryAcquire(dataDirectory);
+                problem = _dataFolderLock is null
+                    ? $"Another Hermes window is using the data folder {dataDirectory}. Switch to that window, or close it and start Hermes again."
+                    : null;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                problem = $"The data folder {dataDirectory} can't be used: {ex.Message}";
+            }
+            if (problem is not null)
+            {
+                desktop.MainWindow = new MessageDialog("Hermes can't start", problem, [("OK", "ok", "accent")]);
                 base.OnFrameworkInitializationCompleted();
                 return;
             }
@@ -49,7 +58,7 @@ public partial class App : Application
                 // Give queued history writes a moment to land; a slow disk mustn't hold the app open.
                 Services.GetRequiredService<WorkspaceService>().FlushHistoryAsync().Wait(TimeSpan.FromSeconds(2));
                 (Services as IDisposable)?.Dispose();
-                _dataFolderLock.Dispose();
+                _dataFolderLock!.Dispose();
             };
         }
 

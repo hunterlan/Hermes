@@ -188,12 +188,14 @@ public sealed partial class KeyValueListViewModel : ObservableObject
     /// </summary>
     private void ApplyBulkText(List<KeyValueItem> lines)
     {
-        var rowsByKey = Rows.Where(r => !r.IsPlaceholder).GroupBy(r => r.Key, StringComparer.Ordinal)
+        // Keys are trimmed in the text, so rows are matched by their trimmed key.
+        var rowsByKey = Rows.Where(r => !r.IsPlaceholder).GroupBy(r => r.Key.Trim(), StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => new Queue<KeyValueRowViewModel>(g), StringComparer.Ordinal);
         foreach (var line in lines)
         {
-            if (rowsByKey.GetValueOrDefault(line.Key) is { Count: > 0 } rows && rows.Dequeue().ToModel() is var row)
+            if (rowsByKey.GetValueOrDefault(line.Key) is { Count: > 0 } rows)
             {
+                var row = rows.Dequeue().ToModel();
                 line.Description = row.Description;
                 line.Kind = row.Kind;
             }

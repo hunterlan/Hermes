@@ -74,6 +74,28 @@ public class EnvironmentMatrixTests
     }
 
     [AvaloniaFact]
+    public void Matrix_swaps_variable_names()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var (a, b) = ("swapA" + Guid.NewGuid().ToString("N")[..8], "swapB" + Guid.NewGuid().ToString("N")[..8]);
+        var env = Workspace.CreateEnvironment("Swap " + Guid.NewGuid());
+        env.Variables.AddRange([new Variable(a, "value of a"), new Variable(b, "value of b")]);
+        Workspace.SaveEnvironment(env);
+
+        vm.OpenEnvironmentMatrixCommand.Execute(null);
+        var matrix = Assert.IsType<EnvironmentMatrixTabViewModel>(vm.ActiveTab);
+        var (rowA, rowB) = (matrix.Rows.Single(r => r.Name == a), matrix.Rows.Single(r => r.Name == b));
+        rowA.Name = b;
+        rowB.Name = a;
+        matrix.SaveAsync().Wait();
+
+        Assert.Equal("value of a", env.Variables.Single(v => v.Key == b).Value);
+        Assert.Equal("value of b", env.Variables.Single(v => v.Key == a).Value);
+        Workspace.DeleteEnvironment(env);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void Saving_the_matrix_does_not_bring_back_a_deleted_environment()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();

@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _sessionTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private MainWindowViewModel? _viewModel;
     private bool _quitConfirmed;
+    private bool _confirmingQuit;
 
     public MainWindow()
     {
@@ -124,10 +125,26 @@ public partial class MainWindow : Window
         if (_viewModel is null)
             return;
         // The OS won't wait for a prompt when it shuts down.
+        if (_confirmingQuit)
+        {
+            // Closed again while the prompts are up: they decide.
+            e.Cancel = true;
+            return;
+        }
         if (_viewModel.HasUnsavedEdits && !_quitConfirmed && e.CloseReason != WindowCloseReason.OSShutdown)
         {
             e.Cancel = true;
-            if (!await _viewModel.ConfirmQuitAsync())
+            _confirmingQuit = true;
+            bool confirmed;
+            try
+            {
+                confirmed = await _viewModel.ConfirmQuitAsync();
+            }
+            finally
+            {
+                _confirmingQuit = false;
+            }
+            if (!confirmed)
                 return;
             _quitConfirmed = true;
             Close();

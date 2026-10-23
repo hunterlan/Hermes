@@ -48,6 +48,13 @@ public class TabTests
         tab.UseDefaultSettingsCommand.Execute(null);
         Assert.Null(tab.BuildModel().Settings.VerifySsl);
         Assert.False(tab.HasSettingsOverrides);
+
+        // Without an override the toggle follows the app setting as it changes.
+        var settings = App.Services.GetRequiredService<SettingsService>();
+        var changed = new List<string?>();
+        tab.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        settings.Update(settings.Current);
+        Assert.Contains(nameof(RequestTabViewModel.VerifySsl), changed);
         window.Close();
     }
 
@@ -92,6 +99,7 @@ public class TabTests
         Assert.True(vm.HasUnsavedEdits);
 
         window.Close();
+        window.Close(); // again while the prompt is up: still one prompt
         Answer(window, "cancel");
         Assert.True(window.IsVisible);
 

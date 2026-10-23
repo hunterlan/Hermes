@@ -65,6 +65,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         };
         services.Settings.Changed += () =>
         {
+            foreach (var tab in Tabs)
+                tab.OnSettingsChanged();
             OnPropertyChanged(nameof(ShowTabs));
             OnPropertyChanged(nameof(IsTabStripVisible));
         };

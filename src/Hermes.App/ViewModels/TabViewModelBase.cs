@@ -55,6 +55,9 @@ public abstract partial class TabViewModelBase(TabServices services) : Observabl
 
     public virtual SessionTab ToSession() => new() { Kind = Kind, EntityId = EntityId, IsPinned = IsPinned };
 
+    /// <summary>Called when the app settings changed.</summary>
+    public virtual void OnSettingsChanged() { }
+
     /// <summary>Called when the active environment or any variables changed.</summary>
     public virtual void OnVariablesChanged() { }
 

@@ -25,9 +25,19 @@ public class EditorTests
         inner.Undo();
         Assert.Equal("{\"a\":1}", inner.Text);
 
-        editor.DataContext = "second tab";
+        // The new tab's text comes before or after the DataContext; either way its history starts empty.
         editor.Text = "other";
+        editor.DataContext = "second tab";
+        UiTestHelpers.Pump();
         Assert.False(inner.Document.UndoStack.CanUndo);
+
+        // Switching to a tab with the same text, typing, then a view-model edit: the typing can still be undone.
+        editor.DataContext = "third tab";
+        UiTestHelpers.Pump();
+        inner.Document.Insert(inner.Document.TextLength, "!");
+        editor.Text = "other! (formatted)";
+        inner.Undo();
+        Assert.Equal("other!", inner.Text);
         window.Close();
     }
 
