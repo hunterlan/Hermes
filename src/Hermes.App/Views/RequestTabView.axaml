@@ -277,6 +277,8 @@
                   </StackPanel>
                   <TextBox Grid.Column="1" Text="{Binding TimeoutText}" Width="120" PlaceholderText="Default" />
                 </Grid>
+                <Button Classes="ghost" HorizontalAlignment="Left" Content="Use app defaults" Command="{Binding UseDefaultSettingsCommand}"
+                        IsVisible="{Binding HasSettingsOverrides}" />
               </StackPanel>
             </StackPanel>
           </Border>

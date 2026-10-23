@@ -92,8 +92,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
     [ObservableProperty] public partial Option<RawLanguage> SelectedRawLanguage { get; set; } = RawLanguages[2];
     [ObservableProperty] public partial string RawBody { get; set; } = "";
     [ObservableProperty] public partial string? BinaryFilePath { get; set; }
-    [ObservableProperty] public partial bool FollowRedirects { get; set; }
-    [ObservableProperty] public partial bool VerifySsl { get; set; }
+    /// <summary>The request's own setting; null follows the app setting.</summary>
+    [ObservableProperty] public partial bool? FollowRedirectsOverride { get; set; }
+    [ObservableProperty] public partial bool? VerifySslOverride { get; set; }
     [ObservableProperty] public partial string TimeoutText { get; set; } = "";
 
     [ObservableProperty] public partial bool IsSending { get; set; }
@@ -117,7 +118,22 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
 
     public bool IsParamsSectionVisible => ParamsAdded || Params.ActiveCount > 0 || HasPathVariables;
     public bool IsBodySectionVisible => BodyAdded || HasBody || HasUnsupportedBody || SelectedMethod is "POST" or "PUT" or "PATCH";
-    public bool HasSettingsOverrides => BuildModel().Settings is { FollowRedirects: not null } or { VerifySsl: not null } or { TimeoutMs: not null };
+    /// <summary>The effective setting, shown by the toggle; turning the toggle makes it an override.</summary>
+    public bool FollowRedirects
+    {
+        get => FollowRedirectsOverride ?? Services.Settings.Current.FollowRedirects;
+        set => FollowRedirectsOverride = value;
+    }
+
+    public bool VerifySsl
+    {
+        get => VerifySslOverride ?? Services.Settings.Current.VerifySsl;
+        set => VerifySslOverride = value;
+    }
+
+    public bool HasSettingsOverrides => FollowRedirectsOverride is not null || VerifySslOverride is not null || TimeoutMs is not null;
+
+    private int? TimeoutMs => int.TryParse(TimeoutText, out var t) && t >= 0 ? t : null;
     public bool IsSettingsSectionVisible => SettingsAdded || HasSettingsOverrides;
     public bool HasUnusedSections => !IsParamsSectionVisible || !IsBodySectionVisible || !IsSettingsSectionVisible;
 
@@ -174,9 +190,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         UrlEncoded.Load(model.Body.UrlEncoded);
         BinaryFilePath = model.Body.BinaryFilePath;
         Auth.Load(model.Auth);
-        var settings = Services.Settings.Current;
-        FollowRedirects = model.Settings.FollowRedirects ?? settings.FollowRedirects;
-        VerifySsl = model.Settings.VerifySsl ?? settings.VerifySsl;
+        FollowRedirectsOverride = model.Settings.FollowRedirects;
+        VerifySslOverride = model.Settings.VerifySsl;
         TimeoutText = model.Settings.TimeoutMs?.ToString() ?? "";
         _description = model.Description;
         _eventsJson = model.EventsJson;
@@ -192,7 +207,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
 
     public HttpRequestModel BuildModel()
     {
-        var settings = Services.Settings.Current;
         return new HttpRequestModel
         {
             Id = RequestId,
@@ -217,9 +231,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
             Auth = Auth.ToModel(),
             Settings = new RequestSettings
             {
-                FollowRedirects = FollowRedirects == settings.FollowRedirects ? null : FollowRedirects,
-                VerifySsl = VerifySsl == settings.VerifySsl ? null : VerifySsl,
-                TimeoutMs = int.TryParse(TimeoutText, out var t) && t >= 0 ? t : null,
+                FollowRedirects = FollowRedirectsOverride,
+                VerifySsl = VerifySslOverride,
+                TimeoutMs = TimeoutMs,
             },
         };
     }
@@ -277,12 +291,13 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         {
             if (e.PropertyName is nameof(SelectedBodyMode))
                 BodyAdded = true;
-            else if (e.PropertyName is nameof(FollowRedirects) or nameof(VerifySsl) or nameof(TimeoutText))
+            else if (e.PropertyName is nameof(FollowRedirectsOverride) or nameof(VerifySslOverride) or nameof(TimeoutText))
                 SettingsAdded = true;
         }
 
         if (e.PropertyName is nameof(Name) or nameof(SelectedMethod) or nameof(SelectedBodyMode) or nameof(SelectedRawLanguage)
-            or nameof(RawBody) or nameof(BinaryFilePath) or nameof(FollowRedirects) or nameof(VerifySsl) or nameof(TimeoutText))
+            or nameof(RawBody) or nameof(BinaryFilePath) or nameof(FollowRedirectsOverride) or nameof(VerifySslOverride)
+            or nameof(TimeoutText))
             OnAnyChanged();
     }
 
@@ -294,6 +309,10 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         UpdateDirty();
         NotifySections();
     }
+
+    partial void OnFollowRedirectsOverrideChanged(bool? value) => OnPropertyChanged(nameof(FollowRedirects));
+
+    partial void OnVerifySslOverrideChanged(bool? value) => OnPropertyChanged(nameof(VerifySsl));
 
     partial void OnUrlChanged(string value)
     {
@@ -663,6 +682,15 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
                 SettingsAdded = SettingsExpanded = true;
                 break;
         }
+    }
+
+    /// <summary>Drops the request's own settings, so it follows the app settings again.</summary>
+    [RelayCommand]
+    private void UseDefaultSettings()
+    {
+        FollowRedirectsOverride = null;
+        VerifySslOverride = null;
+        TimeoutText = "";
     }
 
     private void NotifySections()
