@@ -33,6 +33,19 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     [ObservableProperty] public partial bool IsSuccess { get; set; }
     [ObservableProperty] public partial bool IsRedirect { get; set; }
     [ObservableProperty] public partial bool IsClientOrServerError { get; set; }
+    [ObservableProperty] public partial bool IsClientError { get; set; }
+    [ObservableProperty] public partial bool IsServerError { get; set; }
+
+    /// <summary>The exact request that went out (after variables and auth), shown in the "Sent request" tab.</summary>
+    [ObservableProperty] public partial string SentRequestText { get; set; } = "";
+
+    // Timing bar: time to first byte vs download.
+    [ObservableProperty] public partial double WaitMs { get; set; }
+    [ObservableProperty] public partial double DownloadMs { get; set; }
+    public string WaitText => $"Wait {WaitMs:0} ms";
+    public string DownloadText => $"Download {DownloadMs:0} ms";
+
+    public bool IsSideBySide => settings.Current.Layout == ResponseLayout.Horizontal;
 
     [ObservableProperty] public partial string PrettyText { get; set; } = "";
     [ObservableProperty] public partial string RawText { get; set; } = "";
@@ -77,11 +90,25 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
             case nameof(PreviewImage):
                 OnPropertyChanged(nameof(HasPreviewImage));
                 break;
+            case nameof(WaitMs) or nameof(DownloadMs):
+                OnPropertyChanged(nameof(WaitText));
+                OnPropertyChanged(nameof(DownloadText));
+                break;
         }
     }
 
     [RelayCommand]
     private void SetViewMode(ResponseViewMode mode) => ViewMode = mode;
+
+    [RelayCommand]
+    private void SetLayout(ResponseLayout layout)
+    {
+        settings.Current.Layout = layout;
+        settings.Update(settings.Current);
+        OnPropertyChanged(nameof(IsSideBySide));
+    }
+
+    public void SetSentRequest(PreparedRequest request) => SentRequestText = RawRequestFormatter.Format(request);
 
     public void BeginLoading()
     {
@@ -112,6 +139,10 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         IsSuccess = response.StatusCode is >= 200 and < 300;
         IsRedirect = response.StatusCode is >= 300 and < 400;
         IsClientOrServerError = response.StatusCode >= 400;
+        IsClientError = response.StatusCode is >= 400 and < 500;
+        IsServerError = response.StatusCode >= 500;
+        WaitMs = response.TimeToFirstByte.TotalMilliseconds;
+        DownloadMs = Math.Max(0, (response.TotalTime - response.TimeToFirstByte).TotalMilliseconds);
         TimeText = FormatDuration(response.TotalTime);
         TimingDetails = $"Time to first byte: {FormatDuration(response.TimeToFirstByte)}\nDownload: {FormatDuration(response.TotalTime - response.TimeToFirstByte)}\nTotal: {FormatDuration(response.TotalTime)}";
         SizeText = FormatSize(response.TotalSize);

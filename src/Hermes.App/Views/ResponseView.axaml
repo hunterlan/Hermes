@@ -5,11 +5,32 @@
              xmlns:core="using:Hermes.Core.Models"
              x:Class="Hermes.App.Views.ResponseView"
              x:DataType="vm:ResponseViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.status">
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="9,3" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.status TextBlock">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.layout">
+      <Setter Property="Width" Value="28" />
+      <Setter Property="Height" Value="28" />
+    </Style>
+    <Style Selector="Button.layout.on">
+      <Setter Property="Background" Value="{DynamicResource BgTertiaryBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+  </UserControl.Styles>
+
   <Panel>
     <!-- empty state -->
     <StackPanel IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
-      <PathIcon Data="{StaticResource IconLogo}" Width="56" Height="56" Foreground="{DynamicResource TextTertiaryBrush}" />
-      <TextBlock Classes="secondary" Text="Enter the URL and click Send to get a response" HorizontalAlignment="Center" />
+      <PathIcon Data="{StaticResource IconLogo}" Width="40" Height="40" Foreground="{DynamicResource TextTertiaryBrush}" />
+      <TextBlock Classes="secondary" Text="Send the request to see the response here" HorizontalAlignment="Center" />
+      <Border Classes="kbd" HorizontalAlignment="Center"><TextBlock Text="Ctrl ↵" /></Border>
     </StackPanel>
 
     <!-- loading -->
@@ -18,27 +39,79 @@
       <TextBlock Classes="secondary" Text="Sending request…" HorizontalAlignment="Center" />
     </StackPanel>
 
-    <!-- error -->
+    <!-- no response: say why, in words -->
     <StackPanel IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                Spacing="8" MaxWidth="560" Margin="20">
-      <TextBlock Classes="h1" Text="Could not send request" HorizontalAlignment="Center" />
-      <SelectableTextBlock Classes="error" Text="{Binding Error}" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" Foreground="{DynamicResource ErrorBrush}" />
+                Spacing="10" MaxWidth="560" Margin="20">
+      <Border Classes="status" HorizontalAlignment="Center" Background="{DynamicResource BgTertiaryBrush}"
+              BorderBrush="{DynamicResource TextTertiaryBrush}" BorderThickness="1">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Data="{StaticResource IconCancel}" Width="13" Height="13" Foreground="{DynamicResource TextSecondaryBrush}" />
+          <TextBlock Text="No response" Foreground="{DynamicResource TextSecondaryBrush}" />
+        </StackPanel>
+      </Border>
+      <SelectableTextBlock Text="{Binding Error}" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
     </StackPanel>
 
     <!-- response -->
-    <Grid RowDefinitions="*" IsVisible="{Binding HasResponse}" Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}">
-      <TabControl Padding="0" Margin="0">
+    <Grid RowDefinitions="Auto,*,Auto" IsVisible="{Binding HasResponse}" Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}">
+      <!-- status: icon + text + colour, never colour alone -->
+      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" Margin="0,2,0,4">
+        <Panel>
+          <Border Classes="status tag ok" IsVisible="{Binding IsSuccess}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource IconCheck}" Width="13" Height="13" />
+              <TextBlock Text="{Binding StatusText}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="status tag info" IsVisible="{Binding IsRedirect}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource IconArrowRight}" Width="13" Height="13" />
+              <TextBlock Text="{Binding StatusText}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="status tag warn" IsVisible="{Binding IsClientError}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource IconAlert}" Width="13" Height="13" />
+              <TextBlock Text="{Binding StatusText}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="status tag err" IsVisible="{Binding IsServerError}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource IconClose}" Width="13" Height="13" />
+              <TextBlock Text="{Binding StatusText}" />
+            </StackPanel>
+          </Border>
+        </Panel>
+        <TextBlock Grid.Column="1" Classes="mono secondary" Text="{Binding TimeText}" ToolTip.Tip="{Binding TimingDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="2" Classes="mono secondary" Text="{Binding SizeText}" ToolTip.Tip="{Binding SizeDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="2">
+          <Button Classes="icon layout" Classes.on="{Binding IsSideBySide}" Command="{Binding SetLayoutCommand}"
+                  CommandParameter="{x:Static core:ResponseLayout.Horizontal}" ToolTip.Tip="Side by side" AutomationProperties.Name="Side by side layout">
+            <PathIcon Data="{StaticResource IconLayoutSide}" />
+          </Button>
+          <Button Classes="icon layout" Classes.on="{Binding !IsSideBySide}" Command="{Binding SetLayoutCommand}"
+                  CommandParameter="{x:Static core:ResponseLayout.Vertical}" ToolTip.Tip="Stacked" AutomationProperties.Name="Stacked layout">
+            <PathIcon Data="{StaticResource IconLayoutStacked}" />
+          </Button>
+        </StackPanel>
+      </Grid>
+
+      <TabControl Grid.Row="1" Padding="0" Margin="0">
         <TabItem Header="Body">
           <Grid RowDefinitions="Auto,*">
-            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,6">
-              <StackPanel Orientation="Horizontal" Spacing="2">
-                <ToggleButton Classes="ghost" Content="Pretty" IsChecked="{Binding IsPretty, Mode=OneWay}"
-                              Command="{Binding SetViewModeCommand}" CommandParameter="{x:Static vm:ResponseViewMode.Pretty}" />
-                <ToggleButton Classes="ghost" Content="Raw" IsChecked="{Binding IsRaw, Mode=OneWay}"
-                              Command="{Binding SetViewModeCommand}" CommandParameter="{x:Static vm:ResponseViewMode.Raw}" />
-                <ToggleButton Classes="ghost" Content="Preview" IsChecked="{Binding IsPreview, Mode=OneWay}"
-                              Command="{Binding SetViewModeCommand}" CommandParameter="{x:Static vm:ResponseViewMode.Preview}" />
-                <TextBlock Classes="tertiary" Text="Large response: showing raw text" FontSize="12" VerticalAlignment="Center" Margin="10,0"
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,6,0,6">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Classes="seg">
+                  <StackPanel Orientation="Horizontal">
+                    <ToggleButton Classes="seg" Content="Pretty" IsChecked="{Binding IsPretty, Mode=OneWay}"
+                                  Command="{Binding SetViewModeCommand}" CommandParameter="{x:Static vm:ResponseViewMode.Pretty}" />
+                    <ToggleButton Classes="seg" Content="Raw" IsChecked="{Binding IsRaw, Mode=OneWay}"
+                                  Command="{Binding SetViewModeCommand}" CommandParameter="{x:Static vm:ResponseViewMode.Raw}" />
+                    <ToggleButton Classes="seg" Content="Preview" IsChecked="{Binding IsPreview, Mode=OneWay}"
+                                  Command="{Binding SetViewModeCommand}" CommandParameter="{x:Static vm:ResponseViewMode.Preview}" />
+                  </StackPanel>
+                </Border>
+                <TextBlock Classes="tertiary" Text="Large response: showing raw text" FontSize="12" VerticalAlignment="Center"
                            IsVisible="{Binding IsTooLargeForPretty}" />
               </StackPanel>
               <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2">
@@ -50,7 +123,7 @@
                 </Button>
               </StackPanel>
             </Grid>
-            <Border Grid.Row="1" Classes="table" IsVisible="{Binding IsTextView}">
+            <Border Grid.Row="1" Classes="table" IsVisible="{Binding IsTextView}" Background="{DynamicResource BgCodeBrush}">
               <c:CodeEditor Text="{Binding DisplayText, Mode=OneWay}" Language="{Binding DisplayLanguage}" IsReadOnly="True" />
             </Border>
             <Border Grid.Row="1" Classes="table" IsVisible="{Binding IsPreview}">
@@ -67,7 +140,36 @@
         </TabItem>
         <TabItem>
           <TabItem.Header>
-            <TextBlock><Run Text="Cookies" /><Run Text="{Binding CookiesBadge}" Foreground="{DynamicResource SuccessBrush}" /></TextBlock>
+            <TextBlock><Run Text="Headers" /><Run Text="{Binding HeadersBadge}" Foreground="{DynamicResource TextTertiaryBrush}" /></TextBlock>
+          </TabItem.Header>
+          <ScrollViewer>
+            <Border Classes="table" VerticalAlignment="Top" Margin="0,6,0,0">
+              <StackPanel>
+                <Border Classes="tableHeader">
+                  <Grid ColumnDefinitions="*,2*">
+                    <TextBlock Classes="section" Text="Key" Margin="8,0" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="section" Text="Value" Margin="8,0" VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+                <ItemsControl ItemsSource="{Binding Headers}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="core:KeyValueItem">
+                      <Border Classes="tableRow">
+                        <Grid ColumnDefinitions="*,2*">
+                          <SelectableTextBlock Classes="mono" Text="{Binding Key}" Margin="8,6" FontSize="12.5" TextWrapping="Wrap" />
+                          <SelectableTextBlock Grid.Column="1" Classes="mono" Text="{Binding Value}" Margin="8,6" FontSize="12.5" TextWrapping="Wrap" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+          </ScrollViewer>
+        </TabItem>
+        <TabItem>
+          <TabItem.Header>
+            <TextBlock><Run Text="Cookies" /><Run Text="{Binding CookiesBadge}" Foreground="{DynamicResource TextTertiaryBrush}" /></TextBlock>
           </TabItem.Header>
           <Panel>
             <TextBlock Classes="secondary" Text="No cookies received from the server" IsVisible="{Binding !Cookies.Count}" Margin="4,12" />
@@ -107,47 +209,37 @@
         </TabItem>
         <TabItem>
           <TabItem.Header>
-            <TextBlock><Run Text="Headers" /><Run Text="{Binding HeadersBadge}" Foreground="{DynamicResource SuccessBrush}" /></TextBlock>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="Sent request" VerticalAlignment="Center" />
+              <TextBlock Text="exact bytes" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
+            </StackPanel>
           </TabItem.Header>
-          <ScrollViewer>
-            <Border Classes="table" VerticalAlignment="Top" Margin="0,6,0,0">
-              <StackPanel>
-                <Border Classes="tableHeader">
-                  <Grid ColumnDefinitions="*,2*">
-                    <TextBlock Classes="section" Text="Key" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Classes="section" Text="Value" Margin="8,0" VerticalAlignment="Center" />
-                  </Grid>
-                </Border>
-                <ItemsControl ItemsSource="{Binding Headers}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="core:KeyValueItem">
-                      <Border Classes="tableRow">
-                        <Grid ColumnDefinitions="*,2*">
-                          <SelectableTextBlock Text="{Binding Key}" Margin="8,6" FontWeight="SemiBold" TextWrapping="Wrap" />
-                          <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" Margin="8,6" TextWrapping="Wrap" />
-                        </Grid>
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </StackPanel>
-            </Border>
-          </ScrollViewer>
+          <Border Classes="table" Margin="0,6,0,0" Background="{DynamicResource BgCodeBrush}">
+            <c:CodeEditor Text="{Binding SentRequestText, Mode=OneWay}" Language="text" IsReadOnly="True" />
+          </Border>
         </TabItem>
       </TabControl>
 
-      <!-- status summary, top-right next to the tab headers -->
-      <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,4,0">
-        <TextBlock FontWeight="SemiBold"
-                   Classes.success="{Binding IsSuccess}" Classes.redirect="{Binding IsRedirect}" Classes.error="{Binding IsClientOrServerError}">
-          <Run Text="Status: " Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="Normal" /><Run Text="{Binding StatusText}" />
-        </TextBlock>
-        <TextBlock ToolTip.Tip="{Binding TimingDetails}">
-          <Run Text="Time: " Foreground="{DynamicResource TextSecondaryBrush}" /><Run Text="{Binding TimeText}" Foreground="{DynamicResource SuccessBrush}" />
-        </TextBlock>
-        <TextBlock ToolTip.Tip="{Binding SizeDetails}">
-          <Run Text="Size: " Foreground="{DynamicResource TextSecondaryBrush}" /><Run Text="{Binding SizeText}" Foreground="{DynamicResource SuccessBrush}" />
-        </TextBlock>
+      <!-- timing: what we measure, nothing invented -->
+      <StackPanel Grid.Row="2" Spacing="6" Margin="0,10,0,0">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="Timing" FontWeight="SemiBold" FontSize="12" />
+          <TextBlock Classes="mono tertiary" FontSize="12" Text="{Binding TimeText, StringFormat='{}{0} total'}" />
+        </StackPanel>
+        <Grid Name="TimingBar" ColumnDefinitions="*,2,*" Height="8">
+          <Border Background="{DynamicResource AccentBrush}" CornerRadius="4,0,0,4" />
+          <Border Grid.Column="2" Background="{DynamicResource SuccessBrush}" CornerRadius="0,4,4,0" />
+        </Grid>
+        <StackPanel Orientation="Horizontal" Spacing="16">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Rectangle Width="8" Height="8" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+            <TextBlock Classes="mono secondary" FontSize="11.5" Text="{Binding WaitText}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Rectangle Width="8" Height="8" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center" />
+            <TextBlock Classes="mono secondary" FontSize="11.5" Text="{Binding DownloadText}" />
+          </StackPanel>
+        </StackPanel>
       </StackPanel>
     </Grid>
   </Panel>

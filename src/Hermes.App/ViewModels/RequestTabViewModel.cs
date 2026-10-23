@@ -470,6 +470,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         var prepared = RequestPreparer.Prepare(model, CreateContext());
 
         IsSending = true;
+        Response.SetSentRequest(prepared);
         Response.BeginLoading();
         _sendCts = new CancellationTokenSource();
         try

@@ -29,6 +29,27 @@ public class RequestPreparerTests
     }
 
     [Fact]
+    public void Raw_request_text_shows_resolved_line_host_headers_and_body()
+    {
+        var env = new EnvironmentModel { Variables = [new Variable("base", "https://api.test:8443")] };
+        var request = new HttpRequestModel
+        {
+            Method = "POST",
+            Url = "{{base}}/v2/customers?x=1",
+            Headers = [new KeyValueItem("X-A", "1")],
+            Body = new RequestBody { Mode = BodyMode.Raw, Raw = "{\"a\":1}", RawLanguage = RawLanguage.Json },
+        };
+
+        var text = RawRequestFormatter.Format(RequestPreparer.Prepare(request, Context(env: env)));
+
+        var lines = text.Split('\n');
+        Assert.Equal("POST /v2/customers?x=1 HTTP/1.1", lines[0]);
+        Assert.Equal("Host: api.test:8443", lines[1]);
+        Assert.Contains("X-A: 1", lines);
+        Assert.EndsWith("\n\n{\"a\":1}", text);
+    }
+
+    [Fact]
     public void Inherits_auth_from_nearest_folder()
     {
         var collection = new CollectionModel { Auth = new AuthConfig { Type = AuthType.Bearer, Bearer = { Token = "coll" } } };
