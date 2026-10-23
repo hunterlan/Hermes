@@ -128,7 +128,25 @@ public sealed partial class AuthEditorViewModel : ObservableObject
         ? expires < DateTimeOffset.Now ? "Token expired" : $"Expires {expires.LocalDateTime:g}"
         : "";
 
-    public void RefreshInherited() => OnPropertyChanged(nameof(TypeDescription));
+    /// <summary>One line for the collapsed Auth section, e.g. "Inherited · OAuth 2.0 from Payments API".</summary>
+    public string Summary
+    {
+        get
+        {
+            if (!IsInherit)
+                return SelectedType.Label;
+            if (InheritedAuthProvider?.Invoke() is not { } effective)
+                return "Inherited";
+            var label = BaseTypes.FirstOrDefault(t => t.Value == effective.Auth.Type)?.Label ?? "No Auth";
+            return effective.InheritedFrom is null ? $"Inherited · {label}" : $"Inherited · {label} from {effective.InheritedFrom}";
+        }
+    }
+
+    public void RefreshInherited()
+    {
+        OnPropertyChanged(nameof(TypeDescription));
+        OnPropertyChanged(nameof(Summary));
+    }
 
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -143,6 +161,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsApiKey));
                 OnPropertyChanged(nameof(IsOAuth2));
                 OnPropertyChanged(nameof(TypeDescription));
+                OnPropertyChanged(nameof(Summary));
                 break;
             case nameof(SelectedGrantType):
                 OnPropertyChanged(nameof(IsAuthCodeGrant));
@@ -150,7 +169,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
                 break;
         }
 
-        if (!_loading && e.PropertyName is not (nameof(TokenStatus) or nameof(IsFetchingToken) or nameof(TypeDescription))
+        if (!_loading && e.PropertyName is not (nameof(TokenStatus) or nameof(IsFetchingToken) or nameof(TypeDescription) or nameof(Summary))
             && !e.PropertyName!.StartsWith("Is", StringComparison.Ordinal))
             Changed?.Invoke();
     }

@@ -65,7 +65,7 @@ public partial class RequestTabView : UserControl
         if (horizontal)
         {
             SplitGrid.ColumnDefinitions.AddRange([new ColumnDefinition(1, GridUnitType.Star), new ColumnDefinition(9, GridUnitType.Pixel), new ColumnDefinition(1, GridUnitType.Star)]);
-            Place(RequestTabs, 0, 0);
+            Place(RequestEditor, 0, 0);
             Place(Splitter, 0, 1);
             Place(SplitterLine, 0, 1);
             Place(ResponsePane, 0, 2);
@@ -79,7 +79,7 @@ public partial class RequestTabView : UserControl
         else
         {
             SplitGrid.RowDefinitions.AddRange([new RowDefinition(1, GridUnitType.Star), new RowDefinition(9, GridUnitType.Pixel), new RowDefinition(1, GridUnitType.Star)]);
-            Place(RequestTabs, 0, 0);
+            Place(RequestEditor, 0, 0);
             Place(Splitter, 1, 0);
             Place(SplitterLine, 1, 0);
             Place(ResponsePane, 2, 0);

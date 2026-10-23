@@ -92,17 +92,44 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
     [ObservableProperty] public partial bool VerifySsl { get; set; }
     [ObservableProperty] public partial string TimeoutText { get; set; } = "";
 
-    [ObservableProperty] public partial int SelectedEditorTab { get; set; }
     [ObservableProperty] public partial bool IsSending { get; set; }
-    [ObservableProperty] public partial bool ShowHiddenHeaders { get; set; }
     [ObservableProperty] public partial VariableScope Variables { get; set; } = VariableScope.Empty;
     [ObservableProperty] public partial string Breadcrumb { get; set; } = "";
     [ObservableProperty] public partial bool IsRenaming { get; set; }
 
+    /// <summary>The URL after variable resolution, shown under the URL bar as "Sends to".</summary>
+    [ObservableProperty] public partial string ResolvedUrl { get; set; } = "";
+
+    // ---- composer sections: only what the request uses is on screen; the rest waits as "Not used yet" chips ----
+
+    [ObservableProperty] public partial bool ParamsAdded { get; set; }
+    [ObservableProperty] public partial bool BodyAdded { get; set; }
+    [ObservableProperty] public partial bool SettingsAdded { get; set; }
+    [ObservableProperty] public partial bool ParamsExpanded { get; set; } = true;
+    [ObservableProperty] public partial bool HeadersExpanded { get; set; } = true;
+    [ObservableProperty] public partial bool AuthExpanded { get; set; }
+    [ObservableProperty] public partial bool BodyExpanded { get; set; } = true;
+    [ObservableProperty] public partial bool SettingsExpanded { get; set; } = true;
+
+    public bool IsParamsSectionVisible => ParamsAdded || Params.ActiveCount > 0 || HasPathVariables;
+    public bool IsBodySectionVisible => BodyAdded || HasBody || HasUnsupportedBody || SelectedMethod is "POST" or "PUT" or "PATCH";
+    public bool HasSettingsOverrides => BuildModel().Settings is { FollowRedirects: not null } or { VerifySsl: not null } or { TimeoutMs: not null };
+    public bool IsSettingsSectionVisible => SettingsAdded || HasSettingsOverrides;
+    public bool HasUnusedSections => !IsParamsSectionVisible || !IsBodySectionVisible || !IsSettingsSectionVisible;
+
+    public string? ActiveEnvironmentName => Services.Workspace.ActiveEnvironment?.Name;
+
     public List<KeyValueItem> HiddenHeaders { get; private set; } = [];
 
-    public string HeadersBadge => (Headers.ActiveCount + HiddenHeaders.Count) is var n and > 0 ? $" ({n})" : "";
-    public string ParamsBadge => Params.CountBadge;
+    public string HeadersSummary => (Headers.ActiveCount, HiddenHeaders.Count) switch
+    {
+        (0, 0) => "",
+        (var mine, 0) => $"{mine} yours",
+        (0, var auto) => $"{auto} added automatically",
+        var (mine, auto) => $"{mine} yours · {auto} added automatically",
+    };
+    public string ParamsSummary => Params.ActiveCount is var n and > 0 ? $"{n} active" : "";
+    public string BodySummary => SelectedBodyMode.Value == BodyMode.Raw ? SelectedRawLanguage.Label : SelectedBodyMode.Label;
     public bool HasPathVariables => PathVariables.Rows.Count > 0;
     public bool HasBody => SelectedBodyMode.Value != BodyMode.None;
     public bool IsBodyNone => SelectedBodyMode.Value == BodyMode.None;
@@ -156,6 +183,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         OnPropertyChanged(nameof(HasUnsupportedBody));
         OnPropertyChanged(nameof(Method));
         RefreshHiddenHeaders();
+        NotifySections();
     }
 
     public HttpRequestModel BuildModel()
@@ -229,10 +257,23 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
                 break;
             case nameof(SelectedMethod):
                 OnPropertyChanged(nameof(Method));
+                NotifySections();
                 break;
             case nameof(Name):
                 Title = Name;
                 break;
+            case nameof(ParamsAdded) or nameof(BodyAdded) or nameof(SettingsAdded):
+                NotifySections();
+                break;
+        }
+
+        // A section the user edits stays on screen even if it becomes empty again.
+        if (!_loading)
+        {
+            if (e.PropertyName is nameof(SelectedBodyMode))
+                BodyAdded = true;
+            else if (e.PropertyName is nameof(FollowRedirects) or nameof(VerifySsl) or nameof(TimeoutText))
+                SettingsAdded = true;
         }
 
         if (e.PropertyName is nameof(Name) or nameof(SelectedMethod) or nameof(SelectedBodyMode) or nameof(SelectedRawLanguage)
@@ -246,6 +287,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
             return;
         RefreshHiddenHeaders();
         UpdateDirty();
+        NotifySections();
     }
 
     partial void OnUrlChanged(string value)
@@ -285,7 +327,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
             Params.Load(MergeQueryParams(Params.ToModels(), UrlUtilities.ParseQuery(UrlUtilities.Split(value).Query)));
             PathVariables.Load(MergePathVariables(value, PathVariables.ToModels()));
             OnPropertyChanged(nameof(HasPathVariables));
-            OnPropertyChanged(nameof(ParamsBadge));
+            NotifySections();
         }
         finally
         {
@@ -299,9 +341,10 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
 
     private void OnParamsChanged()
     {
-        OnPropertyChanged(nameof(ParamsBadge));
+        NotifySections();
         if (_syncingUrl || _loading)
             return;
+        ParamsAdded = true;
         _syncingUrl = true;
         try
         {
@@ -353,15 +396,14 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
             .ToList();
     }
 
-    partial void OnShowHiddenHeadersChanged(bool value) => RefreshHiddenHeaders();
-
-    /// <summary>Headers Hermes adds automatically (defaults, content type, auth) that the user didn't set.</summary>
+    /// <summary>Headers Hermes adds automatically (defaults, content type, auth) that the user didn't set, and the resolved URL.</summary>
     private void RefreshHiddenHeaders()
     {
         try
         {
             var model = BuildModel();
             var prepared = RequestPreparer.Prepare(model, CreateContext());
+            ResolvedUrl = prepared.Url;
             var userKeys = model.Headers.Where(h => h.Enabled).Select(h => h.Key.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var hidden = prepared.Headers.Where(h => !userKeys.Contains(h.Key)).ToList();
 
@@ -376,9 +418,11 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         catch (Exception)
         {
             HiddenHeaders = [];
+            ResolvedUrl = Url;
         }
         OnPropertyChanged(nameof(HiddenHeaders));
-        OnPropertyChanged(nameof(HeadersBadge));
+        OnPropertyChanged(nameof(HeadersSummary));
+        OnPropertyChanged(nameof(ActiveEnvironmentName));
     }
 
     // ---- variables / workspace ----
@@ -530,8 +574,34 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
     [RelayCommand]
     private void SetBodyMode(BodyMode mode) => SelectedBodyMode = BodyModes.First(m => m.Value == mode);
 
+    /// <summary>A "Not used yet" chip: brings the section on screen, expanded.</summary>
     [RelayCommand]
-    private void ToggleHiddenHeaders() => ShowHiddenHeaders = !ShowHiddenHeaders;
+    private void AddSection(string section)
+    {
+        switch (section)
+        {
+            case "params":
+                ParamsAdded = ParamsExpanded = true;
+                break;
+            case "body":
+                BodyAdded = BodyExpanded = true;
+                break;
+            case "settings":
+                SettingsAdded = SettingsExpanded = true;
+                break;
+        }
+    }
+
+    private void NotifySections()
+    {
+        OnPropertyChanged(nameof(IsParamsSectionVisible));
+        OnPropertyChanged(nameof(IsBodySectionVisible));
+        OnPropertyChanged(nameof(HasSettingsOverrides));
+        OnPropertyChanged(nameof(IsSettingsSectionVisible));
+        OnPropertyChanged(nameof(HasUnusedSections));
+        OnPropertyChanged(nameof(ParamsSummary));
+        OnPropertyChanged(nameof(BodySummary));
+    }
 
     [RelayCommand]
     private void StartRename() => IsRenaming = true;
