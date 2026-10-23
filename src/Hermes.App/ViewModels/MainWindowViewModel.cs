@@ -69,8 +69,33 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         Workspace.CollectionChanged += _ => NotifyWorkspaceChanged();
         Workspace.CollectionsListChanged += NotifyWorkspaceChanged;
         RefreshEnvironmentOptions();
+        CommandPalette = new CommandPaletteViewModel(PaletteItems);
 
         RestoreSession();
+    }
+
+    public CommandPaletteViewModel CommandPalette { get; }
+
+    [RelayCommand]
+    private void OpenCommandPalette() => CommandPalette.Open();
+
+    private IEnumerable<PaletteItem> PaletteItems()
+    {
+        foreach (var (request, path) in CommandPaletteViewModel.Requests(Workspace.Collections))
+            yield return new PaletteItem(request.Name, $"{path} · {request.Url}", request.Method, null, () => OpenRequest(request));
+
+        yield return new PaletteItem("New request", null, null, "Ctrl T", NewRequest);
+        yield return new PaletteItem("Import…", "Postman collection or environment, cURL", null, "Ctrl O", () => _ = OpenImport());
+        yield return new PaletteItem("Open environments matrix", null, null, null, OpenEnvironmentMatrix);
+        foreach (var option in EnvironmentOptions)
+            yield return new PaletteItem($"Use environment: {option.Name}", null, null, null, () => SelectedEnvironment = option);
+        yield return new PaletteItem("Toggle sidebar", null, null, "Ctrl \\", () => IsSidebarVisible = !IsSidebarVisible);
+        yield return new PaletteItem("Show collections", null, null, null, () => ShowPane(SidebarPane.Collections));
+        yield return new PaletteItem("Show environments", null, null, null, () => ShowPane(SidebarPane.Environments));
+        yield return new PaletteItem("Show history", null, null, null, () => ShowPane(SidebarPane.History));
+        yield return new PaletteItem("Toggle light / dark theme", null, null, null, () => _services.Settings.ToggleTheme());
+        yield return new PaletteItem("Manage cookies", null, null, null, () => _ = OpenCookies());
+        yield return new PaletteItem("Settings", null, null, "Ctrl ,", () => _ = OpenSettings());
     }
 
     private WorkspaceService Workspace => _services.Workspace;

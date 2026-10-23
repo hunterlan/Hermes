@@ -34,14 +34,60 @@ public partial class MainWindow : Window
     {
         base.OnDataContextChanged(e);
         if (_viewModel is not null)
+        {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _viewModel.CommandPalette.PropertyChanged -= OnPaletteChanged;
+        }
         _viewModel = DataContext as MainWindowViewModel;
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            _viewModel.CommandPalette.PropertyChanged += OnPaletteChanged;
             SidebarColumn.Width = new GridLength(_viewModel.SidebarWidth);
         }
     }
+
+    // ---- command palette ----
+
+    private void OnPaletteChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(CommandPaletteViewModel.IsOpen) && _viewModel?.CommandPalette.IsOpen == true)
+            Dispatcher.UIThread.Post(() => PaletteBox.Focus());
+        else if (e.PropertyName == nameof(CommandPaletteViewModel.Selected) && _viewModel?.CommandPalette.Selected is { } selected)
+            PaletteList.ScrollIntoView(selected);
+    }
+
+    private void OnPaletteKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_viewModel?.CommandPalette is not { } palette)
+            return;
+        switch (e.Key)
+        {
+            case Key.Down:
+                palette.Move(1);
+                break;
+            case Key.Up:
+                palette.Move(-1);
+                break;
+            case Key.Enter:
+                palette.Run();
+                break;
+            case Key.Escape:
+                palette.Close();
+                break;
+            default:
+                return;
+        }
+        e.Handled = true;
+    }
+
+    private void OnPaletteItemTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Source is Control { DataContext: PaletteItem item })
+            _viewModel?.CommandPalette.Run(item);
+    }
+
+    private void OnPaletteBackdropPressed(object? sender, PointerPressedEventArgs e) => _viewModel?.CommandPalette.Close();
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -132,6 +178,9 @@ public partial class MainWindow : Window
                 break;
             case Key.OemBackslash or Key.OemPipe:
                 vm.ToggleSidebarCommand.Execute(null);
+                break;
+            case Key.K:
+                vm.OpenCommandPaletteCommand.Execute(null);
                 break;
             case Key.E:
                 EnvironmentButton.Flyout?.ShowAt(EnvironmentButton);

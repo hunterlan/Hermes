@@ -48,6 +48,16 @@
             </StackPanel>
           </Button>
         </StackPanel>
+        <Button Grid.Column="2" Classes="outline" Width="420" MaxWidth="420" HorizontalAlignment="Center" HorizontalContentAlignment="Stretch"
+                Background="{DynamicResource BgTertiaryBrush}" BorderThickness="0" Margin="16,0" Command="{Binding OpenCommandPaletteCommand}"
+                ToolTip.Tip="Search requests or run a command (Ctrl+K)">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <PathIcon Data="{StaticResource IconSearch}" Width="14" Height="14" Foreground="{DynamicResource TextTertiaryBrush}" />
+            <TextBlock Grid.Column="1" Text="Search requests or run a command" Foreground="{DynamicResource TextTertiaryBrush}" Margin="8,0"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <Border Grid.Column="2" Classes="kbd"><TextBlock Text="Ctrl K" /></Border>
+          </Grid>
+        </Button>
         <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
           <!-- active environment: name always on screen; the flyout switches and previews values -->
           <Button Name="EnvironmentButton" Classes="outline" ToolTip.Tip="Active environment (Ctrl+E)"
@@ -214,5 +224,42 @@
         <TextBlock Grid.Column="4" Text="{Binding AppVersion}" Margin="8,0,6,0" />
       </Grid>
     </Border>
+
+    <!-- command palette (Ctrl+K) -->
+    <Panel Grid.RowSpan="3" IsVisible="{Binding CommandPalette.IsOpen}" ZIndex="100">
+      <Border Background="#66000000" PointerPressed="OnPaletteBackdropPressed" />
+      <Border Width="620" MaxHeight="460" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,56,0,0"
+              Background="{DynamicResource BgTertiaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+              CornerRadius="12" BoxShadow="0 12 32 0 #59000000" ClipToBounds="True">
+        <Grid RowDefinitions="Auto,*">
+          <TextBox Name="PaletteBox" Text="{Binding CommandPalette.Query}" PlaceholderText="Search requests by name, method or URL, or type a command"
+                   BorderThickness="0,0,0,1" CornerRadius="0" Background="Transparent" MinHeight="46" Padding="10,0" KeyDown="OnPaletteKeyDown">
+            <TextBox.InnerLeftContent>
+              <PathIcon Data="{StaticResource IconSearch}" Width="15" Height="15" Margin="14,0,0,0" Foreground="{DynamicResource TextTertiaryBrush}" />
+            </TextBox.InnerLeftContent>
+          </TextBox>
+          <ListBox Grid.Row="1" Name="PaletteList" ItemsSource="{Binding CommandPalette.Results}" SelectedItem="{Binding CommandPalette.Selected}"
+                   Background="Transparent" Padding="6" Tapped="OnPaletteItemTapped">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:PaletteItem">
+                <Grid ColumnDefinitions="56,*,Auto" MinHeight="30">
+                  <c:MethodBadge Method="{Binding Method}" Compact="True" FontSize="10" IsVisible="{Binding IsRequest}" VerticalAlignment="Center" />
+                  <PathIcon Data="{StaticResource IconArrowRight}" Width="12" Height="12" IsVisible="{Binding !IsRequest}"
+                            Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Left" />
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Detail}" Classes="tertiary" FontSize="11.5" TextTrimming="CharacterEllipsis"
+                               IsVisible="{Binding Detail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                  </StackPanel>
+                  <Border Grid.Column="2" Classes="kbd" IsVisible="{Binding HasShortcut}" Margin="8,0,0,0">
+                    <TextBlock Text="{Binding Shortcut}" />
+                  </Border>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+    </Panel>
   </Grid>
 </Window>

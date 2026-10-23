@@ -56,6 +56,26 @@ public class TabTests
     }
 
     [AvaloniaFact]
+    public void Command_palette_finds_requests_by_method_and_url()
+    {
+        var (window, vm) = ShowEmptyWindow();
+        var (_, first, _) = CreateRequests("Palette");
+        first.Method = "DELETE";
+        first.Url = "https://api.test/palette-" + first.Id;
+
+        vm.OpenCommandPaletteCommand.Execute(null);
+        Assert.True(vm.CommandPalette.IsOpen);
+        vm.CommandPalette.Query = "delete palette-" + first.Id;
+        var hit = Assert.Single(vm.CommandPalette.Results);
+        UiTestHelpers.Screenshot(window, "15-command-palette");
+
+        vm.CommandPalette.Run(hit);
+        Assert.False(vm.CommandPalette.IsOpen);
+        Assert.Equal(first.Id, Assert.IsType<RequestTabViewModel>(vm.ActiveTab).RequestId);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void Same_named_tabs_show_their_collection()
     {
         var (window, vm) = ShowEmptyWindow();
