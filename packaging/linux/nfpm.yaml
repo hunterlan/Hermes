@@ -1,20 +1,20 @@
 # nfpm config for the .deb and .rpm packages; run by packaging/linux/build-packages.sh,
-# which sets VERSION, ARCH and PUBLISH_DIR.
+# which fills in the @VERSION@, @ARCH@ and @PUBLISH_DIR@ placeholders.
 name: hermes
-arch: ${ARCH}
+arch: @ARCH@
 platform: linux
-version: ${VERSION}
+version: @VERSION@
 section: devel
 priority: optional
-maintainer: hunterlan <hunterlan@users.noreply.github.com>
+maintainer: Kostiantyn Sharykin (hunterlan) <kostiantyn.sharykin@icloud.com>
 description: |
   Native, Postman-style desktop client for testing REST APIs.
-vendor: hunterlan
+vendor: Kostiantyn Sharykin (hunterlan)
 homepage: https://github.com/hunterlan/Hermes
-license: Proprietary
+license: MIT
 
 contents:
-  - src: ${PUBLISH_DIR}/
+  - src: @PUBLISH_DIR@/
     dst: /opt/hermes/
     type: tree
   - src: /opt/hermes/Hermes
@@ -30,6 +30,12 @@ contents:
     dst: /usr/share/icons/hicolor/128x128/apps/hermes.png
   - src: packaging/icons/png/hermes-48.png
     dst: /usr/share/icons/hicolor/48x48/apps/hermes.png
+  - src: LICENSE
+    dst: /usr/share/doc/hermes/copyright
+    packager: deb
+  - src: LICENSE
+    dst: /usr/share/licenses/hermes/LICENSE
+    packager: rpm
 
 # The app is self-contained; these are the native libraries .NET and Avalonia load from the system.
 # libsecret is only a recommendation: without it secrets fall back to plain text (see README).
