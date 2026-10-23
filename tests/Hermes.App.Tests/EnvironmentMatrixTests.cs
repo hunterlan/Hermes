@@ -45,4 +45,51 @@ public class EnvironmentMatrixTests
         Workspace.ActiveEnvironment = null;
         window.Close();
     }
+
+    [AvaloniaFact]
+    public void Matrix_keeps_secret_types_and_renames_variables()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var key = "matrixSecret" + Guid.NewGuid().ToString("N")[..8];
+        var production = Workspace.CreateEnvironment("Production " + Guid.NewGuid());
+        production.Variables.Add(new Variable(key, "prod-secret") { Type = VariableType.Secret });
+        Workspace.SaveEnvironment(production);
+        var staging = Workspace.CreateEnvironment("Staging " + Guid.NewGuid());
+
+        vm.OpenEnvironmentMatrixCommand.Execute(null);
+        var matrix = Assert.IsType<EnvironmentMatrixTabViewModel>(vm.ActiveTab);
+        var row = Assert.Single(matrix.Rows, r => r.Name == key);
+        row.Cells.Single(c => c.Column.Model == staging).Value = "stg-secret";
+        row.Name = key + "Renamed";
+        matrix.SaveAsync().Wait();
+
+        var added = Assert.Single(staging.Variables);
+        Assert.Equal((key + "Renamed", VariableType.Secret), (added.Key, added.Type));
+        var renamed = Assert.Single(production.Variables);
+        Assert.Equal((key + "Renamed", "prod-secret"), (renamed.Key, renamed.Value));
+
+        Workspace.DeleteEnvironment(production);
+        Workspace.DeleteEnvironment(staging);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Saving_the_matrix_does_not_bring_back_a_deleted_environment()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var doomed = Workspace.CreateEnvironment("Doomed " + Guid.NewGuid());
+        doomed.Variables.Add(new Variable("matrixDoomed" + Guid.NewGuid().ToString("N")[..8], "v"));
+        Workspace.SaveEnvironment(doomed);
+
+        vm.OpenEnvironmentMatrixCommand.Execute(null);
+        var matrix = Assert.IsType<EnvironmentMatrixTabViewModel>(vm.ActiveTab);
+        matrix.Rows.First().Cells.First(c => c.Column.Model == doomed).Value = "edited";
+        Assert.True(matrix.IsDirty);
+        Workspace.DeleteEnvironment(doomed);
+        matrix.SaveAsync().Wait();
+
+        Assert.DoesNotContain(matrix.Columns, c => c.Model == doomed);
+        Assert.False(File.Exists(Path.Combine(Workspace.DataDirectory, "environments", $"{doomed.Id}.json")));
+        window.Close();
+    }
 }

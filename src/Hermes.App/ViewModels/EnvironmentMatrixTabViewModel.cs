@@ -57,10 +57,18 @@ public sealed partial class MatrixRow : ObservableObject
     public MatrixRow(string name, int usedBy)
     {
         Name = name;
+        SavedName = name.Length > 0 ? name : null;
         UsedBy = usedBy;
     }
 
     [ObservableProperty] public partial string Name { get; set; }
+
+    /// <summary>The variable's name in the environments, so renaming the row renames it; null for a new row.</summary>
+    public string? SavedName { get; }
+
+    /// <summary>Secret if any environment defines the variable as Secret, so a value added elsewhere is kept secret too.</summary>
+    public VariableType Type => Cells.Any(c => c.IsSecret) ? VariableType.Secret : VariableType.Default;
+
     public int UsedBy { get; }
     public string UsedByText => UsedBy switch { 0 => "unused", 1 => "1 request", var n => $"{n} requests" };
     public ObservableCollection<MatrixCell> Cells { get; } = [];
@@ -172,6 +180,7 @@ public sealed partial class EnvironmentMatrixTabViewModel : TabViewModelBase
 
     public override Task<bool> SaveAsync()
     {
+        RemoveDeletedColumns();
         foreach (var column in Columns)
         {
             var variables = column.Model.Variables;
@@ -181,12 +190,14 @@ public sealed partial class EnvironmentMatrixTabViewModel : TabViewModelBase
                 if (!cell.IsSet)
                     continue;
                 var name = row.Name.Trim();
-                var variable = variables.FirstOrDefault(v => v.Key == name);
+                var variable = variables.FirstOrDefault(v => v.Key == (row.SavedName ?? name));
                 if (variable is null)
                 {
-                    variables.Add(new Variable(name, cell.Value));
+                    variables.Add(new Variable(name, cell.Value) { Type = row.Type });
+                    continue;
                 }
-                else if (variable.EffectiveValue != cell.Value)
+                variable.Key = name;
+                if (variable.EffectiveValue != cell.Value)
                 {
                     // Edit the value the user sees: the local current value if one is set, else the shared one.
                     if (variable.CurrentValue is not null)
@@ -206,8 +217,23 @@ public sealed partial class EnvironmentMatrixTabViewModel : TabViewModelBase
 
     public override void OnVariablesChanged()
     {
-        // Pick up environments added, renamed or edited elsewhere, unless the user has unsaved edits here.
+        // Pick up environments added, renamed or edited elsewhere, unless the user has unsaved edits here. A deleted
+        // environment goes either way: saving its column would write it back.
         if (!IsDirty)
             Load();
+        else
+            RemoveDeletedColumns();
+    }
+
+    private void RemoveDeletedColumns()
+    {
+        var workspace = Services.Workspace;
+        foreach (var column in Columns.Where(c => !c.IsGlobals && !workspace.Environments.Contains(c.Model)).ToList())
+        {
+            Columns.Remove(column);
+            foreach (var row in Rows)
+                row.Cells.Remove(row.Cells.First(c => c.Column == column));
+        }
+        UpdateState();
     }
 }
