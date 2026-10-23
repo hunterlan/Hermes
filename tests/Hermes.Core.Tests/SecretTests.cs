@@ -173,6 +173,28 @@ public class SecretTests : IDisposable
     public void Only_literal_auth_values_count_as_secrets(string value, bool literal) =>
         Assert.Equal(literal, SecretFields.IsLiteral(value));
 
+    [Fact]
+    public void The_workspace_id_lives_in_the_folder_and_moves_with_it()
+    {
+        var id = Guid.NewGuid();
+        WorkspaceIdentity.Write(_dir, id);
+        var moved = _dir + "-moved";
+        Directory.Move(_dir, moved);
+
+        Assert.Equal(id, WorkspaceIdentity.Read(moved));
+        Assert.Null(WorkspaceIdentity.Read(_dir));
+        Directory.Move(moved, _dir);
+    }
+
+    [Fact]
+    public void An_unreadable_workspace_id_is_an_error_not_a_new_id()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(WorkspaceIdentity.FileFor(_dir), "{ cut");
+
+        Assert.Throws<IOException>(() => WorkspaceIdentity.Read(_dir));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_dir))
