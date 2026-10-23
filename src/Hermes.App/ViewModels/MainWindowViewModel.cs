@@ -439,12 +439,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             await ActiveTab.SaveAsync();
     }
 
+    /// <summary>Sends the active request, or cancels it while it's in flight.</summary>
     [RelayCommand]
-    private async Task SendActive()
-    {
-        if (ActiveTab is RequestTabViewModel request)
-            await request.SendCommand.ExecuteAsync(null);
-    }
+    private void SendActive() => (ActiveTab as RequestTabViewModel)?.SendOrCancel();
 
     [RelayCommand]
     private void ToggleTheme() => _services.Settings.ToggleTheme();

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -159,28 +160,28 @@ public partial class MainWindow : Window
         switch (e.Key)
         {
             case Key.Enter:
-                _ = vm.SendActiveCommand.ExecuteAsync(null);
+                Run(vm.SendActiveCommand);
                 break;
             case Key.S:
-                _ = vm.SaveActiveCommand.ExecuteAsync(null);
+                Run(vm.SaveActiveCommand);
                 break;
             case Key.T or Key.N when !shift:
-                vm.NewRequestCommand.Execute(null);
+                Run(vm.NewRequestCommand);
                 break;
             case Key.W:
-                _ = vm.CloseTabCommand.ExecuteAsync(null);
+                Run(vm.CloseTabCommand);
                 break;
             case Key.O:
-                _ = vm.OpenImportCommand.ExecuteAsync(null);
+                Run(vm.OpenImportCommand);
                 break;
             case Key.OemComma:
-                _ = vm.OpenSettingsCommand.ExecuteAsync(null);
+                Run(vm.OpenSettingsCommand);
                 break;
             case Key.OemBackslash or Key.OemPipe:
-                vm.ToggleSidebarCommand.Execute(null);
+                Run(vm.ToggleSidebarCommand);
                 break;
             case Key.K:
-                vm.OpenCommandPaletteCommand.Execute(null);
+                Run(vm.OpenCommandPaletteCommand);
                 break;
             case Key.E:
                 EnvironmentButton.Flyout?.ShowAt(EnvironmentButton);
@@ -189,17 +190,24 @@ public partial class MainWindow : Window
                 this.GetVisualDescendants().OfType<RequestTabView>().FirstOrDefault()?.FocusUrl();
                 break;
             case Key.Tab:
-                (shift ? vm.PreviousTabCommand : vm.NextTabCommand).Execute(null);
+                Run(shift ? vm.PreviousTabCommand : vm.NextTabCommand);
                 break;
             case Key.PageDown:
-                vm.NextTabCommand.Execute(null);
+                Run(vm.NextTabCommand);
                 break;
             case Key.PageUp:
-                vm.PreviousTabCommand.Execute(null);
+                Run(vm.PreviousTabCommand);
                 break;
             default:
                 return;
         }
         e.Handled = true;
+    }
+
+    // Shortcuts follow the same rules as the buttons bound to the same commands.
+    private static void Run(ICommand command)
+    {
+        if (command.CanExecute(null))
+            command.Execute(null);
     }
 }
