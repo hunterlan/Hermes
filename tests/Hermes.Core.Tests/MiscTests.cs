@@ -34,6 +34,17 @@ public class StorageTests : IDisposable
     }
 
     [Fact]
+    public void Concurrent_writes_to_one_file_neither_fail_nor_leave_temp_files()
+    {
+        var path = Path.Combine(_dir, "session.json");
+
+        Parallel.For(0, 200, i => JsonFileStore.Write(path, new SessionState { ActiveTabIndex = i }, HermesJsonContext.Default.SessionState));
+
+        Assert.NotNull(JsonFileStore.Read(path, HermesJsonContext.Default.SessionState));
+        Assert.Equal(["session.json"], Directory.GetFiles(_dir).Select(Path.GetFileName));
+    }
+
+    [Fact]
     public void Collections_environments_history_and_session_persist()
     {
         var repo = new WorkspaceRepository(_dir);
