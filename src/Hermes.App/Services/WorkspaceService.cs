@@ -147,6 +147,7 @@ public sealed class WorkspaceService
     {
         Collections.Remove(collection);
         _repository.DeleteCollection(collection.Id);
+        DeleteResponsesFor(collection.Items);
         CollectionsListChanged?.Invoke();
     }
 
@@ -167,6 +168,18 @@ public sealed class WorkspaceService
             return;
         location.Container.Remove(location.Node);
         SaveCollection(location.Collection);
+        DeleteResponsesFor([location.Node]);
+    }
+
+    private void DeleteResponsesFor(IEnumerable<CollectionNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            if (node is HttpRequestModel request)
+                _repository.DeleteResponses(request.Id);
+            else if (node is FolderModel folder)
+                DeleteResponsesFor(folder.Items);
+        }
     }
 
     /// <summary>
@@ -256,6 +269,23 @@ public sealed class WorkspaceService
     {
         History.Clear();
         _repository.ClearHistory();
+    }
+
+    // ---- saved responses ----
+
+    public List<SavedResponse> LoadResponses(Guid requestId) => _repository.LoadResponses(requestId);
+
+    /// <summary>Saves a response with its request; returns the stored list (newest first), or null if it couldn't be written.</summary>
+    public List<SavedResponse>? SaveResponse(Guid requestId, SavedResponse saved)
+    {
+        try
+        {
+            return _repository.SaveResponse(requestId, saved);
+        }
+        catch (IOException)
+        {
+            return null;
+        }
     }
 
     // ---- session ----

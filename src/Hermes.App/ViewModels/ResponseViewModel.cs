@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Text;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,6 +15,13 @@ public enum ResponseViewMode
     Pretty,
     Raw,
     Preview,
+}
+
+/// <summary>Entry in the saved-responses menu.</summary>
+public sealed record SavedResponseItem(SavedResponse Saved, bool IsLatest)
+{
+    public string Label =>
+        $"{Saved.Response.StatusCode} {Saved.Response.ReasonPhrase} · {Saved.Timestamp.LocalDateTime:g}{(IsLatest ? " · latest" : "")}";
 }
 
 public sealed partial class ResponseViewModel(DialogService dialogs, SettingsService settings) : ObservableObject
@@ -46,6 +54,50 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     public string DownloadText => $"Download {DownloadMs:0} ms";
 
     public bool IsSideBySide => settings.Current.Layout == ResponseLayout.Horizontal;
+
+    // ---- responses saved with the request ----
+
+    public ObservableCollection<SavedResponseItem> SavedResponses { get; } = [];
+
+    /// <summary>Set while an earlier saved response (not the latest) is on screen.</summary>
+    [ObservableProperty] public partial SavedResponseItem? ViewingEarlier { get; set; }
+
+    public bool HasSavedResponses => SavedResponses.Count > 0;
+    public string SavedResponsesLabel => SavedResponses.Count switch
+    {
+        0 => "",
+        1 => "Saved",
+        var n => $"Saved · {n - 1} earlier {(n == 2 ? "response" : "responses")}",
+    };
+
+    /// <summary>Replaces the saved list; with <paramref name="show"/> the newest one is displayed (e.g. when a tab opens).</summary>
+    public void SetSaved(IReadOnlyList<SavedResponse> saved, bool show)
+    {
+        SavedResponses.Clear();
+        for (var i = 0; i < saved.Count; i++)
+            SavedResponses.Add(new SavedResponseItem(saved[i], i == 0));
+        OnPropertyChanged(nameof(HasSavedResponses));
+        OnPropertyChanged(nameof(SavedResponsesLabel));
+        ViewingEarlier = null;
+        if (show && saved.Count > 0)
+            Show(saved[0]);
+    }
+
+    [RelayCommand]
+    private void ShowSaved(SavedResponseItem item)
+    {
+        Show(item.Saved);
+        ViewingEarlier = item.IsLatest ? null : item;
+    }
+
+    private void Show(SavedResponse saved)
+    {
+        SetResponse(saved.Response);
+        SentRequestText = saved.SentRequest;
+        if (saved.BodyOmitted)
+            RawText = PrettyText = "[Body not saved: larger than 2 MB. Send again to see it.]";
+        OnPropertyChanged(nameof(DisplayText));
+    }
 
     [ObservableProperty] public partial string PrettyText { get; set; } = "";
     [ObservableProperty] public partial string RawText { get; set; } = "";

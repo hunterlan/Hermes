@@ -11,12 +11,19 @@ namespace Hermes.Core.Storage;
 /// environments/{id}.json
 /// globals.json
 /// history/yyyy-MM-dd.json
+/// responses/{requestId}.json
 /// session.json
 /// </code>
 /// </summary>
 public sealed class WorkspaceRepository(string root)
 {
     private const int MaxHistoryEntriesPerDay = 500;
+
+    /// <summary>The latest response plus five earlier ones are kept per request.</summary>
+    public const int MaxSavedResponses = 6;
+
+    /// <summary>Bodies above this are not stored with saved responses.</summary>
+    public const long MaxSavedBodyBytes = 2 * 1024 * 1024;
 
     private readonly object _historyLock = new();
 
@@ -25,6 +32,7 @@ public sealed class WorkspaceRepository(string root)
     private string CollectionsDir => Path.Combine(Root, "collections");
     private string EnvironmentsDir => Path.Combine(Root, "environments");
     private string HistoryDir => Path.Combine(Root, "history");
+    private string ResponsesDir => Path.Combine(Root, "responses");
     private string GlobalsFile => Path.Combine(Root, "globals.json");
     private string SessionFile => Path.Combine(Root, "session.json");
 
@@ -146,6 +154,61 @@ public sealed class WorkspaceRepository(string root)
 
     private string HistoryFileFor(DateTimeOffset timestamp) =>
         Path.Combine(HistoryDir, timestamp.LocalDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ".json");
+
+    // ---- saved responses ----
+
+    /// <summary>Saved responses for a request, newest first.</summary>
+    public List<SavedResponse> LoadResponses(Guid requestId)
+    {
+        try
+        {
+            return JsonFileStore.Read(ResponsesFileFor(requestId), HermesJsonContext.Default.ListSavedResponse) ?? [];
+        }
+        catch (Exception)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>Adds a response in front and keeps the newest <see cref="MaxSavedResponses"/>. Returns the stored list.</summary>
+    public List<SavedResponse> SaveResponse(Guid requestId, SavedResponse saved)
+    {
+        if (saved.Response.BodySize > MaxSavedBodyBytes)
+        {
+            saved = new SavedResponse
+            {
+                Timestamp = saved.Timestamp,
+                SentRequest = saved.SentRequest,
+                BodyOmitted = true,
+                Response = WithoutBody(saved.Response),
+            };
+        }
+        var responses = LoadResponses(requestId);
+        responses.Insert(0, saved);
+        if (responses.Count > MaxSavedResponses)
+            responses.RemoveRange(MaxSavedResponses, responses.Count - MaxSavedResponses);
+        JsonFileStore.Write(ResponsesFileFor(requestId), responses, HermesJsonContext.Default.ListSavedResponse);
+        return responses;
+    }
+
+    public void DeleteResponses(Guid requestId) => DeleteFile(ResponsesFileFor(requestId));
+
+    private string ResponsesFileFor(Guid requestId) => Path.Combine(ResponsesDir, $"{requestId}.json");
+
+    private static ResponseModel WithoutBody(ResponseModel r) => new()
+    {
+        StatusCode = r.StatusCode,
+        ReasonPhrase = r.ReasonPhrase,
+        HttpVersion = r.HttpVersion,
+        Headers = r.Headers,
+        ContentType = r.ContentType,
+        Charset = r.Charset,
+        FinalUri = r.FinalUri,
+        TimeToFirstByte = r.TimeToFirstByte,
+        TotalTime = r.TotalTime,
+        HeadersSize = r.HeadersSize,
+        Cookies = r.Cookies,
+    };
 
     // ---- session ----
 

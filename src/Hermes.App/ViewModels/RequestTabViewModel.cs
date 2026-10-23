@@ -58,6 +58,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         Auth.InheritedAuthProvider = () => CreateContext().ResolveAuth(Core.Models.AuthConfig.Inherit());
 
         Response = new ResponseViewModel(services.Dialogs, services.Settings);
+        Response.SetSaved(services.Workspace.LoadResponses(model.Id), show: true);
 
         Load(model);
         _savedSnapshot = savedSnapshot ?? CurrentSnapshot();
@@ -479,7 +480,12 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
             if (result.Cancelled)
                 Response.SetCancelled();
             else if (result.Response is { } response)
+            {
                 Response.SetResponse(response);
+                // Responses are kept with saved requests, so reopening shows the last result and earlier ones.
+                if (IsPersisted && Services.Workspace.SaveResponse(RequestId, new SavedResponse { Response = response, SentRequest = Response.SentRequestText }) is { } saved)
+                    Response.SetSaved(saved, show: false);
+            }
             else
                 Response.SetError(result.Error ?? "Unknown error");
 

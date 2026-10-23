@@ -12,6 +12,28 @@ public class StorageTests : IDisposable
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "hermes-tests-" + Guid.NewGuid());
 
     [Fact]
+    public void Saved_responses_keep_the_newest_and_drop_large_bodies()
+    {
+        var repo = new WorkspaceRepository(_dir);
+        var id = Guid.NewGuid();
+        for (var i = 0; i < WorkspaceRepository.MaxSavedResponses + 2; i++)
+            repo.SaveResponse(id, new SavedResponse { Response = new ResponseModel { StatusCode = 200 + i, Body = [1, 2, 3] }, SentRequest = $"GET /{i}" });
+        repo.SaveResponse(id, new SavedResponse { Response = new ResponseModel { StatusCode = 500, Body = new byte[WorkspaceRepository.MaxSavedBodyBytes + 1] } });
+
+        var loaded = new WorkspaceRepository(_dir).LoadResponses(id);
+
+        Assert.Equal(WorkspaceRepository.MaxSavedResponses, loaded.Count);
+        Assert.Equal(500, loaded[0].Response.StatusCode);
+        Assert.True(loaded[0].BodyOmitted);
+        Assert.Empty(loaded[0].Response.Body);
+        Assert.Equal(200 + WorkspaceRepository.MaxSavedResponses + 1, loaded[1].Response.StatusCode);
+        Assert.Equal([1, 2, 3], loaded[1].Response.Body);
+
+        repo.DeleteResponses(id);
+        Assert.Empty(repo.LoadResponses(id));
+    }
+
+    [Fact]
     public void Collections_environments_history_and_session_persist()
     {
         var repo = new WorkspaceRepository(_dir);

@@ -85,6 +85,28 @@
         <TextBlock Grid.Column="1" Classes="mono secondary" Text="{Binding TimeText}" ToolTip.Tip="{Binding TimingDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
         <TextBlock Grid.Column="2" Classes="mono secondary" Text="{Binding SizeText}" ToolTip.Tip="{Binding SizeDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
         <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="2">
+          <Border Classes="tag warn" Margin="0,0,6,0" IsVisible="{Binding ViewingEarlier, Converter={x:Static ObjectConverters.IsNotNull}}"
+                  ToolTip.Tip="{Binding ViewingEarlier.Label}">
+            <TextBlock Text="Earlier response" />
+          </Border>
+          <Button Classes="outline" FontSize="12" MinHeight="26" Padding="10,2" Margin="0,0,6,0" IsVisible="{Binding HasSavedResponses}"
+                  ToolTip.Tip="Responses are saved with the request">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="{Binding SavedResponsesLabel}" VerticalAlignment="Center" />
+              <PathIcon Data="{StaticResource IconChevronDown}" Width="11" Height="11" />
+            </StackPanel>
+            <Button.Flyout>
+              <MenuFlyout ItemsSource="{Binding SavedResponses}" Placement="BottomEdgeAlignedRight">
+                <MenuFlyout.ItemContainerTheme>
+                  <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}" x:DataType="vm:SavedResponseItem">
+                    <Setter Property="Header" Value="{Binding Label}" />
+                    <Setter Property="Command" Value="{Binding $parent[UserControl].((vm:ResponseViewModel)DataContext).ShowSavedCommand}" />
+                    <Setter Property="CommandParameter" Value="{Binding}" />
+                  </ControlTheme>
+                </MenuFlyout.ItemContainerTheme>
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
           <Button Classes="icon layout" Classes.on="{Binding IsSideBySide}" Command="{Binding SetLayoutCommand}"
                   CommandParameter="{x:Static core:ResponseLayout.Horizontal}" ToolTip.Tip="Side by side" AutomationProperties.Name="Side by side layout">
             <PathIcon Data="{StaticResource IconLayoutSide}" />
