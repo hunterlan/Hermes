@@ -17,6 +17,7 @@ collections and switch environments — in a fast native app that stores everyth
 - Command palette (Ctrl+K) to find requests by name, method or URL and run any command
 - Methods GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
 - URL bar with `{{variable}}` highlighting (resolved / unresolved) and hover tooltips showing the value
+- Typing `{{` in the URL, params, headers or auth fields lists up to five matching variables (↑/↓, Enter or Tab to insert, Esc to dismiss)
 - Query params table kept in two-way sync with the URL; `:pathVariables` table
 - Headers with an auto-generated ("hidden") headers view
 - Body: none, form-data (text and files), x-www-form-urlencoded, raw (Text, JSON, XML, HTML, JavaScript) with

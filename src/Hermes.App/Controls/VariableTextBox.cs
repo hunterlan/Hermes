@@ -2,12 +2,15 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using AvaloniaEdit;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
@@ -17,7 +20,7 @@ namespace Hermes.App.Controls;
 
 /// <summary>
 /// Single-line text input that highlights <c>{{variables}}</c> (orange when resolved, red when not)
-/// and shows the resolved value on hover, like Postman's URL bar.
+/// and shows the resolved value on hover, like Postman's URL bar. Typing <c>{{</c> opens a list of matching variables.
 /// </summary>
 public sealed class VariableTextBox : UserControl
 {
@@ -46,6 +49,9 @@ public sealed class VariableTextBox : UserControl
     private readonly TextEditor _editor;
     private readonly TextBlock _watermark;
     private readonly VariableColorizer _colorizer = new();
+    private readonly Popup _suggestionPopup;
+    private readonly ListBox _suggestionList;
+    private int _suggestionNameStart;
     private bool _updatingFromEditor;
 
     public VariableTextBox()
@@ -71,7 +77,12 @@ public sealed class VariableTextBox : UserControl
         _editor.TextArea.TextView.PointerMoved += OnPointerMoved;
         _editor.TextArea.TextView.PointerExited += (_, _) => ToolTip.SetIsOpen(this, false);
         _editor.TextArea.GotFocus += (_, _) => PseudoClasses.Set(":editing", true);
-        _editor.TextArea.LostFocus += (_, _) => PseudoClasses.Set(":editing", false);
+        _editor.TextArea.LostFocus += (_, _) =>
+        {
+            PseudoClasses.Set(":editing", false);
+            CloseSuggestions();
+        };
+        _editor.TextArea.Caret.PositionChanged += (_, _) => UpdateSuggestions();
 
         _watermark = new TextBlock
         {
@@ -82,7 +93,39 @@ public sealed class VariableTextBox : UserControl
         };
         _watermark.Bind(TextBlock.ForegroundProperty, this.GetResourceObservable("TextTertiaryBrush"));
 
-        Content = new Panel { Children = { _watermark, _editor } };
+        _suggestionList = new ListBox
+        {
+            Focusable = false,
+            Background = Brushes.Transparent,
+            MinWidth = 260,
+            MaxWidth = 460,
+            ItemTemplate = new FuncDataTemplate<VariableResolver.VariableSuggestion>((item, _) => BuildSuggestionRow(item)),
+        };
+        _suggestionList.Styles.Add(new Style(x => x.OfType<ListBoxItem>())
+        {
+            Setters = { new Setter(PaddingProperty, new Thickness(8, 5)), new Setter(MinHeightProperty, 0d) },
+        });
+        // Tunnel so the pick happens before the list could take focus away from the editor.
+        _suggestionList.AddHandler(PointerPressedEvent, OnSuggestionPointerPressed, RoutingStrategies.Tunnel);
+        var suggestionBorder = new Border
+        {
+            Child = _suggestionList,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(4),
+        };
+        suggestionBorder.Bind(Border.BackgroundProperty, this.GetResourceObservable("BgPrimaryBrush"));
+        suggestionBorder.Bind(Border.BorderBrushProperty, this.GetResourceObservable("BorderStrongBrush"));
+        _suggestionPopup = new Popup
+        {
+            Child = suggestionBorder,
+            PlacementTarget = this,
+            Placement = PlacementMode.BottomEdgeAlignedLeft,
+            VerticalOffset = 4,
+            IsLightDismissEnabled = false,
+        };
+
+        Content = new Panel { Children = { _watermark, _editor, _suggestionPopup } };
         ToolTip.SetPlacement(this, PlacementMode.Pointer);
         ToolTip.SetShowDelay(this, 300);
         UpdatePlaceholderText();
@@ -219,10 +262,14 @@ public sealed class VariableTextBox : UserControl
         {
             _updatingFromEditor = false;
         }
+        UpdateSuggestions();
     }
 
     private void OnEditorKeyDown(object? sender, KeyEventArgs e)
     {
+        if (_suggestionPopup.IsOpen && HandleSuggestionKey(e))
+            return;
+
         switch (e.Key)
         {
             case Key.Enter when e.KeyModifiers == KeyModifiers.None:
@@ -238,6 +285,117 @@ public sealed class VariableTextBox : UserControl
                     : NavigationDirection.Next);
                 break;
         }
+    }
+
+    public bool IsSuggestionListOpen => _suggestionPopup.IsOpen;
+
+    public IReadOnlyList<string> SuggestionNames =>
+        _suggestionList.ItemsSource is IEnumerable<VariableResolver.VariableSuggestion> items ? items.Select(i => i.Name).ToList() : [];
+
+    private void UpdateSuggestions()
+    {
+        if (IsReadOnly || !_editor.TextArea.IsFocused ||
+            !VariableResolver.TryFindPartialVariable(_editor.Text, _editor.CaretOffset, out var nameStart, out var typed))
+        {
+            CloseSuggestions();
+            return;
+        }
+
+        var suggestions = VariableResolver.Suggest(Variables ?? VariableScope.Empty, typed);
+        if (suggestions.Count == 0)
+        {
+            CloseSuggestions();
+            return;
+        }
+
+        _suggestionNameStart = nameStart;
+        _suggestionList.ItemsSource = suggestions;
+        _suggestionList.SelectedIndex = 0;
+
+        // Line the list up under the "{{" rather than the left edge of a long URL.
+        var textView = _editor.TextArea.TextView;
+        var location = _editor.Document.GetLocation(Math.Max(0, nameStart - 2));
+        var x = textView.GetVisualPosition(new TextViewPosition(location), VisualYPosition.LineBottom).X - textView.ScrollOffset.X;
+        _suggestionPopup.HorizontalOffset = Math.Clamp(x, 0, Math.Max(0, Bounds.Width - 260));
+        _suggestionPopup.IsOpen = true;
+    }
+
+    private void CloseSuggestions()
+    {
+        if (_suggestionPopup.IsOpen)
+            _suggestionPopup.IsOpen = false;
+    }
+
+    private bool HandleSuggestionKey(KeyEventArgs e)
+    {
+        var count = _suggestionList.ItemCount;
+        switch (e.Key)
+        {
+            case Key.Down:
+                _suggestionList.SelectedIndex = (_suggestionList.SelectedIndex + 1) % count;
+                break;
+            case Key.Up:
+                _suggestionList.SelectedIndex = (_suggestionList.SelectedIndex - 1 + count) % count;
+                break;
+            case Key.Enter or Key.Tab when e.KeyModifiers == KeyModifiers.None:
+                if (_suggestionList.SelectedItem is not VariableResolver.VariableSuggestion pick)
+                    return false;
+                AcceptSuggestion(pick);
+                break;
+            case Key.Escape:
+                CloseSuggestions();
+                break;
+            default:
+                return false;
+        }
+        e.Handled = true;
+        return true;
+    }
+
+    private void OnSuggestionPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if ((e.Source as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true)?.DataContext is VariableResolver.VariableSuggestion pick)
+        {
+            e.Handled = true;
+            AcceptSuggestion(pick);
+        }
+    }
+
+    /// <summary>Replaces the partial name under the caret with <paramref name="pick"/> and closes the braces.</summary>
+    private void AcceptSuggestion(VariableResolver.VariableSuggestion pick)
+    {
+        var text = _editor.Text;
+        // Also swallow the rest of a name being edited in place, e.g. the "rl" in "{{baseU|rl}}".
+        var end = _editor.CaretOffset;
+        while (end < text.Length && text[end] is not ('{' or '}') && !char.IsWhiteSpace(text[end]))
+            end++;
+        var closed = string.CompareOrdinal(text, end, "}}", 0, 2) == 0;
+        var insert = pick.Name + "}}";
+        _editor.Document.Replace(_suggestionNameStart, end - _suggestionNameStart + (closed ? 2 : 0), insert);
+        _editor.CaretOffset = _suggestionNameStart + insert.Length;
+        CloseSuggestions();
+        _editor.TextArea.Focus();
+    }
+
+    private Control BuildSuggestionRow(VariableResolver.VariableSuggestion item)
+    {
+        var name = new TextBlock { Text = item.Name, FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center };
+        name.Bind(TextBlock.FontFamilyProperty, this.GetResourceObservable("MonoFont"));
+        var value = new TextBlock
+        {
+            Text = item.Value is null ? "dynamic" : item.Value.Length == 0 ? "(empty)" : item.Value,
+            FontSize = 12,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(16, 0, 0, 0),
+        };
+        value.Bind(TextBlock.ForegroundProperty, this.GetResourceObservable("TextTertiaryBrush"));
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*") };
+        Grid.SetColumn(value, 1);
+        row.Children.Add(name);
+        row.Children.Add(value);
+        return row;
     }
 
     private void OnPointerMoved(object? sender, PointerEventArgs e)
