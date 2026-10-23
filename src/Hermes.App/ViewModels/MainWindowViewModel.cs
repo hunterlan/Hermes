@@ -365,20 +365,47 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     public async Task CloseTab(TabViewModelBase? tab)
     {
         tab ??= ActiveTab;
-        if (tab is null)
-            return;
+        if (tab is not null)
+            await TryCloseTabAsync(tab);
+    }
 
-        if (tab.IsDirty)
-        {
-            switch (await Dialogs.AskSaveChangesAsync(tab.Title))
-            {
-                case SaveChangesResult.Cancel:
-                    return;
-                case SaveChangesResult.Save when !await tab.SaveAsync():
-                    return;
-            }
-        }
+    /// <summary>Closes the tab after asking about unsaved changes. False when the user cancelled.</summary>
+    private async Task<bool> TryCloseTabAsync(TabViewModelBase tab)
+    {
+        if (!await ConfirmDiscardAsync(tab))
+            return false;
         RemoveTab(tab);
+        return true;
+    }
+
+    /// <summary>Asks to save a dirty tab. False when the user cancelled or the save didn't happen.</summary>
+    private async Task<bool> ConfirmDiscardAsync(TabViewModelBase tab)
+    {
+        if (!tab.IsDirty)
+            return true;
+        return await Dialogs.AskSaveChangesAsync(tab.Title) switch
+        {
+            SaveChangesResult.Cancel => false,
+            SaveChangesResult.Save => await tab.SaveAsync(),
+            _ => true,
+        };
+    }
+
+    /// <summary>Tabs whose edits quitting would lose: dirty, and the session can't keep a draft of them.</summary>
+    private IEnumerable<TabViewModelBase> TabsLosingEditsOnQuit => Tabs.Where(t => t.IsDirty && !t.KeepsDraftInSession);
+
+    public bool HasUnsavedEdits => TabsLosingEditsOnQuit.Any();
+
+    /// <summary>Asks to save each tab that would lose edits on quitting. False when the user cancelled.</summary>
+    public async Task<bool> ConfirmQuitAsync()
+    {
+        foreach (var tab in TabsLosingEditsOnQuit.ToList())
+        {
+            ActiveTab = tab;
+            if (!await ConfirmDiscardAsync(tab))
+                return false;
+        }
+        return true;
     }
 
     /// <summary>Removes a tab without prompting (e.g. its entity was deleted).</summary>
@@ -397,14 +424,16 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     private async Task CloseOtherTabs(TabViewModelBase tab)
     {
         foreach (var other in Tabs.Where(t => t != tab && !t.IsPinned).ToList())
-            await CloseTab(other);
+            if (!await TryCloseTabAsync(other))
+                return;
     }
 
     [RelayCommand]
     private async Task CloseAllTabs()
     {
         foreach (var tab in Tabs.Where(t => !t.IsPinned).ToList())
-            await CloseTab(tab);
+            if (!await TryCloseTabAsync(tab))
+                return;
     }
 
     [RelayCommand]
@@ -538,20 +567,24 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             Workspace.ActiveEnvironment = env;
         SidebarWidth = Math.Clamp(session.SidebarWidth, 200, 600);
 
-        foreach (var saved in session.Tabs)
+        // ActiveTabIndex counts the saved tabs, some of which may not come back (their entity was deleted).
+        TabViewModelBase? active = null;
+        foreach (var (saved, index) in session.Tabs.Select((t, i) => (t, i)))
         {
             var tab = RestoreTab(saved);
             if (tab is not null)
             {
                 tab.IsPinned = saved.IsPinned;
                 Tabs.Add(tab);
+                if (index <= session.ActiveTabIndex || active is null)
+                    active = tab;
             }
         }
 
-        if (Tabs.Count == 0)
+        if (active is null)
             NewRequest();
         else
-            ActiveTab = Tabs[Math.Clamp(session.ActiveTabIndex, 0, Tabs.Count - 1)];
+            ActiveTab = active;
         OnPropertyChanged(nameof(HasTabs));
     }
 

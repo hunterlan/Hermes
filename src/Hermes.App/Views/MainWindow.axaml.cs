@@ -16,6 +16,7 @@ public partial class MainWindow : Window
 {
     private readonly DispatcherTimer _sessionTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private MainWindowViewModel? _viewModel;
+    private bool _quitConfirmed;
 
     public MainWindow()
     {
@@ -118,11 +119,22 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnClosing(object? sender, WindowClosingEventArgs e)
+    private async void OnClosing(object? sender, WindowClosingEventArgs e)
     {
-        _sessionTimer.Stop();
         if (_viewModel is null)
             return;
+        // The OS won't wait for a prompt when it shuts down.
+        if (_viewModel.HasUnsavedEdits && !_quitConfirmed && e.CloseReason != WindowCloseReason.OSShutdown)
+        {
+            e.Cancel = true;
+            if (!await _viewModel.ConfirmQuitAsync())
+                return;
+            _quitConfirmed = true;
+            Close();
+            return;
+        }
+
+        _sessionTimer.Stop();
         if (_viewModel.IsSidebarVisible && SidebarColumn.ActualWidth > 0)
             _viewModel.SidebarWidth = SidebarColumn.ActualWidth;
         _viewModel.SaveSession();

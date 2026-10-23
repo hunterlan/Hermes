@@ -6,7 +6,8 @@ using Hermes.Core.Models;
 
 namespace Hermes.App.ViewModels;
 
-public sealed record SaveRequestTarget(string Name, CollectionModel Collection, FolderModel? Folder);
+/// <param name="IsNewCollection">The collection was created in the dialog and isn't in the workspace yet.</param>
+public sealed record SaveRequestTarget(string Name, CollectionModel Collection, FolderModel? Folder, bool IsNewCollection);
 
 public sealed class SaveTargetNode
 {
@@ -21,6 +22,9 @@ public sealed class SaveTargetNode
 public sealed partial class SaveRequestDialogViewModel : ObservableObject
 {
     private readonly WorkspaceService _workspace;
+
+    /// <summary>Created with "New collection"; added to the workspace by the caller only if the request is saved there.</summary>
+    private CollectionModel? _newCollection;
 
     public SaveRequestDialogViewModel(WorkspaceService workspace, string name)
     {
@@ -47,7 +51,8 @@ public sealed partial class SaveRequestDialogViewModel : ObservableObject
     private void Rebuild()
     {
         Targets.Clear();
-        foreach (var collection in _workspace.Collections)
+        var collections = _newCollection is null ? _workspace.Collections : [.. _workspace.Collections, _newCollection];
+        foreach (var collection in collections.OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase))
         {
             var node = new SaveTargetNode { Name = collection.Name, Collection = collection, Path = collection.Name };
             AddFolders(node, collection, collection.Items, collection.Name);
@@ -80,10 +85,10 @@ public sealed partial class SaveRequestDialogViewModel : ObservableObject
         var name = NewCollectionName.Trim();
         if (name.Length == 0)
             return;
-        var collection = _workspace.CreateCollection(name);
+        _newCollection = new CollectionModel { Name = name };
         IsCreatingCollection = false;
         Rebuild();
-        SelectedTarget = Targets.FirstOrDefault(t => t.Collection == collection);
+        SelectedTarget = Targets.FirstOrDefault(t => t.Collection == _newCollection);
     }
 
     [RelayCommand(CanExecute = nameof(CanSave))]
@@ -92,7 +97,8 @@ public sealed partial class SaveRequestDialogViewModel : ObservableObject
         if (SelectedTarget is null)
             return;
         var name = string.IsNullOrWhiteSpace(Name) ? "Untitled Request" : Name.Trim();
-        CloseRequested?.Invoke(new SaveRequestTarget(name, SelectedTarget.Collection, SelectedTarget.Folder));
+        CloseRequested?.Invoke(new SaveRequestTarget(name, SelectedTarget.Collection, SelectedTarget.Folder,
+            IsNewCollection: SelectedTarget.Collection == _newCollection));
     }
 
     private bool CanSave() => SelectedTarget is not null;

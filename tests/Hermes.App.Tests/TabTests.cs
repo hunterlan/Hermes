@@ -51,6 +51,97 @@ public class TabTests
         window.Close();
     }
 
+    /// <summary>Answers the dialog the window is showing, as if one of its buttons was clicked.</summary>
+    private static void Answer(Avalonia.Controls.Window window, string result)
+    {
+        UiTestHelpers.Pump();
+        Assert.Single(window.OwnedWindows).Close(result);
+        UiTestHelpers.Pump();
+    }
+
+    [AvaloniaFact]
+    public void Cancel_in_an_unsaved_changes_prompt_stops_close_all()
+    {
+        var (window, vm) = ShowEmptyWindow();
+        var (_, first, second) = CreateRequests("Cancel");
+        foreach (var request in new[] { first, second })
+        {
+            vm.OpenRequest(request);
+            ((RequestTabViewModel)vm.ActiveTab!).Name += " edited";
+        }
+
+        var closing = vm.CloseAllTabsCommand.ExecuteAsync(null);
+        Answer(window, "cancel");
+
+        Assert.True(closing.IsCompleted);
+        Assert.Empty(window.OwnedWindows);
+        Assert.Equal(2, vm.Tabs.Count);
+        foreach (var tab in vm.Tabs.ToList())
+            vm.RemoveTab(tab);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Quitting_asks_about_edits_the_session_cannot_keep()
+    {
+        var (window, vm) = ShowEmptyWindow();
+        vm.OpenEnvironmentMatrixCommand.Execute(null);
+        var matrix = Assert.IsType<EnvironmentMatrixTabViewModel>(vm.ActiveTab);
+        matrix.AddVariableCommand.Execute(null);
+        matrix.Rows[^1].Name = "quitVar" + Guid.NewGuid().ToString("N")[..8];
+        Assert.True(vm.HasUnsavedEdits);
+
+        window.Close();
+        Answer(window, "cancel");
+        Assert.True(window.IsVisible);
+
+        window.Close();
+        Answer(window, "discard");
+        Assert.False(window.IsVisible);
+        vm.RemoveTab(matrix);
+    }
+
+    [AvaloniaFact]
+    public void The_active_tab_is_restored_even_when_an_earlier_tab_is_gone()
+    {
+        var (window, _) = ShowEmptyWindow();
+        window.Close();
+        var environments = Enumerable.Range(0, 3).Select(i => Workspace.CreateEnvironment($"Restore {i} {Guid.NewGuid()}")).ToList();
+        SessionTab EnvTab(EnvironmentModel env) => new() { Kind = SessionTabKind.Environment, EntityId = env.Id };
+        Workspace.SaveSession(new SessionState
+        {
+            // The deleted request comes back as nothing, so the saved index 2 must still mean environments[1].
+            Tabs = [EnvTab(environments[0]), new SessionTab { Kind = SessionTabKind.Request, EntityId = Guid.NewGuid() },
+                EnvTab(environments[1]), EnvTab(environments[2])],
+            ActiveTabIndex = 2,
+        });
+
+        var restored = new MainWindowViewModel(App.Services.GetRequiredService<TabServices>());
+
+        Assert.Equal(environments[1].Id, restored.ActiveTab?.EntityId);
+        foreach (var env in environments)
+            Workspace.DeleteEnvironment(env);
+    }
+
+    [AvaloniaFact]
+    public void A_collection_made_in_the_save_dialog_exists_only_once_saved_to()
+    {
+        var name = "Dialog " + Guid.NewGuid();
+        var dialog = new SaveRequestDialogViewModel(Workspace, "Request");
+        SaveRequestTarget? result = null;
+        dialog.CloseRequested += target => result = target;
+
+        dialog.StartNewCollectionCommand.Execute(null);
+        dialog.NewCollectionName = name;
+        dialog.CreateCollectionCommand.Execute(null);
+        Assert.Equal(name, dialog.SelectedTarget?.Name);
+        Assert.DoesNotContain(Workspace.Collections, c => c.Name == name);
+
+        dialog.SaveCommand.Execute(null);
+        Assert.True(result?.IsNewCollection);
+        Assert.DoesNotContain(Workspace.Collections, c => c.Name == name);
+    }
+
     [AvaloniaFact]
     public void Single_click_replaces_the_preview_tab_until_it_is_edited()
     {

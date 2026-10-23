@@ -50,6 +50,9 @@ public abstract partial class TabViewModelBase(TabServices services) : Observabl
     /// <summary>Saves the tab. Returns false when the user cancelled (e.g. closed the "Save as" dialog).</summary>
     public abstract Task<bool> SaveAsync();
 
+    /// <summary>Unsaved edits survive a restart in the session; otherwise quitting asks to save them.</summary>
+    public virtual bool KeepsDraftInSession => false;
+
     public virtual SessionTab ToSession() => new() { Kind = Kind, EntityId = EntityId, IsPinned = IsPinned };
 
     /// <summary>Called when the active environment or any variables changed.</summary>
