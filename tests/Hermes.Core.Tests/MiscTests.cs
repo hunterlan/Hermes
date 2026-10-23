@@ -20,7 +20,7 @@ public class StorageTests : IDisposable
             repo.SaveResponse(id, new SavedResponse { Response = new ResponseModel { StatusCode = 200 + i, Body = [1, 2, 3] }, SentRequest = $"GET /{i}" });
         repo.SaveResponse(id, new SavedResponse { Response = new ResponseModel { StatusCode = 500, Body = new byte[WorkspaceRepository.MaxSavedBodyBytes + 1] } });
 
-        var loaded = new WorkspaceRepository(_dir).LoadResponses(id);
+        var loaded = new WorkspaceRepository(_dir).LoadResponses(id).Items;
 
         Assert.Equal(WorkspaceRepository.MaxSavedResponses, loaded.Count);
         Assert.Equal(500, loaded[0].Response.StatusCode);
@@ -30,7 +30,7 @@ public class StorageTests : IDisposable
         Assert.Equal([1, 2, 3], loaded[1].Response.Body);
 
         repo.DeleteResponses(id);
-        Assert.Empty(repo.LoadResponses(id));
+        Assert.Empty(repo.LoadResponses(id).Items);
     }
 
     [Fact]
@@ -42,6 +42,69 @@ public class StorageTests : IDisposable
 
         Assert.NotNull(JsonFileStore.Read(path, HermesJsonContext.Default.SessionState));
         Assert.Equal(["session.json"], Directory.GetFiles(_dir).Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public void An_unreadable_saved_response_is_reported_and_kept()
+    {
+        var repo = new WorkspaceRepository(_dir);
+        var id = Guid.NewGuid();
+        repo.SaveResponse(id, new SavedResponse { Timestamp = DateTimeOffset.Now.AddMinutes(-1), Response = new ResponseModel { StatusCode = 200 } });
+        var corrupt = Directory.GetFiles(Path.Combine(_dir, "responses", id.ToString())).Single();
+        File.WriteAllText(corrupt, "{ cut short");
+
+        repo.SaveResponse(id, new SavedResponse { Response = new ResponseModel { StatusCode = 201 } });
+        var loaded = repo.LoadResponses(id);
+
+        Assert.Equal(201, Assert.Single(loaded.Items).Response.StatusCode);
+        Assert.Contains(corrupt, Assert.Single(loaded.Errors));
+        Assert.Equal("{ cut short", File.ReadAllText(corrupt));
+    }
+
+    [Fact]
+    public void History_lines_cut_short_are_skipped_and_later_entries_still_load()
+    {
+        var repo = new WorkspaceRepository(_dir);
+        repo.AppendHistory(new HistoryEntry { StatusCode = 200 });
+        var file = Directory.GetFiles(Path.Combine(_dir, "history")).Single();
+        File.AppendAllText(file, "\n{\"statusCode\": 2");
+        repo.AppendHistory(new HistoryEntry { StatusCode = 404 });
+
+        var fresh = new WorkspaceRepository(_dir);
+        Assert.Equal([404, 200], fresh.LoadHistory(30).Select(h => h.StatusCode));
+        Assert.Single(fresh.LoadErrors);
+    }
+
+    [Fact]
+    public async Task A_clear_queued_after_an_append_wins()
+    {
+        var repo = new WorkspaceRepository(_dir);
+        var writer = new BackgroundWriter();
+        var started = new ManualResetEventSlim();
+        var release = new ManualResetEventSlim();
+        writer.Enqueue(() => { started.Set(); release.Wait(); });
+        writer.Enqueue(() => repo.AppendHistory(new HistoryEntry { StatusCode = 200 }));
+        writer.Enqueue(repo.ClearHistory);
+
+        started.Wait(TestContext.Current.CancellationToken);
+        release.Set();
+        await writer.FlushAsync();
+
+        Assert.Empty(new WorkspaceRepository(_dir).LoadHistory(30));
+    }
+
+    [Fact]
+    public async Task Background_write_failures_are_reported()
+    {
+        var writer = new BackgroundWriter();
+        Exception? failure = null;
+        writer.Failed += e => failure = e;
+
+        writer.Enqueue(() => throw new IOException("disk full"));
+        writer.Enqueue(() => { });
+        await writer.FlushAsync();
+
+        Assert.Equal("disk full", failure?.Message);
     }
 
     [Fact]

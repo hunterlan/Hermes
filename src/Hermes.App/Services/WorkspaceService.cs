@@ -17,9 +17,13 @@ public sealed class WorkspaceService
 {
     private readonly WorkspaceRepository _repository;
 
+    // History is written in the background, in order, so a clear always lands after the appends before it.
+    private readonly BackgroundWriter _historyWriter = new();
+
     public WorkspaceService(WorkspaceRepository repository, SettingsService settings)
     {
         _repository = repository;
+        _historyWriter.Failed += ex => StorageProblem?.Invoke($"History couldn't be saved: {ex.Message}");
         Settings = settings;
         Collections = repository.LoadCollections();
         Environments = repository.LoadEnvironments();
@@ -57,6 +61,9 @@ public sealed class WorkspaceService
 
     /// <summary>Anything that can change variable resolution: environment selection, env / globals / collection variables.</summary>
     public event Action? VariablesChanged;
+
+    /// <summary>Something couldn't be read or written. May be raised on a background thread.</summary>
+    public event Action<string>? StorageProblem;
 
     // ---- lookup ----
 
@@ -254,38 +261,45 @@ public sealed class WorkspaceService
     public void AddHistory(HistoryEntry entry)
     {
         History.Insert(0, entry);
-        _ = Task.Run(() =>
-        {
-            try { _repository.AppendHistory(entry); }
-            catch (IOException) { /* history is best effort */ }
-        });
+        _historyWriter.Enqueue(() => _repository.AppendHistory(entry));
     }
 
     public void DeleteHistory(HistoryEntry entry)
     {
         History.Remove(entry);
-        _repository.DeleteHistoryEntry(entry);
+        _historyWriter.Enqueue(() => _repository.DeleteHistoryEntry(entry));
     }
 
     public void ClearHistory()
     {
         History.Clear();
-        _repository.ClearHistory();
+        _historyWriter.Enqueue(_repository.ClearHistory);
     }
+
+    /// <summary>Completes when queued history writes are on disk (or have failed).</summary>
+    public Task FlushHistoryAsync() => _historyWriter.FlushAsync();
 
     // ---- saved responses ----
 
-    public List<SavedResponse> LoadResponses(Guid requestId) => _repository.LoadResponses(requestId);
+    /// <summary>Saved responses for a request, newest first. Files that can't be read are reported and skipped.</summary>
+    public IReadOnlyList<SavedResponse> LoadResponses(Guid requestId)
+    {
+        var loaded = _repository.LoadResponses(requestId);
+        foreach (var error in loaded.Errors)
+            StorageProblem?.Invoke($"A saved response couldn't be read and was skipped: {error}");
+        return loaded.Items;
+    }
 
-    /// <summary>Saves a response with its request; returns the stored list (newest first), or null if it couldn't be written.</summary>
-    public List<SavedResponse>? SaveResponse(Guid requestId, SavedResponse saved)
+    /// <summary>Saves a response with its request; returns what was stored, or null (after reporting it) if it couldn't be written.</summary>
+    public SavedResponse? SaveResponse(Guid requestId, SavedResponse saved)
     {
         try
         {
             return _repository.SaveResponse(requestId, saved);
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            StorageProblem?.Invoke($"The response couldn't be saved: {ex.Message}");
             return null;
         }
     }

@@ -7,6 +7,7 @@ using Hermes.App.Services;
 using Hermes.Core.Formatting;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Storage;
 
 namespace Hermes.App.ViewModels;
 
@@ -82,6 +83,10 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         if (show && saved.Count > 0)
             Show(saved[0]);
     }
+
+    /// <summary>Puts a just-saved response in front of the list, keeping as many as the workspace stores.</summary>
+    public void AddSaved(SavedResponse saved) =>
+        SetSaved([saved, .. SavedResponses.Select(i => i.Saved).Take(WorkspaceRepository.MaxSavedResponses - 1)], show: false);
 
     [RelayCommand]
     private void ShowSaved(SavedResponseItem item)
