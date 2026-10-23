@@ -14,6 +14,7 @@ public sealed class DataFolderLock : IDisposable
     public static string FileFor(string dataDirectory) => Path.Combine(dataDirectory, ".lock");
 
     /// <summary>Takes the folder's lock; null when another instance holds it.</summary>
+    /// <exception cref="UnauthorizedAccessException">The folder or its lock file can't be created.</exception>
     public static DataFolderLock? TryAcquire(string dataDirectory)
     {
         Directory.CreateDirectory(dataDirectory);

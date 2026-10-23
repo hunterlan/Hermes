@@ -214,8 +214,9 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
 
         var contentType = response.ContentType ?? "";
         var isImage = contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) && !contentType.Contains("svg");
-        PreviewImage?.Dispose();
+        var oldPreview = PreviewImage;
         PreviewImage = isImage ? TryDecodeImage(response.Body) : null;
+        oldPreview?.Dispose();
 
         IsTooLargeForPretty = response.BodySize > settings.Current.MaxPrettyResponseSizeMb * 1024L * 1024L;
         RawText = isImage ? $"[{contentType} image, {FormatSize(response.BodySize)}. Use Preview to view it.]" : Decode(response);
@@ -239,8 +240,9 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         IsLoading = false;
         Error = null;
         PrettyText = RawText = "";
-        PreviewImage?.Dispose();
+        var oldPreview = PreviewImage;
         PreviewImage = null;
+        oldPreview?.Dispose();
         OnPropertyChanged(nameof(DisplayText));
     }
 

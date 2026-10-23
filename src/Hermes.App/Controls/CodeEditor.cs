@@ -43,9 +43,6 @@ public sealed class CodeEditor : UserControl
     private FoldingManager? _foldings;
     private bool _updatingFromEditor;
 
-    /// <summary>The next text from the view model starts a new document (another tab's or response's), not an edit.</summary>
-    private bool _newDocument = true;
-
     public CodeEditor()
     {
         _editor = new TextEditor
@@ -162,13 +159,16 @@ public sealed class CodeEditor : UserControl
         ResetFoldings();
     }
 
-    // Views are recycled between tabs, so a new DataContext means another document: its undo history starts empty
-    // whichever order the binding and this notification come in.
+    // Views are recycled between tabs, so a new DataContext means another document. Its text may arrive before or
+    // after this notification, so the history is cleared once the bindings have settled.
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
-        _editor.Document.UndoStack.ClearAll();
-        _newDocument = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _editor.Document.UndoStack.ClearAll();
+            _editor.ScrollToHome();
+        }, DispatcherPriority.Background);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -181,7 +181,7 @@ public sealed class CodeEditor : UserControl
             var text = change.GetNewValue<string?>() ?? "";
             if (_editor.Text != text)
             {
-                if (_newDocument || IsReadOnly)
+                if (IsReadOnly)
                 {
                     _editor.Document.Text = text;
                     _editor.Document.UndoStack.ClearAll();
@@ -193,7 +193,6 @@ public sealed class CodeEditor : UserControl
                     _editor.Document.Replace(0, _editor.Document.TextLength, text);
                 }
             }
-            _newDocument = false;
             ScheduleFoldings();
         }
         else if (change.Property == LanguageProperty)

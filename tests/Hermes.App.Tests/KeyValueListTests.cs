@@ -12,7 +12,7 @@ public class KeyValueListTests
         list.Load(
         [
             new KeyValueItem("name", "ada") { Description = "Who" },
-            new KeyValueItem("avatar", "/tmp/a.png") { Kind = KeyValueKind.File },
+            new KeyValueItem("avatar ", "/tmp/a.png") { Kind = KeyValueKind.File },
             new KeyValueItem("tag", "one") { Description = "First tag" },
             new KeyValueItem("tag", "two") { Description = "Second tag" },
         ]);

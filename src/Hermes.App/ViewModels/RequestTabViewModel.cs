@@ -452,6 +452,13 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
 
     // ---- variables / workspace ----
 
+    // The toggles show the app setting where the request has no override.
+    public override void OnSettingsChanged()
+    {
+        OnPropertyChanged(nameof(FollowRedirects));
+        OnPropertyChanged(nameof(VerifySsl));
+    }
+
     public override void OnVariablesChanged()
     {
         RefreshVariables();

@@ -184,13 +184,21 @@ public sealed partial class EnvironmentMatrixTabViewModel : TabViewModelBase
         foreach (var column in Columns)
         {
             var variables = column.Model.Variables;
-            foreach (var row in Rows.Where(r => r.Name.Trim().Length > 0))
+            var rows = Rows.Where(r => r.Name.Trim().Length > 0).ToList();
+            // Each row's variable is found before any is renamed, so swapped names or a new row taking a renamed
+            // row's old name can't land on the wrong variable.
+            var existing = rows.Where(r => r.SavedName is not null)
+                .ToDictionary(r => r, r => variables.FirstOrDefault(v => v.Key == r.SavedName));
+            foreach (var row in rows.Where(r => r.SavedName is null))
+                existing[row] = variables.FirstOrDefault(v => v.Key == row.Name.Trim() && !existing.ContainsValue(v));
+
+            foreach (var row in rows)
             {
                 var cell = row.Cells.First(c => c.Column == column);
                 if (!cell.IsSet)
                     continue;
                 var name = row.Name.Trim();
-                var variable = variables.FirstOrDefault(v => v.Key == (row.SavedName ?? name));
+                var variable = existing[row];
                 if (variable is null)
                 {
                     variables.Add(new Variable(name, cell.Value) { Type = row.Type });
