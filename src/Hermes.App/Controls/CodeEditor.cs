@@ -43,6 +43,9 @@ public sealed class CodeEditor : UserControl
     private FoldingManager? _foldings;
     private bool _updatingFromEditor;
 
+    /// <summary>The next text from the view model starts a new document (another tab's or response's), not an edit.</summary>
+    private bool _newDocument = true;
+
     public CodeEditor()
     {
         _editor = new TextEditor
@@ -159,6 +162,15 @@ public sealed class CodeEditor : UserControl
         ResetFoldings();
     }
 
+    // Views are recycled between tabs, so a new DataContext means another document: its undo history starts empty
+    // whichever order the binding and this notification come in.
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        _editor.Document.UndoStack.ClearAll();
+        _newDocument = true;
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
@@ -169,10 +181,19 @@ public sealed class CodeEditor : UserControl
             var text = change.GetNewValue<string?>() ?? "";
             if (_editor.Text != text)
             {
-                _editor.Document.Text = text;
-                _editor.Document.UndoStack.ClearAll();
-                _editor.ScrollToHome();
+                if (_newDocument || IsReadOnly)
+                {
+                    _editor.Document.Text = text;
+                    _editor.Document.UndoStack.ClearAll();
+                    _editor.ScrollToHome();
+                }
+                else
+                {
+                    // An edit made by the view model (Beautify, an import): one step the user can undo.
+                    _editor.Document.Replace(0, _editor.Document.TextLength, text);
+                }
             }
+            _newDocument = false;
             ScheduleFoldings();
         }
         else if (change.Property == LanguageProperty)

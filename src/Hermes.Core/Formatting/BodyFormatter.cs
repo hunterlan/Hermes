@@ -17,16 +17,26 @@ public static class BodyFormatter
     /// Pretty-prints JSON. Falls back to a lenient, token-based formatter for text that isn't strictly valid
     /// (e.g. contains unquoted <c>{{variables}}</c>), so "Beautify" still works on request bodies.
     /// </summary>
-    public static string FormatJson(string text)
+    public static string FormatJson(string text) =>
+        TryFormatJson(text, new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip }, out var formatted)
+            ? formatted
+            : LenientJsonFormat(text);
+
+    /// <summary>Pretty-prints <paramref name="text"/> if it is valid JSON; otherwise leaves it as it is.</summary>
+    public static bool TryFormatJson(string text, out string formatted) => TryFormatJson(text, default, out formatted);
+
+    private static bool TryFormatJson(string text, JsonDocumentOptions options, out string formatted)
     {
         try
         {
-            using var doc = JsonDocument.Parse(text, new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
-            return JsonSerializer.Serialize(doc.RootElement, IndentedOptions);
+            using var doc = JsonDocument.Parse(text, options);
+            formatted = JsonSerializer.Serialize(doc.RootElement, IndentedOptions);
+            return true;
         }
         catch (JsonException)
         {
-            return LenientJsonFormat(text);
+            formatted = text;
+            return false;
         }
     }
 
