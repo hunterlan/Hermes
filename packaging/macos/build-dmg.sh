@@ -21,6 +21,7 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp -R "$work/publish/." "$app/Contents/MacOS/"
 sed "s/@VERSION@/$version/g" "$here/Info.plist" > "$app/Contents/Info.plist"
 cp "$root/packaging/icons/hermes.icns" "$app/Contents/Resources/Hermes.icns"
+cp "$root/LICENSE" "$app/Contents/Resources/LICENSE"
 
 # Ad-hoc signature: Apple Silicon refuses to run unsigned code. Not notarized.
 codesign --force --deep --sign - "$app"

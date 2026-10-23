@@ -14,11 +14,14 @@ case "$rid" in
   *) echo "unsupported runtime: $rid" >&2; exit 1 ;;
 esac
 
-publish="$(mktemp -d)"
-trap 'rm -rf "$publish"' EXIT
-dotnet publish "$root/src/Hermes.App" -c Release -r "$rid" -p:Version="$version" -o "$publish"
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+dotnet publish "$root/src/Hermes.App" -c Release -r "$rid" -p:Version="$version" -o "$work/publish"
+
+# nfpm expands environment variables only in a few fields, not in file paths, so fill in the placeholders here.
+sed -e "s|@VERSION@|$version|g" -e "s|@ARCH@|$arch|g" -e "s|@PUBLISH_DIR@|$work/publish|g" \
+  "$root/packaging/linux/nfpm.yaml" > "$work/nfpm.yaml"
 
 cd "$root"
-export VERSION="$version" ARCH="$arch" PUBLISH_DIR="$publish"
-nfpm package --config packaging/linux/nfpm.yaml --packager deb --target "$out/hermes_${version}_${arch}.deb"
-nfpm package --config packaging/linux/nfpm.yaml --packager rpm --target "$out/hermes-${version}.${rpm_arch}.rpm"
+nfpm package --config "$work/nfpm.yaml" --packager deb --target "$out/hermes_${version}_${arch}.deb"
+nfpm package --config "$work/nfpm.yaml" --packager rpm --target "$out/hermes-${version}.${rpm_arch}.rpm"
