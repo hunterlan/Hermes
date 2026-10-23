@@ -69,6 +69,9 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void OpenMatrix() => _host.OpenEnvironmentMatrix();
+
+    [RelayCommand]
     private void NewEnvironment()
     {
         var env = _workspace.CreateEnvironment("New Environment");

@@ -6,6 +6,7 @@ public enum SessionTabKind
     Collection,
     Folder,
     Environment,
+    EnvironmentMatrix,
 }
 
 public sealed class SessionTab

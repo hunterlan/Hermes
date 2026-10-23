@@ -47,7 +47,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
                 tab.OnVariablesChanged();
             RefreshEnvironmentOptions();
         };
-        Workspace.EnvironmentsChanged += RefreshEnvironmentOptions;
+        Workspace.EnvironmentsChanged += () =>
+        {
+            RefreshEnvironmentOptions();
+            foreach (var matrix in Tabs.OfType<EnvironmentMatrixTabViewModel>())
+                matrix.OnVariablesChanged();
+        };
         Tabs.CollectionChanged += (_, e) =>
         {
             foreach (var tab in e.NewItems?.OfType<TabViewModelBase>() ?? [])
@@ -181,6 +186,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
 
     public void OpenFolder(FolderModel folder) =>
         OpenOrFocus(folder.Id, () => new FolderTabViewModel(_services, folder));
+
+    [RelayCommand]
+    public void OpenEnvironmentMatrix() =>
+        OpenOrFocus(EnvironmentMatrixTabViewModel.MatrixId, () => new EnvironmentMatrixTabViewModel(_services));
 
     public void OpenEnvironment(EnvironmentModel environment) =>
         OpenOrFocus(environment.Id, () => new EnvironmentTabViewModel(_services, environment));
@@ -533,6 +542,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
                 return Workspace.Find(id)?.Node is FolderModel folder ? new FolderTabViewModel(_services, folder) : null;
             case SessionTabKind.Environment:
                 return Workspace.FindEnvironment(id) is { } environment ? new EnvironmentTabViewModel(_services, environment) : null;
+            case SessionTabKind.EnvironmentMatrix:
+                return new EnvironmentMatrixTabViewModel(_services);
             default:
                 return null;
         }

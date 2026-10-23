@@ -97,8 +97,8 @@
                     <Button Grid.Column="1" Classes="link" Content="Edit" Command="{Binding EditGlobalsCommand}" />
                   </Grid>
                   <v:QuickLookTable DataContext="{Binding QuickLookGlobals}" />
-                  <Button Classes="outline" HorizontalAlignment="Left" Content="Manage environments"
-                          Command="{Binding ShowPaneCommand}" CommandParameter="{x:Static vm:SidebarPane.Environments}" />
+                  <Button Classes="outline" HorizontalAlignment="Left" Content="Open environments matrix"
+                          Command="{Binding OpenEnvironmentMatrixCommand}" />
                 </StackPanel>
               </Flyout>
             </Button.Flyout>
@@ -183,6 +183,9 @@
             </DataTemplate>
             <DataTemplate DataType="vm:EnvironmentTabViewModel">
               <v:EnvironmentTabView />
+            </DataTemplate>
+            <DataTemplate DataType="vm:EnvironmentMatrixTabViewModel">
+              <v:EnvironmentMatrixView />
             </DataTemplate>
           </ContentControl.DataTemplates>
         </ContentControl>

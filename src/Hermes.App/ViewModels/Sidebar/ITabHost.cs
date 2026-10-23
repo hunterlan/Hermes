@@ -13,6 +13,9 @@ public interface ITabHost
     void OpenFolder(FolderModel folder);
     void OpenEnvironment(EnvironmentModel environment);
 
+    /// <summary>Opens the side-by-side view of every variable in every environment.</summary>
+    void OpenEnvironmentMatrix();
+
     /// <summary>Opens an unsaved copy of a request (from history).</summary>
     void OpenDraft(HttpRequestModel model);
 

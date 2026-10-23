@@ -18,7 +18,14 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,*">
+  <Grid RowDefinitions="Auto,*,Auto">
+    <Button Grid.Row="2" Classes="outline" Margin="12,6,12,10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+            Command="{Binding OpenMatrixCommand}" ToolTip.Tip="Every variable in every environment, side by side">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <PathIcon Data="{StaticResource IconEnvironment}" Width="13" Height="13" />
+        <TextBlock Text="Compare all environments" />
+      </StackPanel>
+    </Button>
     <Grid ColumnDefinitions="Auto,*" Margin="8,8,8,6">
       <Button Classes="icon" Command="{Binding NewEnvironmentCommand}" ToolTip.Tip="Create new environment">
         <PathIcon Data="{StaticResource IconPlus}" />

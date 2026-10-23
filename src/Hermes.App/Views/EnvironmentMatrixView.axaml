@@ -1,0 +1,135 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             x:Class="Hermes.App.Views.EnvironmentMatrixView"
+             x:DataType="vm:EnvironmentMatrixTabViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.cell">
+      <Setter Property="Width" Value="230" />
+      <Setter Property="MinHeight" Value="40" />
+      <Setter Property="Padding" Value="4,0" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
+    <Style Selector="Border.cell.active">
+      <Setter Property="Background" Value="{DynamicResource BgTertiaryBrush}" />
+    </Style>
+    <Style Selector="Border.nameCell">
+      <Setter Property="Width" Value="190" />
+    </Style>
+    <Style Selector="Border.usedCell">
+      <Setter Property="Width" Value="110" />
+    </Style>
+    <Style Selector="Border.headerCell">
+      <Setter Property="MinHeight" Value="52" />
+      <Setter Property="Padding" Value="12,0" />
+      <Setter Property="Background" Value="{DynamicResource BgPrimaryBrush}" />
+    </Style>
+    <Style Selector="Border.headerCell.active">
+      <Setter Property="Background" Value="{DynamicResource BgTertiaryBrush}" />
+    </Style>
+    <Style Selector="TextBox.matrix">
+      <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+      <Setter Property="FontSize" Value="12.5" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20,14,20,0">
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="2">
+        <TextBlock Classes="h1" Text="Variables across environments" />
+        <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
+                   Text="Edit a variable in every environment in one row. Empty cells fall back to Globals. Resolution order: request, folder, collection, environment, globals." />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+        <Button Classes="outline" Command="{Binding AddVariableCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Data="{StaticResource IconPlus}" Width="12" Height="12" />
+            <TextBlock Text="Add variable" />
+          </StackPanel>
+        </Button>
+        <Button Classes="accent" Command="{Binding SaveCommand}" ToolTip.Tip="Save (Ctrl+S)" IsEnabled="{Binding IsDirty}">
+          <TextBlock Text="Save" />
+        </Button>
+      </StackPanel>
+    </Grid>
+
+    <!-- empty values in the active environment that saved requests use -->
+    <Border Grid.Row="1" Margin="0,12,0,0" Padding="14,10" CornerRadius="10" Background="{DynamicResource WarningBgBrush}"
+            IsVisible="{Binding MissingWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <Grid ColumnDefinitions="Auto,*">
+        <PathIcon Data="{StaticResource IconAlert}" Width="16" Height="16" Foreground="{DynamicResource WarningBrush}" Margin="0,0,12,0" />
+        <TextBlock Grid.Column="1" Text="{Binding MissingWarning}" TextWrapping="Wrap" />
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="2" Margin="0,14,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" ClipToBounds="True"
+            VerticalAlignment="Top">
+      <ScrollViewer HorizontalScrollBarVisibility="Auto">
+        <StackPanel>
+          <!-- header row -->
+          <StackPanel Orientation="Horizontal">
+            <Border Classes="cell nameCell headerCell"><TextBlock Text="Name" FontWeight="SemiBold" VerticalAlignment="Center" /></Border>
+            <ItemsControl ItemsSource="{Binding Columns}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:MatrixColumn">
+                  <Border Classes="cell headerCell" Classes.active="{Binding IsActive}">
+                    <StackPanel VerticalAlignment="Center" Spacing="1">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <PathIcon Data="{StaticResource IconLock}" Width="11" Height="11" Foreground="{DynamicResource ErrorBrush}"
+                                  IsVisible="{Binding ConfirmBeforeSend}" />
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                      </StackPanel>
+                      <TextBlock Text="{Binding Caption}" FontSize="11" Classes="tertiary" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Border Classes="cell usedCell headerCell"><TextBlock Text="Used by" FontWeight="SemiBold" VerticalAlignment="Center" /></Border>
+          </StackPanel>
+
+          <ItemsControl ItemsSource="{Binding Rows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:MatrixRow">
+                <StackPanel Orientation="Horizontal">
+                  <Border Classes="cell nameCell">
+                    <TextBox Classes="cell matrix" Text="{Binding Name}" PlaceholderText="name" Foreground="{DynamicResource InfoBrush}" />
+                  </Border>
+                  <ItemsControl ItemsSource="{Binding Cells}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:MatrixCell">
+                        <Border Classes="cell" Classes.active="{Binding IsActiveColumn}">
+                          <Grid ColumnDefinitions="Auto,*">
+                            <PathIcon Data="{StaticResource IconKey}" Width="12" Height="12" Foreground="{DynamicResource SuccessBrush}"
+                                      Margin="6,0,0,0" IsVisible="{Binding IsSecret}" ToolTip.Tip="Secret" />
+                            <TextBox Grid.Column="1" Classes="cell matrix" Text="{Binding Value}" PlaceholderText="{Binding Placeholder}"
+                                     PasswordChar="{Binding IsSecret, Converter={x:Static vm:UiConverters.SecretChar}}" />
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <Border Classes="cell usedCell" Padding="12,0">
+                    <TextBlock Text="{Binding UsedByText}" Classes="secondary" FontSize="12" VerticalAlignment="Center" />
+                  </Border>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,12,0,14">
+      <PathIcon Data="{StaticResource IconKey}" Width="13" Height="13" Foreground="{DynamicResource SuccessBrush}" />
+      <TextBlock Classes="secondary" FontSize="12" Text="Secret values are masked on screen." VerticalAlignment="Center" />
+    </StackPanel>
+  </Grid>
+</UserControl>
