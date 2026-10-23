@@ -75,6 +75,11 @@ public class StorageTests : IDisposable
         var fresh = new WorkspaceRepository(_dir);
         Assert.Equal([404, 200], fresh.LoadHistory(30).Select(h => h.StatusCode));
         Assert.Single(fresh.LoadErrors);
+
+        // Reported once: the damaged line is gone from the file after that.
+        var again = new WorkspaceRepository(_dir);
+        Assert.Equal([404, 200], again.LoadHistory(30).Select(h => h.StatusCode));
+        Assert.Empty(again.LoadErrors);
     }
 
     [Fact]

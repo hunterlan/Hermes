@@ -34,6 +34,12 @@ public static class RequestPreparer
         var prepared = Prepare(request, context, context.BuildScope().UseDynamicValues(dynamicValues), auth, includeDefaultHeaders: true);
         var masked = Prepare(request, context, context.BuildScope().MaskSecrets().UseDynamicValues(dynamicValues.Replay()),
             SecretFields.Masked(auth), includeDefaultHeaders: true);
+
+        // Secret values that reached the request some other way (a copy typed in by hand) are masked by value.
+        var scope = context.BuildScope();
+        var secretValues = scope.Values.Where(v => scope.IsSecret(v.Key)).Select(v => v.Value)
+            .Concat(SecretFields.Values(auth).Select(v => VariableResolver.Resolve(v, scope)));
+        SecretMasker.MaskOccurrences(masked, secretValues);
         return (prepared, masked);
     }
 

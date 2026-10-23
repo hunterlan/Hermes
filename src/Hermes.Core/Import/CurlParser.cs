@@ -49,6 +49,7 @@ public static class CurlParser
         var urlEncodedParts = new List<string>();
         var forceGet = false;
         var head = false;
+        var json = false;
 
         foreach (var (flag, value) in Options(tokens.Skip(1).ToList()))
         {
@@ -69,10 +70,8 @@ public static class CurlParser
                     dataParts.Add(new DataPart(value!, DataFlagsReadingFiles.Contains(flag)));
                     break;
                 case "--json":
-                    // Same as --data, plus JSON Content-Type and Accept headers unless given.
                     dataParts.Add(new DataPart(value!, ReadsFile: true));
-                    AddHeaderIfMissing(request, "Content-Type", "application/json");
-                    AddHeaderIfMissing(request, "Accept", "application/json");
+                    json = true;
                     break;
                 case "--data-urlencode":
                     urlEncodedParts.Add(value!);
@@ -130,6 +129,13 @@ public static class CurlParser
                     request.Settings.FollowRedirects = true;
                     break;
             }
+        }
+
+        // --json is --data plus JSON Content-Type and Accept headers, unless -H gives them (before or after it).
+        if (json)
+        {
+            AddHeaderIfMissing(request, "Content-Type", "application/json");
+            AddHeaderIfMissing(request, "Accept", "application/json");
         }
 
         // A word that looks like a URL wins over others, in case an unlisted option's value was taken for a word.

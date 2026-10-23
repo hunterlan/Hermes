@@ -38,6 +38,10 @@ public static partial class SecretFields
         return copy;
     }
 
+    /// <summary>The credential fields of <paramref name="auth"/> that are set, as written (not resolved).</summary>
+    internal static IEnumerable<string> Values(AuthConfig auth) =>
+        Slots(auth, "").Select(slot => slot.Get()).OfType<string>().Where(v => v.Length > 0);
+
     /// <summary>True for a credential typed in as-is, false for one made only of <c>{{variable}}</c> references.</summary>
     public static bool IsLiteral(string? value) =>
         !string.IsNullOrWhiteSpace(value) && !OnlyVariableReferences().IsMatch(value);

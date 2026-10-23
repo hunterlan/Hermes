@@ -26,10 +26,10 @@ public sealed class KeychainSecretStore : SecretStore
         if (Environment.GetEnvironmentVariable("HERMES_SECRET_STORE") == "memory")
             return new InMemorySecretStore();
 
-        Guid? existingId;
+        WorkspaceIdentityState identity;
         try
         {
-            existingId = WorkspaceIdentity.Read(dataDirectory);
+            identity = WorkspaceIdentity.Resolve(dataDirectory);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -38,22 +38,23 @@ public sealed class KeychainSecretStore : SecretStore
 
         try
         {
-            var id = existingId ?? Guid.NewGuid();
-            var storage = Open(id.ToString("N"));
+            var storage = Open(identity.Id.ToString("N"));
             storage.VerifyPersistence();
-            if (existingId is null)
-            {
-                // Entries used to be keyed by a hash of the folder's path; their secrets move to the id's entry.
-                // The id is recorded only once they're there (a failure is retried next start), and the old entry
-                // is cleared only after that.
-                var old = Open(PathKey(dataDirectory));
-                var data = old.ReadData();
-                if (data.Length > 0)
-                    storage.WriteData(data);
-                WorkspaceIdentity.Write(dataDirectory, id);
-                if (data.Length > 0)
-                    old.Clear();
-            }
+
+            // A folder new to ids takes the secrets stored under the hash of its path (how entries used to be keyed);
+            // a copied folder starts with a copy of the original's secrets.
+            var source = identity.IsNew ? Open(PathKey(dataDirectory))
+                : identity.CopiedFrom is { } original ? Open(original.ToString("N"))
+                : null;
+            var data = source?.ReadData() ?? [];
+            if (data.Length > 0)
+                storage.WriteData(data);
+            // The id is recorded only once the secrets are under it (a failure is retried next start), and the
+            // path-keyed entry is cleared only after that. The original of a copy keeps its own entry.
+            if (identity.NeedsWrite)
+                WorkspaceIdentity.Write(dataDirectory, identity.Id);
+            if (identity.IsNew && data.Length > 0)
+                source!.Clear();
             return new KeychainSecretStore(storage);
         }
         catch (Exception ex)

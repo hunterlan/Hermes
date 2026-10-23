@@ -178,7 +178,7 @@ public static partial class VariableResolver
 
     /// <summary>Whether <paramref name="name"/> can be resolved, either from the scope or as a dynamic variable.</summary>
     public static bool CanResolve(string name, VariableScope scope) =>
-        scope.TryGet(name, out _) || (IsDynamic(name) && DynamicVariables.Names.Contains(name));
+        scope.TryGet(name, out _) || (IsDynamic(name) && DynamicVariables.Exists(name));
 
     /// <summary>Replaces <c>{{name}}</c> with values from the scope. Unknown variables are left untouched.</summary>
     public static string Resolve(string? text, VariableScope scope)
