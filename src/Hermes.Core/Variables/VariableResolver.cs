@@ -5,8 +5,12 @@ namespace Hermes.Core.Variables;
 /// <summary>A layered set of variables. Later layers win over earlier ones (global &lt; collection &lt; environment).</summary>
 public sealed class VariableScope
 {
+    /// <summary>Shown (and saved) in place of a secret value.</summary>
+    public const string MaskedValue = "••••••";
+
     private readonly Dictionary<string, string> _values = new(StringComparer.Ordinal);
     private readonly HashSet<string> _secretKeys = new(StringComparer.Ordinal);
+    private DynamicValueLog? _dynamicValues;
 
     public static VariableScope Empty { get; } = new();
 
@@ -34,12 +38,79 @@ public sealed class VariableScope
         return this;
     }
 
+    /// <summary>Replaces every secret value with <see cref="MaskedValue"/>, for a copy of a request that is shown or saved.</summary>
+    public VariableScope MaskSecrets()
+    {
+        foreach (var key in _secretKeys)
+            _values[key] = MaskedValue;
+        return this;
+    }
+
+    /// <summary>Takes dynamic values (<c>{{$guid}}</c>, ...) from <paramref name="log"/> instead of generating them freely.</summary>
+    public VariableScope UseDynamicValues(DynamicValueLog log)
+    {
+        _dynamicValues = log;
+        return this;
+    }
+
     public bool TryGet(string key, out string value) => _values.TryGetValue(key, out value!);
+
+    public bool IsSecret(string key) => _secretKeys.Contains(key);
+
+    /// <summary>The value to show for <paramref name="key"/>: <see cref="MaskedValue"/> when it's a secret.</summary>
+    public bool TryGetDisplay(string key, out string value)
+    {
+        if (!_values.TryGetValue(key, out value!))
+            return false;
+        if (IsSecret(key))
+            value = MaskedValue;
+        return true;
+    }
 
     public IReadOnlyDictionary<string, string> Values => _values;
 
-    /// <summary>Values of the variables that are secret in the layer that wins.</summary>
-    public IEnumerable<string> SecretValues => _secretKeys.Select(k => _values[k]);
+    internal bool TryResolveDynamic(string name, out string value) =>
+        _dynamicValues is { } log ? log.TryResolve(name, out value) : DynamicVariables.TryResolve(name, out value);
+}
+
+/// <summary>
+/// Dynamic values generated while preparing a request, in order. A replay hands the same values out again, so the
+/// masked copy of a request shows what was actually sent.
+/// </summary>
+public sealed class DynamicValueLog
+{
+    private readonly Dictionary<string, List<string>> _values;
+    private readonly Dictionary<string, int>? _replayed;
+
+    public DynamicValueLog() => _values = new(StringComparer.Ordinal);
+
+    private DynamicValueLog(Dictionary<string, List<string>> values)
+    {
+        _values = values;
+        _replayed = new(StringComparer.Ordinal);
+    }
+
+    /// <summary>A log that returns this one's values in the order they were generated (and fresh ones after that).</summary>
+    public DynamicValueLog Replay() => new(_values);
+
+    internal bool TryResolve(string name, out string value)
+    {
+        if (_replayed is not null)
+        {
+            var next = _replayed.GetValueOrDefault(name);
+            if (_values.TryGetValue(name, out var recorded) && next < recorded.Count)
+            {
+                _replayed[name] = next + 1;
+                value = recorded[next];
+                return true;
+            }
+            return DynamicVariables.TryResolve(name, out value);
+        }
+        if (!DynamicVariables.TryResolve(name, out value))
+            return false;
+        (_values.TryGetValue(name, out var list) ? list : _values[name] = []).Add(value);
+        return true;
+    }
 }
 
 public static partial class VariableResolver
@@ -92,7 +163,7 @@ public static partial class VariableResolver
     /// </summary>
     public static IReadOnlyList<VariableSuggestion> Suggest(VariableScope scope, string typed, int max = 5)
     {
-        var candidates = scope.Values.Select(kv => new VariableSuggestion(kv.Key, kv.Value))
+        var candidates = scope.Values.Select(kv => new VariableSuggestion(kv.Key, scope.IsSecret(kv.Key) ? VariableScope.MaskedValue : kv.Value))
             .Concat(DynamicVariables.Names.Where(n => !scope.Values.ContainsKey(n)).Select(n => new VariableSuggestion(n, null)));
         return candidates
             .Select(c => (Suggestion: c, Index: c.Name.IndexOf(typed, StringComparison.OrdinalIgnoreCase)))
@@ -107,7 +178,7 @@ public static partial class VariableResolver
 
     /// <summary>Whether <paramref name="name"/> can be resolved, either from the scope or as a dynamic variable.</summary>
     public static bool CanResolve(string name, VariableScope scope) =>
-        scope.TryGet(name, out _) || (IsDynamic(name) && DynamicVariables.TryResolve(name, out _));
+        scope.TryGet(name, out _) || (IsDynamic(name) && DynamicVariables.Names.Contains(name));
 
     /// <summary>Replaces <c>{{name}}</c> with values from the scope. Unknown variables are left untouched.</summary>
     public static string Resolve(string? text, VariableScope scope)
@@ -122,7 +193,7 @@ public static partial class VariableResolver
             var next = VariablePattern().Replace(current, m =>
             {
                 var name = m.Groups[1].Value.Trim();
-                if (scope.TryGet(name, out var value) || (IsDynamic(name) && DynamicVariables.TryResolve(name, out value)))
+                if (scope.TryGet(name, out var value) || (IsDynamic(name) && scope.TryResolveDynamic(name, out value)))
                 {
                     changed = true;
                     return value;
