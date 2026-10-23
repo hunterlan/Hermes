@@ -14,6 +14,19 @@ public class StorageTests : IDisposable
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "hermes-tests-" + Guid.NewGuid());
 
     [Fact]
+    public void Only_one_instance_holds_a_data_folder()
+    {
+        using (var first = DataFolderLock.TryAcquire(_dir))
+        {
+            Assert.NotNull(first);
+            Assert.Null(DataFolderLock.TryAcquire(_dir));
+        }
+
+        using var afterRelease = DataFolderLock.TryAcquire(_dir);
+        Assert.NotNull(afterRelease);
+    }
+
+    [Fact]
     public void Saved_responses_keep_the_newest_and_drop_large_bodies()
     {
         var repo = new WorkspaceRepository(_dir);
