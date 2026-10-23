@@ -239,6 +239,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         IsLoading = false;
         Error = null;
         PrettyText = RawText = "";
+        PreviewImage?.Dispose();
         PreviewImage = null;
         OnPropertyChanged(nameof(DisplayText));
     }
@@ -305,15 +306,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         switch (language)
         {
             case "json":
-                try
-                {
-                    using var doc = System.Text.Json.JsonDocument.Parse(text);
-                    return BodyFormatter.FormatJson(text);
-                }
-                catch (System.Text.Json.JsonException)
-                {
-                    return text;
-                }
+                return BodyFormatter.TryFormatJson(text, out var json) ? json : text;
             case "xml":
                 return BodyFormatter.TryFormatXml(text, out var xml) ? xml : text;
             default:

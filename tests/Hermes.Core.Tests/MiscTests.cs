@@ -181,6 +181,17 @@ public class FormatterAndOAuthTests
     }
 
     [Fact]
+    public void Strict_json_formatting_leaves_text_that_is_not_json()
+    {
+        Assert.True(BodyFormatter.TryFormatJson("[1]", out var formatted));
+        Assert.Equal("[\n  1\n]", formatted.ReplaceLineEndings("\n"));
+        Assert.False(BodyFormatter.TryFormatJson("{\"id\":{{id}}}", out formatted));
+        Assert.Equal("{\"id\":{{id}}}", formatted);
+        // A response's comments aren't dropped from its pretty view.
+        Assert.False(BodyFormatter.TryFormatJson("[1 /* one */]", out _));
+    }
+
+    [Fact]
     public void Formats_xml()
     {
         Assert.True(BodyFormatter.TryFormatXml("<a><b>1</b></a>", out var xml));
