@@ -122,6 +122,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     public QuickLookSection QuickLookGlobals { get; private set; } = new([]);
     public string QuickLookEnvironmentTitle => Workspace.ActiveEnvironment?.Name ?? "No environment selected";
     public bool HasActiveEnvironment => Workspace.ActiveEnvironment is not null;
+    public bool ActiveEnvironmentConfirms => Workspace.ActiveEnvironment?.ConfirmBeforeSend == true;
 
     partial void OnSelectedEnvironmentChanged(EnvironmentOption? value)
     {
@@ -158,6 +159,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         OnPropertyChanged(nameof(QuickLookGlobals));
         OnPropertyChanged(nameof(QuickLookEnvironmentTitle));
         OnPropertyChanged(nameof(HasActiveEnvironment));
+        OnPropertyChanged(nameof(ActiveEnvironmentConfirms));
     }
 
     [RelayCommand]

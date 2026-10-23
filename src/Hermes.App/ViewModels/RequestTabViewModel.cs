@@ -469,6 +469,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
 
         var model = BuildModel();
         var prepared = RequestPreparer.Prepare(model, CreateContext());
+        if (!await ConfirmSendAsync(prepared))
+            return;
 
         IsSending = true;
         Response.SetSentRequest(prepared);
@@ -505,6 +507,53 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
             _sendCts.Dispose();
             _sendCts = null;
         }
+    }
+
+    /// <summary>Variables used by the request that resolve to nothing; they would be sent as literal {{name}} text.</summary>
+    public IReadOnlyList<string> FindUnresolvedVariables()
+    {
+        var model = BuildModel();
+        var scope = CreateContext().BuildScope();
+        IEnumerable<string?> texts =
+        [
+            model.Url,
+            .. model.PathVariables.Select(p => p.Value),
+            .. model.Headers.Where(h => h.Enabled).SelectMany(h => new[] { h.Key, h.Value }),
+            .. model.Body.Mode switch
+            {
+                BodyMode.Raw => [model.Body.Raw],
+                BodyMode.FormData => model.Body.FormData.Where(f => f.Enabled).SelectMany(f => new[] { f.Key, f.Value }),
+                BodyMode.UrlEncoded => model.Body.UrlEncoded.Where(f => f.Enabled).SelectMany(f => new[] { f.Key, f.Value }),
+                _ => [],
+            },
+        ];
+        return texts.SelectMany(VariableResolver.FindVariables)
+            .Select(m => m.Name)
+            .Where(name => !VariableResolver.CanResolve(name, scope) || scope.TryGet(name, out var value) && value.Length == 0)
+            .Distinct()
+            .ToList();
+    }
+
+    /// <summary>Unresolved variables and environments marked "ask before sending" need a yes first.</summary>
+    private async Task<bool> ConfirmSendAsync(PreparedRequest prepared)
+    {
+        var environment = Services.Workspace.ActiveEnvironment;
+        var unresolved = FindUnresolvedVariables();
+        if (unresolved.Count > 0)
+        {
+            var names = string.Join(", ", unresolved.Select(n => "{{" + n + "}}"));
+            var where = environment is null ? "with no environment selected" : $"in {environment.Name}";
+            if (!await Services.Dialogs.ConfirmAsync("Unresolved variables",
+                    $"{names} {(unresolved.Count == 1 ? "has" : "have")} no value {where}, so the literal text would be sent.",
+                    "Send anyway", destructive: false))
+                return false;
+        }
+        if (environment is { ConfirmBeforeSend: true })
+        {
+            return await Services.Dialogs.ConfirmAsync($"Send to {environment.Name}?", $"{prepared.Method} {prepared.Url}",
+                $"Send to {environment.Name}");
+        }
+        return true;
     }
 
     public override async Task<bool> SaveAsync()

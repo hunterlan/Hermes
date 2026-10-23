@@ -23,8 +23,22 @@
         </Button>
       </StackPanel>
     </Grid>
-    <TextBlock Grid.Row="1" Classes="secondary" FontSize="12" Margin="0,8,0,14" TextWrapping="Wrap"
-               Text="Use variables as {{name}} in URLs, headers, bodies and auth. Environment variables override collection variables, which override globals." />
+    <StackPanel Grid.Row="1" Spacing="10" Margin="0,8,0,14">
+      <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
+                 Text="Use variables as {{name}} in URLs, headers, bodies and auth. Environment variables override collection variables, which override globals." />
+      <Border IsVisible="{Binding CanRename}" Background="{DynamicResource BgPrimaryBrush}" BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="1" CornerRadius="10" Padding="14,10" HorizontalAlignment="Left" MaxWidth="640">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <PathIcon Data="{StaticResource IconLock}" Width="16" Height="16" Foreground="{DynamicResource ErrorBrush}" Margin="0,0,12,0" />
+          <StackPanel Grid.Column="1" Spacing="2">
+            <TextBlock Text="Ask before sending" FontWeight="SemiBold" />
+            <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
+                       Text="While this environment is active, every send shows the target and waits for confirmation. Use it for Production." />
+          </StackPanel>
+          <ToggleSwitch Grid.Column="2" IsChecked="{Binding ConfirmBeforeSend}" OnContent="" OffContent="" Margin="12,0,0,0" />
+        </Grid>
+      </Border>
+    </StackPanel>
     <ScrollViewer Grid.Row="2">
       <v:VariableTable DataContext="{Binding Variables}" Margin="0,0,8,16" VerticalAlignment="Top" />
     </ScrollViewer>

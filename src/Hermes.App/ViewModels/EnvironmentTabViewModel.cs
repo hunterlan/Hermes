@@ -29,6 +29,7 @@ public sealed partial class EnvironmentTabViewModel : TabViewModelBase
     public VariableListViewModel Variables { get; } = new();
 
     [ObservableProperty] public partial string Name { get; set; } = "";
+    [ObservableProperty] public partial bool ConfirmBeforeSend { get; set; }
 
     public bool IsActiveEnvironment => Services.Workspace.ActiveEnvironment == _environment;
 
@@ -37,6 +38,7 @@ public sealed partial class EnvironmentTabViewModel : TabViewModelBase
         _loading = true;
         Name = _environment.Name;
         Title = _environment.Name;
+        ConfirmBeforeSend = _environment.ConfirmBeforeSend;
         Variables.Load(_environment.Variables);
         _loading = false;
     }
@@ -46,7 +48,10 @@ public sealed partial class EnvironmentTabViewModel : TabViewModelBase
         Id = _environment.Id,
         Name = Name,
         Variables = Variables.ToModels(),
+        ConfirmBeforeSend = ConfirmBeforeSend,
     });
+
+    partial void OnConfirmBeforeSendChanged(bool value) => UpdateDirty();
 
     private void UpdateDirty()
     {
@@ -65,6 +70,7 @@ public sealed partial class EnvironmentTabViewModel : TabViewModelBase
         if (!IsGlobals)
             _environment.Name = string.IsNullOrWhiteSpace(Name) ? "New Environment" : Name.Trim();
         _environment.Variables = Variables.ToModels();
+        _environment.ConfirmBeforeSend = ConfirmBeforeSend && !IsGlobals;
         Services.Workspace.SaveEnvironment(_environment);
         Name = _environment.Name;
         _snapshot = Snapshot();

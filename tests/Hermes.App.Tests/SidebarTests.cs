@@ -144,6 +144,7 @@ public class SidebarTests
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         tab.Url = "{{baseUrl}}/env-test";
         Assert.True(tab.Variables.TryGet("baseUrl", out _));
+        Assert.Empty(tab.FindUnresolvedVariables());
 
         var historyBefore = Workspace.History.Count;
         await tab.SendCommand.ExecuteAsync(null);
@@ -162,6 +163,7 @@ public class SidebarTests
 
         vm.SelectedEnvironment = vm.EnvironmentOptions[0];
         Assert.Null(Workspace.ActiveEnvironment);
+        Assert.Equal(["baseUrl"], tab.FindUnresolvedVariables());
         window.Close();
     }
 

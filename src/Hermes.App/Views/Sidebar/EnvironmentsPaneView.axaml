@@ -40,9 +40,17 @@
                        IsVisible="{Binding !IsRenaming}" FontWeight="{Binding IsGlobals, Converter={x:Static sbv:EnvironmentsPaneView.BoldIf}}" />
             <TextBox Grid.Column="1" Text="{Binding Name, Mode=OneWay}" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1"
                      KeyDown="OnRenameKeyDown" LostFocus="OnRenameLostFocus" PropertyChanged="OnRenameBoxPropertyChanged" />
-            <Border Grid.Column="2" Classes="tag warn" IsVisible="{Binding IsActive}" Margin="6,0" ToolTip.Tip="Active environment">
-              <TextBlock Text="Active" />
-            </Border>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="6,0">
+              <Border Classes="tag err" IsVisible="{Binding ConfirmBeforeSend}" ToolTip.Tip="Asks before sending">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <PathIcon Data="{StaticResource IconLock}" Width="10" Height="10" />
+                  <TextBlock Text="Confirm" />
+                </StackPanel>
+              </Border>
+              <Border Classes="tag warn" IsVisible="{Binding IsActive}" ToolTip.Tip="Active environment">
+                <TextBlock Text="Active" />
+              </Border>
+            </StackPanel>
             <Button Grid.Column="3" Classes="icon rowMenu" Width="22" Height="22" Padding="3" Click="OnMenuClick" ToolTip.Tip="More actions">
               <PathIcon Data="{StaticResource IconMore}" Width="13" Height="13" />
             </Button>
