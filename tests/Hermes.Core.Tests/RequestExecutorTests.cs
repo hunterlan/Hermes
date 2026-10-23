@@ -24,6 +24,8 @@ public sealed class RequestExecutorTests : IDisposable
         var path = ctx.Request.Url!.AbsolutePath;
         if (path == "/delay")
             await Task.Delay(5000, stop);
+        if (path == "/slow")
+            await Task.Delay(300, stop);
         if (path == "/redirect")
         {
             ctx.Response.StatusCode = 302;
@@ -114,6 +116,49 @@ public sealed class RequestExecutorTests : IDisposable
         var result = await Send(new HttpRequestModel { Url = _baseUrl + "cookie" });
         Assert.Contains(result.Response!.Cookies, c => c.Name == "session" && c.Value == "abc");
         Assert.NotEmpty(_clients.GetAllCookies());
+    }
+
+    [Fact]
+    public async Task Clearing_cookies_leaves_requests_in_flight_alone()
+    {
+        await Send(new HttpRequestModel { Url = _baseUrl + "cookie" });
+
+        var inFlight = Send(new HttpRequestModel { Url = _baseUrl + "slow" });
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        _clients.ClearCookies();
+        var result = await inFlight;
+
+        Assert.Null(result.Error);
+        Assert.Equal(201, result.Response!.StatusCode);
+        Assert.Empty(_clients.GetAllCookies());
+    }
+
+    [Fact]
+    public async Task Files_already_opened_are_closed_when_a_later_file_is_missing()
+    {
+        var dir = Directory.CreateTempSubdirectory("hermes-multipart-");
+        var present = Path.Combine(dir.FullName, "a.txt");
+        File.WriteAllText(present, "a");
+
+        var result = await Send(new HttpRequestModel
+        {
+            Method = "POST",
+            Url = _baseUrl + "echo",
+            Body =
+            {
+                Mode = BodyMode.FormData,
+                FormData =
+                [
+                    new KeyValueItem("a", present) { Kind = KeyValueKind.File },
+                    new KeyValueItem("b", Path.Combine(dir.FullName, "missing.txt")) { Kind = KeyValueKind.File },
+                ],
+            },
+        });
+
+        Assert.NotNull(result.Error);
+        // Exclusive access fails while any handle to the file is still open.
+        using (File.Open(present, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
+        dir.Delete(recursive: true);
     }
 
     [Fact]

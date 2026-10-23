@@ -57,20 +57,29 @@ public static class HttpMessageFactory
 
             case BodyMode.FormData:
                 var multipart = new MultipartFormDataContent();
-                foreach (var field in request.FormFields)
+                try
                 {
-                    if (field.Kind == KeyValueKind.File)
+                    foreach (var field in request.FormFields)
                     {
-                        if (field.Value.Length == 0)
-                            continue;
-                        var file = new StreamContent(File.OpenRead(field.Value));
-                        file.Headers.ContentType = new MediaTypeHeaderValue(MimeTypes.FromFileName(field.Value));
-                        multipart.Add(file, Quote(field.Key), Quote(Path.GetFileName(field.Value)));
+                        if (field.Kind == KeyValueKind.File)
+                        {
+                            if (field.Value.Length == 0)
+                                continue;
+                            var file = new StreamContent(File.OpenRead(field.Value));
+                            file.Headers.ContentType = new MediaTypeHeaderValue(MimeTypes.FromFileName(field.Value));
+                            multipart.Add(file, Quote(field.Key), Quote(Path.GetFileName(field.Value)));
+                        }
+                        else
+                        {
+                            multipart.Add(new ByteArrayContent(Encoding.UTF8.GetBytes(field.Value)), Quote(field.Key));
+                        }
                     }
-                    else
-                    {
-                        multipart.Add(new ByteArrayContent(Encoding.UTF8.GetBytes(field.Value)), Quote(field.Key));
-                    }
+                }
+                catch
+                {
+                    // Closes the files already opened; otherwise they stay locked until the GC gets to them.
+                    multipart.Dispose();
+                    throw;
                 }
                 return multipart;
 
