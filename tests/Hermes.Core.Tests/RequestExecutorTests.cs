@@ -1,76 +1,52 @@
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.TestSupport;
 
 namespace Hermes.Core.Tests;
 
 /// <summary>Runs against a tiny local HttpListener, so the real handler pipeline is exercised.</summary>
 public sealed class RequestExecutorTests : IDisposable
 {
-    private readonly HttpListener _listener = new();
+    private readonly LocalHttpServer _server;
     private readonly string _baseUrl;
     private readonly HttpClientProvider _clients = new();
-    private readonly CancellationTokenSource _stop = new();
 
     public RequestExecutorTests()
     {
-        var port = FreePort();
-        _baseUrl = $"http://127.0.0.1:{port}/";
-        _listener.Prefixes.Add(_baseUrl);
-        _listener.Start();
-        _ = Task.Run(ServeAsync);
+        _server = new LocalHttpServer(ServeAsync);
+        _baseUrl = _server.Url;
     }
 
-    private static int FreePort()
+    private async Task ServeAsync(HttpListenerContext ctx, CancellationToken stop)
     {
-        var l = new TcpListener(IPAddress.Loopback, 0);
-        l.Start();
-        var port = ((IPEndPoint)l.LocalEndpoint).Port;
-        l.Stop();
-        return port;
-    }
-
-    private async Task ServeAsync()
-    {
-        while (!_stop.IsCancellationRequested)
+        var path = ctx.Request.Url!.AbsolutePath;
+        if (path == "/delay")
+            await Task.Delay(5000, stop);
+        if (path == "/redirect")
         {
-            HttpListenerContext ctx;
-            try { ctx = await _listener.GetContextAsync(); }
-            catch { return; }
-
-            var path = ctx.Request.Url!.AbsolutePath;
-            if (path == "/delay")
-            {
-                try { await Task.Delay(5000, _stop.Token); } catch { }
-            }
-            if (path == "/redirect")
-            {
-                ctx.Response.StatusCode = 302;
-                ctx.Response.RedirectLocation = _baseUrl + "echo";
-                ctx.Response.Close();
-                continue;
-            }
-            if (path == "/cookie")
-                ctx.Response.AppendHeader("Set-Cookie", "session=abc; Path=/");
-
-            using var reader = new StreamReader(ctx.Request.InputStream);
-            var body = await reader.ReadToEndAsync();
-            var echo = $"{ctx.Request.HttpMethod} {ctx.Request.Url!.PathAndQuery}\nX-Test: {ctx.Request.Headers["X-Test"]}\nContent-Type: {ctx.Request.ContentType}\n{body}";
-            var bytes = Encoding.UTF8.GetBytes(echo);
-            ctx.Response.StatusCode = 201;
-            ctx.Response.ContentType = "text/plain; charset=utf-8";
-            try
-            {
-                await ctx.Response.OutputStream.WriteAsync(bytes);
-                ctx.Response.Close();
-            }
-            catch { }
+            ctx.Response.StatusCode = 302;
+            ctx.Response.RedirectLocation = _baseUrl + "echo";
+            ctx.Response.Close();
+            return;
         }
+        if (path == "/cookie")
+            ctx.Response.AppendHeader("Set-Cookie", "session=abc; Path=/");
+
+        using var reader = new StreamReader(ctx.Request.InputStream);
+        var body = await reader.ReadToEndAsync(stop);
+        var echo = $"{ctx.Request.HttpMethod} {ctx.Request.Url!.PathAndQuery}\nX-Test: {ctx.Request.Headers["X-Test"]}\nContent-Type: {ctx.Request.ContentType}\n{body}";
+        var bytes = Encoding.UTF8.GetBytes(echo);
+        ctx.Response.StatusCode = 201;
+        ctx.Response.ContentType = "text/plain; charset=utf-8";
+        await ctx.Response.OutputStream.WriteAsync(bytes, stop);
+        ctx.Response.Close();
     }
 
-    private Task<ExecutionResult> Send(HttpRequestModel request, CancellationToken ct = default) =>
+    private Task<ExecutionResult> Send(HttpRequestModel request) => SendCancellable(request, TestContext.Current.CancellationToken);
+
+    private Task<ExecutionResult> SendCancellable(HttpRequestModel request, CancellationToken ct) =>
         new RequestExecutor(_clients).ExecuteAsync(RequestPreparer.Prepare(request, RequestContext.Empty), ct);
 
     [Fact]
@@ -144,7 +120,7 @@ public sealed class RequestExecutorTests : IDisposable
     public async Task Cancellation_and_timeout()
     {
         using var cts = new CancellationTokenSource(200);
-        var cancelled = await Send(new HttpRequestModel { Url = _baseUrl + "delay" }, cts.Token);
+        var cancelled = await SendCancellable(new HttpRequestModel { Url = _baseUrl + "delay" }, cts.Token);
         Assert.True(cancelled.Cancelled);
 
         var timedOut = await Send(new HttpRequestModel { Url = _baseUrl + "delay", Settings = { TimeoutMs = 200 } });
@@ -161,15 +137,15 @@ public sealed class RequestExecutorTests : IDisposable
     [Fact]
     public async Task Connection_failure_is_reported()
     {
-        var result = await Send(new HttpRequestModel { Url = $"http://127.0.0.1:{FreePort()}/" });
+        using var port = new ResettingPort();
+        var result = await Send(new HttpRequestModel { Url = $"http://127.0.0.1:{port.Port}/" });
         Assert.NotNull(result.Error);
         Assert.Null(result.Response);
     }
 
     public void Dispose()
     {
-        _stop.Cancel();
-        _listener.Close();
+        _server.Dispose();
         _clients.Dispose();
     }
 }
