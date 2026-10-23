@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
+using static Hermes.Core.Import.PostmanFormat;
 
 namespace Hermes.Core.Import;
 
@@ -149,7 +150,7 @@ public static class PostmanCollectionExporter
                     ["raw"] = body.Raw,
                     ["options"] = new JsonObject
                     {
-                        ["raw"] = new JsonObject { ["language"] = body.RawLanguage.ToString().ToLowerInvariant() },
+                        ["raw"] = new JsonObject { ["language"] = RawLanguageName(body.RawLanguage) },
                     },
                 };
             case BodyMode.UrlEncoded:
@@ -198,18 +199,13 @@ public static class PostmanCollectionExporter
             {
                 ["type"] = "apikey",
                 ["apikey"] = Attrs(("key", auth.ApiKey.Key), ("value", auth.ApiKey.Value),
-                    ("in", auth.ApiKey.AddTo == ApiKeyLocation.Query ? "query" : "header")),
+                    ("in", ApiKeyLocationName(auth.ApiKey.AddTo))),
             },
             AuthType.OAuth2 => new JsonObject
             {
                 ["type"] = "oauth2",
                 ["oauth2"] = Attrs(
-                    ("grant_type", auth.OAuth2.GrantType switch
-                    {
-                        OAuth2GrantType.ClientCredentials => "client_credentials",
-                        OAuth2GrantType.Password => "password_credentials",
-                        _ => auth.OAuth2.UsePkce ? "authorization_code_with_pkce" : "authorization_code",
-                    }),
+                    ("grant_type", GrantTypeName(auth.OAuth2.GrantType, auth.OAuth2.UsePkce)),
                     ("authUrl", auth.OAuth2.AuthUrl),
                     ("accessTokenUrl", auth.OAuth2.AccessTokenUrl),
                     ("clientId", auth.OAuth2.ClientId),
@@ -219,22 +215,23 @@ public static class PostmanCollectionExporter
                     ("redirect_uri", auth.OAuth2.RedirectUri),
                     ("username", auth.OAuth2.Username),
                     ("password", auth.OAuth2.Password),
+                    ("accessToken", auth.OAuth2.AccessToken),
                     ("headerPrefix", auth.OAuth2.HeaderPrefix),
-                    ("client_authentication", auth.OAuth2.ClientAuthentication == OAuth2ClientAuthentication.Body ? "body" : "header"),
+                    ("client_authentication", ClientAuthenticationName(auth.OAuth2.ClientAuthentication)),
                     ("addTokenTo", "header")),
             },
             _ => null,
         };
     }
 
-    internal static JsonArray WriteVariables(IEnumerable<Variable> variables) =>
+    private static JsonArray WriteVariables(IEnumerable<Variable> variables) =>
         new(variables.Select(v =>
         {
             var o = new JsonObject
             {
                 ["key"] = v.Key,
                 ["value"] = v.Value,
-                ["type"] = v.Type == VariableType.Secret ? "secret" : "default",
+                ["type"] = VariableTypeName(v.Type),
             };
             if (!v.Enabled)
                 o["disabled"] = true;

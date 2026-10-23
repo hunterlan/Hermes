@@ -120,4 +120,52 @@ public class PostmanTests
         Assert.Single(result.Requests);
         Assert.Single(result.Errors);
     }
+
+    [Fact]
+    public void Loosely_typed_flags_are_read_not_rejected()
+    {
+        const string json = """
+            {
+              "info": { "name": "Loose", "schema": 2.1 },
+              "variable": [ { "key": "off", "value": "1", "disabled": "true" }, { "key": "on", "value": "2", "enabled": 1 } ],
+              "item": [ {
+                "name": "R",
+                "protocolProfileBehavior": { "strictSSL": "false", "followRedirects": 0 },
+                "request": { "method": "GET", "url": "https://x", "header": [ { "key": "H", "value": "v", "disabled": "false" } ] }
+              } ]
+            }
+            """;
+
+        var collection = PostmanCollectionImporter.Import(json);
+
+        var request = Assert.IsType<HttpRequestModel>(Assert.Single(collection.Items));
+        Assert.False(request.Settings.VerifySsl);
+        Assert.False(request.Settings.FollowRedirects);
+        Assert.True(Assert.Single(request.Headers).Enabled);
+        Assert.False(collection.Variables.Single(v => v.Key == "off").Enabled);
+        Assert.True(collection.Variables.Single(v => v.Key == "on").Enabled);
+    }
+
+    [Fact]
+    public void OAuth2_access_token_round_trips()
+    {
+        var auth = new AuthConfig { Type = AuthType.OAuth2, OAuth2 = { GrantType = OAuth2GrantType.ClientCredentials, AccessToken = "tok" } };
+
+        var back = PostmanCollectionImporter.ReadAuth(PostmanCollectionExporter.WriteAuth(auth))!;
+
+        Assert.Equal("tok", back.OAuth2.AccessToken);
+        Assert.Equal(OAuth2GrantType.ClientCredentials, back.OAuth2.GrantType);
+    }
+
+    [Fact]
+    public void Importer_failures_become_import_errors()
+    {
+        var result = new ImportResult();
+
+        // Repeated names make System.Text.Json throw ArgumentException when the object is read.
+        ImportService.ImportText("""{ "info": { "name": "a", "name": "b" }, "item": [] }""", result, "dup.json");
+
+        Assert.Empty(result.Collections);
+        Assert.StartsWith("dup.json:", Assert.Single(result.Errors));
+    }
 }

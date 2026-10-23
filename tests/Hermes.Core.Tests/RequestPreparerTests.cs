@@ -120,4 +120,16 @@ public class RequestPreparerTests
         Assert.True(prepared.VerifySsl);
         Assert.Equal(5, prepared.TimeoutMs);
     }
+
+    [Fact]
+    public void Repeated_path_variables_take_the_last_value()
+    {
+        var request = new HttpRequestModel
+        {
+            Url = "https://api.test/users/:id",
+            PathVariables = [new KeyValueItem("id", "1"), new KeyValueItem("id", "2")],
+        };
+
+        Assert.Equal("https://api.test/users/2", RequestPreparer.Prepare(request, Context()).Url);
+    }
 }

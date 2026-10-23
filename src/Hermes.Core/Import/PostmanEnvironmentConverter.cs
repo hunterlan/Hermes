@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Hermes.Core.Models;
+using static Hermes.Core.Import.PostmanFormat;
 
 namespace Hermes.Core.Import;
 
@@ -20,8 +21,8 @@ public static class PostmanEnvironmentConverter
             throw new FormatException("Not a Postman environment.");
         return new EnvironmentModel
         {
-            Name = PostmanCollectionImporter.Str(root["name"]) ?? "Imported environment",
-            Variables = PostmanCollectionImporter.ReadVariables(root["values"]),
+            Name = Str(root["name"]) ?? "Imported environment",
+            Variables = ReadVariables(root["values"]),
         };
     }
 
@@ -35,7 +36,7 @@ public static class PostmanEnvironmentConverter
             {
                 ["key"] = v.Key,
                 ["value"] = v.Value,
-                ["type"] = v.Type == VariableType.Secret ? "secret" : "default",
+                ["type"] = VariableTypeName(v.Type),
                 ["enabled"] = v.Enabled,
             }).ToArray()),
             ["_postman_variable_scope"] = isGlobals ? "globals" : "environment",

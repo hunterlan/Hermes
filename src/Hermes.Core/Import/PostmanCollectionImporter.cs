@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Hermes.Core.Models;
+using static Hermes.Core.Import.PostmanFormat;
 
 namespace Hermes.Core.Import;
 
@@ -9,7 +10,7 @@ public static class PostmanCollectionImporter
 {
     public static bool LooksLikeCollection(JsonNode? root) =>
         root is JsonObject o && o["info"] is JsonObject info && o["item"] is JsonArray &&
-        (info["schema"]?.GetValue<string>()?.Contains("collection", StringComparison.OrdinalIgnoreCase) ?? true);
+        (Str(info["schema"])?.Contains("collection", StringComparison.OrdinalIgnoreCase) ?? true);
 
     public static CollectionModel Import(string json) =>
         Import(JsonNode.Parse(json, documentOptions: new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip })
@@ -132,7 +133,7 @@ public static class PostmanCollectionImporter
 
     private static void ReadBody(JsonNode? body, HttpRequestModel model)
     {
-        if (body is not JsonObject || Bool(body["disabled"]))
+        if (body is not JsonObject || Flag(body["disabled"]) == true)
             return;
 
         switch (Str(body["mode"]))
@@ -140,14 +141,10 @@ public static class PostmanCollectionImporter
             case "raw":
                 model.Body.Mode = BodyMode.Raw;
                 model.Body.Raw = Str(body["raw"]) ?? "";
-                model.Body.RawLanguage = Str(body["options"]?["raw"]?["language"]) switch
-                {
-                    "json" => RawLanguage.Json,
-                    "xml" => RawLanguage.Xml,
-                    "html" => RawLanguage.Html,
-                    "javascript" => RawLanguage.JavaScript,
-                    _ => GuessLanguage(model.Headers),
-                };
+                // "text" is also what Postman writes when nothing was chosen, so the Content-Type header decides then.
+                model.Body.RawLanguage = ParseRawLanguage(Str(body["options"]?["raw"]?["language"])) is { } language and not RawLanguage.Text
+                    ? language
+                    : GuessLanguage(model.Headers);
                 break;
             case "urlencoded":
                 model.Body.Mode = BodyMode.UrlEncoded;
@@ -182,10 +179,10 @@ public static class PostmanCollectionImporter
     {
         if (behavior is not JsonObject)
             return;
-        if (behavior["followRedirects"] is JsonValue follow)
-            model.Settings.FollowRedirects = follow.GetValue<bool>();
-        if (behavior["strictSSL"] is JsonValue strict)
-            model.Settings.VerifySsl = strict.GetValue<bool>();
+        if (Flag(behavior["followRedirects"]) is { } follow)
+            model.Settings.FollowRedirects = follow;
+        if (Flag(behavior["strictSSL"]) is { } strict)
+            model.Settings.VerifySsl = strict;
     }
 
     internal static AuthConfig? ReadAuth(JsonNode? auth)
@@ -215,19 +212,12 @@ public static class PostmanCollectionImporter
                 config.Type = AuthType.ApiKey;
                 config.ApiKey.Key = apikey.GetValueOrDefault("key", "");
                 config.ApiKey.Value = apikey.GetValueOrDefault("value", "");
-                config.ApiKey.AddTo = apikey.GetValueOrDefault("in") == "query" ? ApiKeyLocation.Query : ApiKeyLocation.Header;
+                config.ApiKey.AddTo = ParseApiKeyLocation(apikey.GetValueOrDefault("in"));
                 break;
             case "oauth2":
                 var o = Attributes(auth["oauth2"]);
                 config.Type = AuthType.OAuth2;
-                var grant = o.GetValueOrDefault("grant_type", "authorization_code");
-                config.OAuth2.GrantType = grant switch
-                {
-                    "client_credentials" => OAuth2GrantType.ClientCredentials,
-                    "password" or "password_credentials" => OAuth2GrantType.Password,
-                    _ => OAuth2GrantType.AuthorizationCode,
-                };
-                config.OAuth2.UsePkce = grant == "authorization_code_with_pkce";
+                (config.OAuth2.GrantType, config.OAuth2.UsePkce) = ParseGrantType(o.GetValueOrDefault("grant_type"));
                 config.OAuth2.AuthUrl = o.GetValueOrDefault("authUrl", "");
                 config.OAuth2.AccessTokenUrl = o.GetValueOrDefault("accessTokenUrl", "");
                 config.OAuth2.ClientId = o.GetValueOrDefault("clientId", "");
@@ -240,9 +230,7 @@ public static class PostmanCollectionImporter
                 config.OAuth2.HeaderPrefix = o.GetValueOrDefault("headerPrefix", "Bearer");
                 if (o.TryGetValue("redirect_uri", out var redirect) && redirect.Length > 0)
                     config.OAuth2.RedirectUri = redirect;
-                config.OAuth2.ClientAuthentication = o.GetValueOrDefault("client_authentication") == "body"
-                    ? OAuth2ClientAuthentication.Body
-                    : OAuth2ClientAuthentication.Header;
+                config.OAuth2.ClientAuthentication = ParseClientAuthentication(o.GetValueOrDefault("client_authentication"));
                 break;
             default:
                 // Unsupported auth types (digest, hawk, aws, ...) degrade to none.
@@ -271,26 +259,6 @@ public static class PostmanCollectionImporter
         return result;
     }
 
-    internal static List<Variable> ReadVariables(JsonNode? node)
-    {
-        var list = new List<Variable>();
-        if (node is not JsonArray array)
-            return list;
-        foreach (var v in array)
-        {
-            if (v is null)
-                continue;
-            list.Add(new Variable
-            {
-                Key = Str(v["key"]) ?? Str(v["id"]) ?? "",
-                Value = ValueString(v["value"]),
-                Enabled = !Bool(v["disabled"]) && (v["enabled"] is not JsonValue e || e.GetValue<bool>()),
-                Type = Str(v["type"]) == "secret" ? VariableType.Secret : VariableType.Default,
-            });
-        }
-        return list;
-    }
-
     private static List<KeyValueItem> ReadKeyValues(JsonNode? node)
     {
         var list = new List<KeyValueItem>();
@@ -312,32 +280,11 @@ public static class PostmanCollectionImporter
             {
                 Key = Str(kv["key"]) ?? "",
                 Value = value,
-                Enabled = !Bool(kv["disabled"]),
+                Enabled = Flag(kv["disabled"]) != true,
                 Description = Description(kv["description"]),
                 Kind = isFile ? KeyValueKind.File : KeyValueKind.Text,
             });
         }
         return list;
     }
-
-    // ---- primitive helpers ----
-
-    internal static string? Str(JsonNode? node) =>
-        node is JsonValue v && v.TryGetValue<string>(out var s) ? s : null;
-
-    private static string ValueString(JsonNode? node) => node switch
-    {
-        null => "",
-        JsonValue v when v.TryGetValue<string>(out var s) => s,
-        _ => node.ToJsonString(),
-    };
-
-    private static bool Bool(JsonNode? node) => node is JsonValue v && v.TryGetValue<bool>(out var b) && b;
-
-    /// <summary>Descriptions are either a string or {content, type}.</summary>
-    private static string? Description(JsonNode? node) => node switch
-    {
-        JsonObject o => Str(o["content"]),
-        _ => Str(node),
-    };
 }
