@@ -6,6 +6,7 @@ using Hermes.App.Services;
 using Hermes.App.ViewModels.Sidebar;
 using Hermes.Core.Models;
 using Hermes.Core.Serialization;
+using Hermes.Core.Variables;
 
 namespace Hermes.App.ViewModels;
 
@@ -194,7 +195,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
                 .Select(v => new QuickLookVariable(v.Key, Mask(v, v.Value), Mask(v, v.EffectiveValue)))
                 .ToList() ?? []);
 
-        static string Mask(Variable v, string value) => v.Type == VariableType.Secret && value.Length > 0 ? "••••••" : value;
+        static string Mask(Variable v, string value) => v.Type == VariableType.Secret && value.Length > 0 ? VariableScope.MaskedValue : value;
 
         QuickLookEnvironment = Rows(Workspace.ActiveEnvironment);
         QuickLookGlobals = Rows(Workspace.Globals);

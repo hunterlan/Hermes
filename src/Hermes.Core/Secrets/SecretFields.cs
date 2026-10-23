@@ -28,9 +28,15 @@ public static partial class SecretFields
 
     public static void Restore(SessionState session, IReadOnlyDictionary<string, string> secrets) => Restore(Slots(session), secrets);
 
-    /// <summary>Every credential field of <paramref name="auth"/>, literal or not.</summary>
-    public static IEnumerable<string> AuthValues(AuthConfig auth) =>
-        Slots(auth, "").Select(s => s.Get()).OfType<string>().Where(v => v.Length > 0);
+    /// <summary>A copy of <paramref name="auth"/> with every credential field (literal or not) masked.</summary>
+    public static AuthConfig Masked(AuthConfig auth)
+    {
+        var copy = Serialization.ModelCloner.Clone(auth);
+        foreach (var slot in Slots(copy, ""))
+            if (!string.IsNullOrEmpty(slot.Get()))
+                slot.Set(Variables.VariableScope.MaskedValue);
+        return copy;
+    }
 
     /// <summary>True for a credential typed in as-is, false for one made only of <c>{{variable}}</c> references.</summary>
     public static bool IsLiteral(string? value) =>

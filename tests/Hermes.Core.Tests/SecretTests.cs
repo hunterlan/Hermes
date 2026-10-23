@@ -139,7 +139,8 @@ public class SecretTests : IDisposable
     {
         var request = new HttpRequestModel
         {
-            Url = "https://api.test/items?key={{apiKey}}",
+            Url = "https://api.test/items?key={{apiKey}}&pin={{pin}}&page=123",
+            Headers = [new KeyValueItem("X-Request-Id", "{{$guid}}")],
             Auth = new AuthConfig { Type = AuthType.Bearer, Bearer = { Token = "{{token}}" } },
         };
         var context = new RequestContext
@@ -154,14 +155,29 @@ public class SecretTests : IDisposable
                 ],
             },
         };
-        var text = RawRequestFormatter.Format(RequestPreparer.Prepare(request, context)) + "\npin=123";
 
-        var masked = SecretMasker.MaskRequestText(text, SecretMasker.CollectSecrets(request, context));
+        var (sent, masked) = RequestPreparer.PrepareWithMasked(request, context);
+        var text = SecretMasker.MaskCredentialHeaders(RawRequestFormatter.Format(masked));
 
-        Assert.Contains("Authorization: Bearer ••••••", masked);
-        Assert.DoesNotContain("bearer-token-value", masked);
-        Assert.DoesNotContain("k3y", masked);
-        Assert.Contains("pin=123", masked);
+        Assert.Contains("Authorization: Bearer ••••••", text);
+        Assert.DoesNotContain("bearer-token-value", text);
+        Assert.DoesNotContain("k3y", text);
+        // A short secret is masked where it was used, and nowhere else.
+        Assert.Contains("pin=••••••&page=123", text);
+        // Dynamic values are the ones that were sent.
+        Assert.Contains($"X-Request-Id: {sent.GetHeader("X-Request-Id")}", text);
+        Assert.Contains("bearer-token-value", sent.GetHeader("Authorization"));
+    }
+
+    [Fact]
+    public void Secret_values_are_masked_wherever_variables_are_shown()
+    {
+        var scope = new Variables.VariableScope().AddLayer([new Variable("apiKey", "s3cret") { Type = VariableType.Secret }, new Variable("host", "h")]);
+
+        Assert.True(scope.TryGetDisplay("apiKey", out var shown));
+        Assert.Equal(Variables.VariableScope.MaskedValue, shown);
+        Assert.Equal(Variables.VariableScope.MaskedValue, Assert.Single(Variables.VariableResolver.Suggest(scope, "api")).Value);
+        Assert.Equal("h", Assert.Single(Variables.VariableResolver.Suggest(scope, "hos")).Value);
     }
 
     [Theory]

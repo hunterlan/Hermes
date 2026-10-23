@@ -470,7 +470,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         }
 
         var model = BuildModel();
-        var prepared = RequestPreparer.Prepare(model, CreateContext());
+        // One context for the request and its masked copy: switching environments while it's in flight changes neither.
+        var (prepared, masked) = RequestPreparer.PrepareWithMasked(model, CreateContext());
         if (!await ConfirmSendAsync(prepared))
             return;
 
@@ -491,7 +492,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
                 if (IsPersisted && Services.Workspace.SaveResponse(RequestId, new SavedResponse
                     {
                         Response = response,
-                        SentRequest = SecretMasker.MaskRequestText(Response.SentRequestText, SecretMasker.CollectSecrets(model, CreateContext())),
+                        SentRequest = SecretMasker.MaskCredentialHeaders(RawRequestFormatter.Format(masked)),
                     }) is { } saved)
                     Response.AddSaved(saved);
             }

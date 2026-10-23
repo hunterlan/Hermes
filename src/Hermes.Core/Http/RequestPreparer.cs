@@ -1,5 +1,6 @@
 using Hermes.Core.Auth;
 using Hermes.Core.Models;
+using Hermes.Core.Secrets;
 using Hermes.Core.Variables;
 
 namespace Hermes.Core.Http;
@@ -17,9 +18,28 @@ public static class RequestPreparer
         new("Connection", "keep-alive"),
     ];
 
-    public static PreparedRequest Prepare(HttpRequestModel request, RequestContext context, bool includeDefaultHeaders = true)
+    public static PreparedRequest Prepare(HttpRequestModel request, RequestContext context, bool includeDefaultHeaders = true) =>
+        Prepare(request, context, context.BuildScope(), context.ResolveAuth(request.Auth).Auth, includeDefaultHeaders);
+
+    /// <summary>
+    /// The request to send, and a copy to show or save in which secret variables and auth credentials are masked.
+    /// Both come from the same context and the same dynamic values, so the copy matches what was sent except for
+    /// the masked parts. (A secret whose value itself uses dynamic variables may shift later dynamic values in the
+    /// copy; the secret is masked either way.)
+    /// </summary>
+    public static (PreparedRequest Request, PreparedRequest Masked) PrepareWithMasked(HttpRequestModel request, RequestContext context)
     {
-        var scope = context.BuildScope();
+        var dynamicValues = new DynamicValueLog();
+        var auth = context.ResolveAuth(request.Auth).Auth;
+        var prepared = Prepare(request, context, context.BuildScope().UseDynamicValues(dynamicValues), auth, includeDefaultHeaders: true);
+        var masked = Prepare(request, context, context.BuildScope().MaskSecrets().UseDynamicValues(dynamicValues.Replay()),
+            SecretFields.Masked(auth), includeDefaultHeaders: true);
+        return (prepared, masked);
+    }
+
+    private static PreparedRequest Prepare(HttpRequestModel request, RequestContext context, VariableScope scope, AuthConfig auth,
+        bool includeDefaultHeaders)
+    {
         string R(string s) => VariableResolver.Resolve(s, scope);
 
         var prepared = new PreparedRequest
@@ -42,7 +62,7 @@ public static class RequestPreparer
             if (h.Enabled && h.Key.Trim().Length > 0)
                 prepared.Headers.Add(new KeyValueItem(R(h.Key).Trim(), R(h.Value)));
 
-        AuthApplier.Apply(context.ResolveAuth(request.Auth).Auth, scope, prepared);
+        AuthApplier.Apply(auth, scope, prepared);
 
         switch (request.Body.Mode)
         {

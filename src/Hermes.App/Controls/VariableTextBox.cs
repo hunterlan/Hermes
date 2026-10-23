@@ -411,7 +411,7 @@ public sealed class VariableTextBox : UserControl
                 if (offset < match.Start || offset > match.Start + match.Length)
                     continue;
                 var scope = Variables ?? VariableScope.Empty;
-                tip = scope.TryGet(match.Name, out var value)
+                tip = scope.TryGetDisplay(match.Name, out var value)
                     ? $"{match.Name}\n{(value.Length == 0 ? "(empty)" : value)}"
                     : VariableResolver.IsDynamic(match.Name) && VariableResolver.CanResolve(match.Name, scope)
                         ? $"{match.Name}\nDynamic variable, generated when the request is sent"
