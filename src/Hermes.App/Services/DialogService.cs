@@ -98,7 +98,8 @@ public sealed class DialogService
             await clipboard.SetTextAsync(text);
     }
 
-    public async Task OpenUrlAsync(Uri uri) => await Top.Launcher.LaunchUriAsync(uri);
+    /// <summary>Opens the URL in the system browser. False when no browser could be launched.</summary>
+    public async Task<bool> OpenUrlAsync(Uri uri) => await Top.Launcher.LaunchUriAsync(uri);
 
     public async Task RevealFolderAsync(string path) => await Top.Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(path));
 

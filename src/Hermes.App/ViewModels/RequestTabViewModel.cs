@@ -57,6 +57,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         Auth = services.CreateAuthEditor(allowInherit: true);
         Auth.Changed += OnAnyChanged;
         Auth.ScopeProvider = () => CreateContext().BuildScope();
+        Auth.VerifySslProvider = () => VerifySsl;
         Auth.InheritedAuthProvider = () => CreateContext().ResolveAuth(Core.Models.AuthConfig.Inherit());
         Auth.ChainProvider = () => (AuthInheritance.OuterLevels(CreateContext()), "Request", Name);
 

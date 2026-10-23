@@ -208,6 +208,11 @@
                 </Button>
                 <TextBlock Text="{Binding TokenStatus}" VerticalAlignment="Center" TextWrapping="Wrap" Classes="secondary" MaxWidth="460" />
               </StackPanel>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="140,6,0,0" MaxWidth="620" HorizontalAlignment="Left"
+                    IsVisible="{Binding AuthorizationUrl, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <SelectableTextBlock Text="{Binding AuthorizationUrl}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Classes="ghost" Content="Copy" Command="{Binding CopyAuthorizationUrlCommand}" VerticalAlignment="Top" />
+              </Grid>
             </StackPanel>
           </StackPanel>
         </ScrollViewer>
