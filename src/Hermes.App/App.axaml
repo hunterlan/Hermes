@@ -15,8 +15,8 @@
   <Application.Styles>
     <FluentTheme>
       <FluentTheme.Palettes>
-        <ColorPaletteResources x:Key="Dark" Accent="#FF6C37" RegionColor="#212121" />
-        <ColorPaletteResources x:Key="Light" Accent="#FF6C37" RegionColor="#FFFFFF" />
+        <ColorPaletteResources x:Key="Dark" Accent="#F0B84A" RegionColor="#181B22" />
+        <ColorPaletteResources x:Key="Light" Accent="#8F5600" RegionColor="#FFFFFF" />
       </FluentTheme.Palettes>
     </FluentTheme>
     <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
