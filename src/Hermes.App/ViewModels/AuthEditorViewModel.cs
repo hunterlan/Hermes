@@ -11,14 +11,17 @@ namespace Hermes.App.ViewModels;
 public sealed partial class AuthEditorViewModel : ObservableObject
 {
     private readonly OAuth2Service _oauth;
-    private readonly Func<Uri, Task> _openBrowser;
+    private readonly Func<Uri, Task<bool>> _openBrowser;
+    private readonly Func<string, Task> _copyText;
     private bool _loading;
     private CancellationTokenSource? _tokenCts;
 
-    public AuthEditorViewModel(OAuth2Service oauth, Func<Uri, Task> openBrowser, bool allowInherit)
+    /// <param name="openBrowser">Opens a URL in the system browser; false when none could be launched.</param>
+    public AuthEditorViewModel(OAuth2Service oauth, Func<Uri, Task<bool>> openBrowser, Func<string, Task> copyText, bool allowInherit)
     {
         _oauth = oauth;
         _openBrowser = openBrowser;
+        _copyText = copyText;
         Types = allowInherit ? [InheritOption, .. BaseTypes] : BaseTypes;
         SelectedType = allowInherit ? InheritOption : BaseTypes[0];
         SelectedApiKeyLocation = ApiKeyLocations[0];
@@ -57,6 +60,9 @@ public sealed partial class AuthEditorViewModel : ObservableObject
 
     /// <summary>Supplies the variables in effect, for resolving OAuth fields when fetching a token.</summary>
     public Func<VariableScope>? ScopeProvider { get; set; }
+
+    /// <summary>Whether token requests verify SSL certificates: the setting in effect where the auth is edited.</summary>
+    public Func<bool> VerifySslProvider { get; set; } = () => true;
 
     /// <summary>Supplies the effective auth when "inherit" is selected, for the explanatory text.</summary>
     public Func<EffectiveAuth>? InheritedAuthProvider { get; set; }
@@ -117,6 +123,10 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     private DateTimeOffset? _expiresAt;
 
     [ObservableProperty] public partial string TokenStatus { get; set; } = "";
+
+    /// <summary>The sign-in address, shown while waiting for authorization when no browser could be opened.</summary>
+    [ObservableProperty] public partial string? AuthorizationUrl { get; set; }
+
     [ObservableProperty] public partial bool IsFetchingToken { get; set; }
 
     public bool IsInherit => SelectedType.Value == AuthType.Inherit;
@@ -201,7 +211,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
                 break;
         }
 
-        if (!_loading && e.PropertyName is not (nameof(TokenStatus) or nameof(IsFetchingToken) or nameof(TokenButtonCommand) or nameof(TypeDescription) or nameof(Summary) or nameof(Chain) or nameof(Overrides) or nameof(HasOverrides) or nameof(UsageSummary))
+        if (!_loading && e.PropertyName is not (nameof(TokenStatus) or nameof(AuthorizationUrl) or nameof(IsFetchingToken) or nameof(TokenButtonCommand) or nameof(TypeDescription) or nameof(Summary) or nameof(Chain) or nameof(Overrides) or nameof(HasOverrides) or nameof(UsageSummary))
             && !e.PropertyName!.StartsWith("Is", StringComparison.Ordinal))
             Changed?.Invoke();
     }
@@ -282,7 +292,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
         try
         {
             var scope = ScopeProvider?.Invoke() ?? VariableScope.Empty;
-            var result = await _oauth.GetTokenAsync(ToModel().OAuth2, scope, _openBrowser, verifySsl: true, _tokenCts.Token);
+            var result = await _oauth.GetTokenAsync(ToModel().OAuth2, scope, OpenBrowserAsync, VerifySslProvider(), _tokenCts.Token);
             if (result.IsSuccess)
             {
                 _refreshToken = result.RefreshToken;
@@ -303,10 +313,24 @@ public sealed partial class AuthEditorViewModel : ObservableObject
         finally
         {
             IsFetchingToken = false;
+            AuthorizationUrl = null;
             _tokenCts.Dispose();
             _tokenCts = null;
         }
     }
+
+    // Without a browser the user can still sign in by opening the address themselves: the callback listener waits
+    // either way. Runs on the UI thread, as OAuth2Service opens the browser before its first await.
+    private async Task OpenBrowserAsync(Uri uri)
+    {
+        if (await _openBrowser(uri))
+            return;
+        AuthorizationUrl = uri.AbsoluteUri;
+        TokenStatus = "Couldn't open a browser. Open this address to sign in:";
+    }
+
+    [RelayCommand]
+    private Task CopyAuthorizationUrl() => AuthorizationUrl is { } url ? _copyText(url) : Task.CompletedTask;
 
     [RelayCommand]
     private void ClearToken()

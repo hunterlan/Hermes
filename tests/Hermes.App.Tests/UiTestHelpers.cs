@@ -41,6 +41,18 @@ internal static class UiTestHelpers
         }
     }
 
+    /// <summary>Pumps the UI thread until <paramref name="condition"/> holds; fails after 5 seconds.</summary>
+    public static async Task WaitUntil(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (!condition())
+        {
+            Assert.True(DateTime.UtcNow < deadline, "Timed out waiting for the condition.");
+            Pump();
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+    }
+
     public static string Screenshot(Window window, string name)
     {
         Pump();

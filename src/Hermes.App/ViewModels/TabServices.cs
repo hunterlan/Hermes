@@ -21,5 +21,5 @@ public sealed class TabServices(
     public HttpClientProvider Http { get; } = http;
 
     public AuthEditorViewModel CreateAuthEditor(bool allowInherit) =>
-        new(OAuth, Dialogs.OpenUrlAsync, allowInherit);
+        new(OAuth, Dialogs.OpenUrlAsync, Dialogs.CopyTextAsync, allowInherit) { VerifySslProvider = () => Settings.Current.VerifySsl };
 }
