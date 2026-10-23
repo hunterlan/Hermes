@@ -29,6 +29,7 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
         FollowRedirects = s.FollowRedirects;
         MaxPrettySizeText = s.MaxPrettyResponseSizeMb.ToString();
         HistoryRetentionText = s.HistoryRetentionDays.ToString();
+        ShowTabs = s.ShowTabs;
         DataDirectory = string.IsNullOrWhiteSpace(s.DataDirectory) ? AppPaths.DefaultDataDirectory : s.DataDirectory;
     }
 
@@ -46,6 +47,7 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
     [ObservableProperty] public partial string MaxPrettySizeText { get; set; }
     [ObservableProperty] public partial string HistoryRetentionText { get; set; }
     [ObservableProperty] public partial string DataDirectory { get; set; }
+    [ObservableProperty] public partial bool ShowTabs { get; set; }
     [ObservableProperty] public partial string CookieStatus { get; set; } = "";
 
     public bool DataDirectoryChanged => !string.Equals(Path.GetFullPath(DataDirectory), Path.GetFullPath(_currentDataDirectory), StringComparison.Ordinal);
@@ -83,6 +85,7 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
             FollowRedirects = FollowRedirects,
             MaxPrettyResponseSizeMb = Parse(MaxPrettySizeText, current.MaxPrettyResponseSizeMb, 1),
             HistoryRetentionDays = Parse(HistoryRetentionText, current.HistoryRetentionDays, 1),
+            ShowTabs = ShowTabs,
             DataDirectory = DataDirectory == AppPaths.DefaultDataDirectory ? null : DataDirectory,
         });
         CloseRequested?.Invoke(true);

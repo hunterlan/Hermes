@@ -8,6 +8,7 @@
     <Style Selector="Border#Root">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="TextElement.Foreground" Value="{DynamicResource TextSecondaryBrush}" />
     </Style>
     <Style Selector="Border#Root:pointerover">
       <Setter Property="Background" Value="{DynamicResource BgHoverBrush}" />
@@ -15,24 +16,39 @@
     <Style Selector="Border#Root.active">
       <Setter Property="Background" Value="{DynamicResource BgPrimaryBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="TextElement.Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
-    <!-- Close button on hover (or on the active clean tab); otherwise the unsaved-changes dot. -->
+    <!-- Preview tabs are italic until edited, double-clicked or pinned. -->
+    <Style Selector="Border#Root.preview TextBlock#TitleText">
+      <Setter Property="FontStyle" Value="Italic" />
+    </Style>
+    <!-- Close button on hover (or on the active clean tab); otherwise the unsaved-changes dot. Pinned tabs have no close button. -->
     <Style Selector="Button#CloseButton">
       <Setter Property="Opacity" Value="0" />
     </Style>
     <Style Selector="Border#Root:pointerover Button#CloseButton, Border#Root.active:not(.dirty) Button#CloseButton">
       <Setter Property="Opacity" Value="1" />
     </Style>
+    <Style Selector="Border#Root.pinned Button#CloseButton">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
     <Style Selector="Border#Root:pointerover Ellipse#DirtyDot">
       <Setter Property="Opacity" Value="0" />
     </Style>
+    <Style Selector="Border#Root.pinned:pointerover Ellipse#DirtyDot">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
   </UserControl.Styles>
 
-  <Border Name="Root" Classes.active="{Binding IsActive}" Classes.dirty="{Binding IsDirty}" BorderThickness="0,2,0,0" Height="38"
-          MinWidth="120" MaxWidth="240" Padding="12,0,6,0" PointerPressed="OnPointerPressed" PointerReleased="OnPointerReleased"
+  <Border Name="Root" Classes.active="{Binding IsActive}" Classes.dirty="{Binding IsDirty}" Classes.preview="{Binding IsPreview}"
+          Classes.pinned="{Binding IsPinned}" BorderThickness="0,0,0,2" Height="32" CornerRadius="8,8,0,0"
+          MinWidth="100" MaxWidth="300" Padding="10,0,4,0" PointerPressed="OnPointerPressed" PointerReleased="OnPointerReleased"
           ToolTip.Tip="{Binding Title}">
     <Border.ContextMenu>
       <ContextMenu>
+        <MenuItem Header="Keep Open" Click="OnKeep" IsVisible="{Binding IsPreview}" />
+        <MenuItem Header="Pin Tab" Click="OnTogglePin" IsVisible="{Binding !IsPinned}" />
+        <MenuItem Header="Unpin Tab" Click="OnTogglePin" IsVisible="{Binding IsPinned}" />
         <MenuItem Header="Duplicate Tab" Click="OnDuplicate" />
         <Separator />
         <MenuItem Header="Close Tab" InputGesture="Ctrl+W" Click="OnClose" />
@@ -40,17 +56,22 @@
         <MenuItem Header="Close All Tabs" Click="OnCloseAll" />
       </ContextMenu>
     </Border.ContextMenu>
-    <Grid ColumnDefinitions="Auto,*,Auto">
-      <Panel Margin="0,0,8,0" VerticalAlignment="Center">
-        <c:MethodBadge Method="{Binding Method}" Compact="True" FontSize="11" IsVisible="{Binding Method, Converter={x:Static ObjectConverters.IsNotNull}}" />
+    <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+      <PathIcon Data="{StaticResource IconPin}" Width="12" Height="12" Margin="0,0,6,0" IsVisible="{Binding IsPinned}"
+                AutomationProperties.Name="Pinned" />
+      <Panel Grid.Column="1" Margin="0,0,7,0" VerticalAlignment="Center">
+        <c:MethodBadge Method="{Binding Method}" Compact="True" FontSize="10" IsVisible="{Binding Method, Converter={x:Static ObjectConverters.IsNotNull}}" />
         <TextBlock Text="{Binding KindLabel}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiaryBrush}"
                    IsVisible="{Binding KindLabel, Converter={x:Static ObjectConverters.IsNotNull}}" />
       </Panel>
-      <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-      <Panel Grid.Column="2" Width="24" Height="24" Margin="6,0,0,0">
-        <Ellipse Name="DirtyDot" Width="8" Height="8" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding IsDirty}" IsHitTestVisible="False" />
-        <Button Name="CloseButton" Classes="icon" Width="22" Height="22" Padding="4" Click="OnClose" ToolTip.Tip="Close (Ctrl+W)">
-          <PathIcon Data="{StaticResource IconClose}" Width="11" Height="11" />
+      <TextBlock Grid.Column="2" Text="{Binding TitlePrefix, StringFormat='{}{0} › '}" Foreground="{DynamicResource TextTertiaryBrush}"
+                 VerticalAlignment="Center" IsVisible="{Binding TitlePrefix, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <TextBlock Grid.Column="3" Name="TitleText" Text="{Binding Title}" FontWeight="Medium" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+      <Panel Grid.Column="4" Width="22" Height="22" Margin="6,0,0,0">
+        <Ellipse Name="DirtyDot" Width="7" Height="7" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding IsDirty}" IsHitTestVisible="False"
+                 ToolTip.Tip="Unsaved changes" />
+        <Button Name="CloseButton" Classes="icon" Width="20" Height="20" Padding="4" Click="OnClose" ToolTip.Tip="Close (Ctrl+W)">
+          <PathIcon Data="{StaticResource IconClose}" Width="10" Height="10" />
         </Button>
       </Panel>
     </Grid>

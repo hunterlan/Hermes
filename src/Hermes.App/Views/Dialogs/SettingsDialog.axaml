@@ -34,6 +34,13 @@
           </StackPanel>
           <ComboBox Grid.Column="1" ItemsSource="{Binding Layouts}" SelectedItem="{Binding SelectedLayout}" HorizontalAlignment="Stretch" />
         </Grid>
+        <Grid Classes="setting" ColumnDefinitions="*,Auto">
+          <StackPanel>
+            <TextBlock Classes="title" Text="Tabs" />
+            <TextBlock Classes="hint" Text="When off, opening a request replaces the current one. Tabs with unsaved changes stay until saved or closed." />
+          </StackPanel>
+          <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowTabs}" OnContent="" OffContent="" />
+        </Grid>
 
         <TextBlock Classes="section" Text="REQUESTS" Margin="0,8,0,10" />
         <Grid Classes="setting" ColumnDefinitions="*,Auto">

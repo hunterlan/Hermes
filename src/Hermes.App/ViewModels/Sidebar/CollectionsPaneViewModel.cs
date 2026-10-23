@@ -98,6 +98,15 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
 
     // ---- open ----
 
+    /// <summary>Single click: requests open in the preview tab; folders and collections only expand or collapse.</summary>
+    public void Activate(TreeNodeViewModel? node)
+    {
+        if (node is RequestNodeViewModel r)
+            _host.PreviewRequest(r.Model);
+        else if (node is not null)
+            node.IsExpanded = !node.IsExpanded;
+    }
+
     [RelayCommand]
     public void Open(TreeNodeViewModel? node)
     {

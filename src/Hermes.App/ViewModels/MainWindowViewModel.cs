@@ -48,6 +48,19 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             RefreshEnvironmentOptions();
         };
         Workspace.EnvironmentsChanged += RefreshEnvironmentOptions;
+        Tabs.CollectionChanged += (_, e) =>
+        {
+            foreach (var tab in e.NewItems?.OfType<TabViewModelBase>() ?? [])
+                tab.PropertyChanged += OnTabPropertyChanged;
+            foreach (var tab in e.OldItems?.OfType<TabViewModelBase>() ?? [])
+                tab.PropertyChanged -= OnTabPropertyChanged;
+            OnTabsChanged();
+        };
+        services.Settings.Changed += () =>
+        {
+            OnPropertyChanged(nameof(ShowTabs));
+            OnPropertyChanged(nameof(IsTabStripVisible));
+        };
         Workspace.CollectionChanged += _ => NotifyWorkspaceChanged();
         Workspace.CollectionsListChanged += NotifyWorkspaceChanged;
         RefreshEnvironmentOptions();
@@ -96,6 +109,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     {
         foreach (var tab in Tabs)
             tab.OnWorkspaceChanged();
+        UpdateTitlePrefixes();
     }
 
     // ---- environment selector ----
@@ -204,10 +218,16 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
 
     public void AddTab(TabViewModelBase tab)
     {
+        // Single-tab mode: the new tab takes the place of a clean current one.
+        if (!ShowTabs && ActiveTab is { IsDirty: false, IsPinned: false } replaced)
+        {
+            Tabs[Tabs.IndexOf(replaced)] = tab;
+            ActiveTab = tab;
+            return;
+        }
         var index = ActiveTab is null ? Tabs.Count : Tabs.IndexOf(ActiveTab) + 1;
         Tabs.Insert(index, tab);
         ActiveTab = tab;
-        OnPropertyChanged(nameof(HasTabs));
     }
 
     /// <summary>Focuses an open tab for the entity, or opens a new one.</summary>
@@ -222,8 +242,71 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         }
     }
 
-    public void OpenRequest(HttpRequestModel model) =>
+    public void OpenRequest(HttpRequestModel model)
+    {
         OpenOrFocus(model.Id, () => new RequestTabViewModel(_services, ModelCloner.Clone(model)));
+        if (ActiveTab is not null)
+            ActiveTab.IsPreview = false;
+    }
+
+    public void PreviewRequest(HttpRequestModel model)
+    {
+        if (Tabs.FirstOrDefault(t => t.EntityId == model.Id) is { } open)
+        {
+            ActiveTab = open;
+            return;
+        }
+        var tab = new RequestTabViewModel(_services, ModelCloner.Clone(model)) { IsPreview = true };
+        if (Tabs.FirstOrDefault(t => t is { IsPreview: true, IsDirty: false }) is { } previous)
+        {
+            Tabs[Tabs.IndexOf(previous)] = tab;
+            ActiveTab = tab;
+        }
+        else
+        {
+            AddTab(tab);
+        }
+    }
+
+    [RelayCommand]
+    private void KeepTab(TabViewModelBase tab) => tab.IsPreview = false;
+
+    [RelayCommand]
+    private void TogglePin(TabViewModelBase tab)
+    {
+        tab.IsPinned = !tab.IsPinned;
+        // Pinned tabs sit together at the start of the strip.
+        var target = tab.IsPinned ? Tabs.Count(t => t.IsPinned && t != tab) : Tabs.Count(t => t.IsPinned);
+        Tabs.Move(Tabs.IndexOf(tab), target);
+    }
+
+    // ---- tab strip ----
+
+    public bool ShowTabs => _services.Settings.Current.ShowTabs;
+
+    /// <summary>With tabs turned off the strip still appears while more than one tab (unsaved work) is open.</summary>
+    public bool IsTabStripVisible => ShowTabs || Tabs.Count > 1;
+
+    private void OnTabPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(TabViewModelBase.Title))
+            UpdateTitlePrefixes();
+    }
+
+    private void OnTabsChanged()
+    {
+        OnPropertyChanged(nameof(HasTabs));
+        OnPropertyChanged(nameof(IsTabStripVisible));
+        UpdateTitlePrefixes();
+    }
+
+    /// <summary>Same-named tabs show their collection so they can be told apart.</summary>
+    private void UpdateTitlePrefixes()
+    {
+        var duplicates = Tabs.GroupBy(t => t.Title).Where(g => g.Count() > 1).SelectMany(g => g).ToHashSet();
+        foreach (var tab in Tabs)
+            tab.TitlePrefix = duplicates.Contains(tab) ? tab.CollectionName : null;
+    }
 
     [RelayCommand]
     private void SelectTab(TabViewModelBase tab) => ActiveTab = tab;
@@ -263,14 +346,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     [RelayCommand]
     private async Task CloseOtherTabs(TabViewModelBase tab)
     {
-        foreach (var other in Tabs.Where(t => t != tab).ToList())
+        foreach (var other in Tabs.Where(t => t != tab && !t.IsPinned).ToList())
             await CloseTab(other);
     }
 
     [RelayCommand]
     private async Task CloseAllTabs()
     {
-        foreach (var tab in Tabs.ToList())
+        foreach (var tab in Tabs.Where(t => !t.IsPinned).ToList())
             await CloseTab(tab);
     }
 
@@ -412,7 +495,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         {
             var tab = RestoreTab(saved);
             if (tab is not null)
+            {
+                tab.IsPinned = saved.IsPinned;
                 Tabs.Add(tab);
+            }
         }
 
         if (Tabs.Count == 0)

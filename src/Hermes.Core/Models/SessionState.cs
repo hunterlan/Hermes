@@ -17,6 +17,8 @@ public sealed class SessionTab
 
     /// <summary>Unsaved state of a request tab.</summary>
     public HttpRequestModel? RequestDraft { get; set; }
+
+    public bool IsPinned { get; set; }
 }
 
 public sealed class SessionState

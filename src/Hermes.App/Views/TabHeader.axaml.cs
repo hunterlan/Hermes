@@ -15,8 +15,24 @@ public partial class TabHeader : UserControl
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && Tab is { } tab && Main is { } main)
-            main.SelectTabCommand.Execute(tab);
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed || Tab is not { } tab || Main is not { } main)
+            return;
+        main.SelectTabCommand.Execute(tab);
+        // Double-clicking a preview tab keeps it.
+        if (e.ClickCount >= 2)
+            main.KeepTabCommand.Execute(tab);
+    }
+
+    private void OnKeep(object? sender, RoutedEventArgs e)
+    {
+        if (Tab is { } tab)
+            Main?.KeepTabCommand.Execute(tab);
+    }
+
+    private void OnTogglePin(object? sender, RoutedEventArgs e)
+    {
+        if (Tab is { } tab)
+            Main?.TogglePinCommand.Execute(tab);
     }
 
     private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)

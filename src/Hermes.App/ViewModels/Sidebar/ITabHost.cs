@@ -6,6 +6,9 @@ namespace Hermes.App.ViewModels.Sidebar;
 public interface ITabHost
 {
     void OpenRequest(HttpRequestModel model);
+
+    /// <summary>Opens a request in the preview tab (single click), replacing the previous preview.</summary>
+    void PreviewRequest(HttpRequestModel model);
     void OpenCollection(CollectionModel collection);
     void OpenFolder(FolderModel folder);
     void OpenEnvironment(EnvironmentModel environment);

@@ -32,4 +32,7 @@ public sealed class AppSettings
     public string? DataDirectory { get; set; }
 
     public int HistoryRetentionDays { get; set; } = 30;
+
+    /// <summary>When off, opening an item replaces the current clean tab and the strip only shows while unsaved tabs remain.</summary>
+    public bool ShowTabs { get; set; } = true;
 }

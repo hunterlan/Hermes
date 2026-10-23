@@ -138,7 +138,7 @@
       <Grid Grid.Column="1" RowDefinitions="Auto,*">
         <!-- tab strip -->
         <Border Background="{DynamicResource BgSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
-                Padding="8,6,8,0">
+                Padding="8,6,8,0" IsVisible="{Binding IsTabStripVisible}">
           <Grid ColumnDefinitions="Auto,Auto,*">
             <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
               <ItemsControl ItemsSource="{Binding Tabs}">

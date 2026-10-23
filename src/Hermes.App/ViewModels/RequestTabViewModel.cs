@@ -561,5 +561,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         Kind = SessionTabKind.Request,
         EntityId = RequestId,
         RequestDraft = IsDirty || !IsPersisted ? BuildModel() : null,
+        IsPinned = IsPinned,
     };
+
+    public override string? CollectionName => Services.Workspace.Find(RequestId)?.Collection.Name;
 }

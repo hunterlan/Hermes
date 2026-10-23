@@ -80,7 +80,13 @@ public partial class CollectionsPaneView : UserControl
     {
         if (e.InitialPressMouseButton == MouseButton.Left && !_dragging && _pressedNode is { IsRenaming: false } node &&
             (sender as Control)?.DataContext == node)
-            ViewModel?.Open(node);
+        {
+            // A double click keeps the request open in its own tab.
+            if (_lastPressArgs?.ClickCount >= 2 && node.IsRequest)
+                ViewModel?.Open(node);
+            else
+                ViewModel?.Activate(node);
+        }
         _pressedNode = null;
         _lastPressArgs = null;
     }
