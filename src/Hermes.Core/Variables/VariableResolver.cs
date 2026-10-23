@@ -6,6 +6,7 @@ namespace Hermes.Core.Variables;
 public sealed class VariableScope
 {
     private readonly Dictionary<string, string> _values = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _secretKeys = new(StringComparer.Ordinal);
 
     public static VariableScope Empty { get; } = new();
 
@@ -14,20 +15,31 @@ public sealed class VariableScope
         if (variables is null)
             return this;
         foreach (var v in variables)
-            if (v.Enabled && !string.IsNullOrEmpty(v.Key))
-                _values[v.Key] = v.EffectiveValue;
+        {
+            if (!v.Enabled || string.IsNullOrEmpty(v.Key))
+                continue;
+            _values[v.Key] = v.EffectiveValue;
+            if (v.Type == Models.VariableType.Secret)
+                _secretKeys.Add(v.Key);
+            else
+                _secretKeys.Remove(v.Key);
+        }
         return this;
     }
 
     public VariableScope Set(string key, string value)
     {
         _values[key] = value;
+        _secretKeys.Remove(key);
         return this;
     }
 
     public bool TryGet(string key, out string value) => _values.TryGetValue(key, out value!);
 
     public IReadOnlyDictionary<string, string> Values => _values;
+
+    /// <summary>Values of the variables that are secret in the layer that wins.</summary>
+    public IEnumerable<string> SecretValues => _secretKeys.Select(k => _values[k]);
 }
 
 public static partial class VariableResolver

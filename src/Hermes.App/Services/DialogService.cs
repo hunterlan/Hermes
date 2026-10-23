@@ -27,6 +27,15 @@ public sealed class DialogService
         return await ShowDialogAsync<string>(dialog) == "confirm";
     }
 
+    /// <summary>Secrets are left out of exports unless the user says otherwise (closing the dialog leaves them out).</summary>
+    public async Task<bool> AskIncludeSecretsAsync()
+    {
+        var dialog = new MessageDialog("Include secret values?",
+            "This export contains secret variables or credentials. Left out, they are exported blank and the file is safe to share.",
+            [("Include secrets", "include", "accent"), ("Leave out", "omit", "")]);
+        return await ShowDialogAsync<string>(dialog) == "include";
+    }
+
     public async Task ShowMessageAsync(string title, string message)
     {
         var dialog = new MessageDialog(title, message, [("OK", "ok", "accent")]);

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Services;
 using Hermes.Core.Import;
 using Hermes.Core.Models;
+using Hermes.Core.Secrets;
 using Hermes.Core.Serialization;
 
 namespace Hermes.App.ViewModels.Sidebar;
@@ -134,7 +135,10 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
         if (item is null)
             return;
         var suffix = item.IsGlobals ? "postman_globals" : "postman_environment";
+        var model = ModelCloner.Clone(item.Model);
+        if (SecretFields.Strip(model).Count > 0 && await _dialogs.AskIncludeSecretsAsync())
+            model = item.Model;
         if (await _dialogs.SaveFileAsync("Export environment", $"{item.Name}.{suffix}.json", ".json") is { } path)
-            await File.WriteAllTextAsync(path, PostmanEnvironmentConverter.Export(item.Model, item.IsGlobals));
+            await File.WriteAllTextAsync(path, PostmanEnvironmentConverter.Export(model, item.IsGlobals));
     }
 }

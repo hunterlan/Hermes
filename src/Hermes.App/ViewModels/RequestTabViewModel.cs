@@ -5,6 +5,7 @@ using Hermes.Core.Formatting;
 using Hermes.Core.Http;
 using Hermes.Core.Import;
 using Hermes.Core.Models;
+using Hermes.Core.Secrets;
 using Hermes.Core.Serialization;
 using Hermes.Core.Variables;
 
@@ -486,7 +487,12 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
             {
                 Response.SetResponse(response);
                 // Responses are kept with saved requests, so reopening shows the last result and earlier ones.
-                if (IsPersisted && Services.Workspace.SaveResponse(RequestId, new SavedResponse { Response = response, SentRequest = Response.SentRequestText }) is { } saved)
+                // The saved copy has credentials masked; the one on screen stays exact.
+                if (IsPersisted && Services.Workspace.SaveResponse(RequestId, new SavedResponse
+                    {
+                        Response = response,
+                        SentRequest = SecretMasker.MaskRequestText(Response.SentRequestText, SecretMasker.CollectSecrets(model, CreateContext())),
+                    }) is { } saved)
                     Response.SetSaved(saved, show: false);
             }
             else

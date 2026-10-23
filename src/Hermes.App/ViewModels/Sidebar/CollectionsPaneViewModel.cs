@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Services;
 using Hermes.Core.Import;
 using Hermes.Core.Models;
+using Hermes.Core.Secrets;
 using Hermes.Core.Serialization;
 
 namespace Hermes.App.ViewModels.Sidebar;
@@ -266,9 +267,12 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     {
         if (node?.Root is not { } root)
             return;
+        var model = ModelCloner.Clone(root.Model);
+        if (SecretFields.Strip(model).Count > 0 && await _dialogs.AskIncludeSecretsAsync())
+            model = root.Model;
         var fileName = $"{root.Model.Name}.postman_collection.json";
         if (await _dialogs.SaveFileAsync("Export collection (Postman v2.1)", fileName, ".json") is { } path)
-            await File.WriteAllTextAsync(path, PostmanCollectionExporter.Export(root.Model));
+            await File.WriteAllTextAsync(path, PostmanCollectionExporter.Export(model));
     }
 
     // ---- drag & drop ----

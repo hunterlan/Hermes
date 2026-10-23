@@ -42,6 +42,13 @@ environment > collection > globals. Dynamic variables: `{{$guid}}`, `{{$randomUU
 `{{$isoTimestamp}}`, `{{$randomInt}}`, `{{$randomBoolean}}`, `{{$randomEmail}}`, `{{$randomFirstName}}`,
 `{{$randomLastName}}`, `{{$randomAlphaNumeric}}`.
 
+**Secrets** — values of secret variables and literal auth credentials (passwords, tokens, API key values, OAuth
+client secrets) are kept in the OS keychain: the macOS Keychain, the Linux keyring (libsecret) or a DPAPI-encrypted
+file on Windows. The JSON files hold everything else, so the data folder is safe to commit. Auth fields written as
+`{{variables}}` stay in the files. Saved responses mask credentials in the sent request, history drops them, and
+exports ask whether to include them. Without a usable keychain (e.g. Linux with no keyring) secrets are saved as plain
+text and the status bar says so.
+
 An environments matrix edits every variable in every environment side by side and flags variables used by
 requests that are empty in the active environment. The auth editor shows where auth is inherited from and which
 items override it.

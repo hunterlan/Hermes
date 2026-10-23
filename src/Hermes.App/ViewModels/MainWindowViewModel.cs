@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Services;
@@ -67,6 +68,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             OnPropertyChanged(nameof(IsTabStripVisible));
         };
         Workspace.CollectionChanged += _ => NotifyWorkspaceChanged();
+        Workspace.Secrets.ProtectionLost += () => Dispatcher.UIThread.Post(() =>
+        {
+            OnPropertyChanged(nameof(AreSecretsUnprotected));
+            OnPropertyChanged(nameof(SecretsWarning));
+        });
         Workspace.CollectionsListChanged += NotifyWorkspaceChanged;
         RefreshEnvironmentOptions();
         CommandPalette = new CommandPaletteViewModel(PaletteItems);
@@ -132,6 +138,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
 
     /// <summary>Folder holding the workspace's plain JSON files (shown in the status bar).</summary>
     public string DataDirectory => Workspace.DataDirectory;
+
+    /// <summary>True when there's no usable keychain, so secrets are written to the data files as plain text.</summary>
+    public bool AreSecretsUnprotected => !Workspace.Secrets.IsProtected;
+
+    public string SecretsWarning =>
+        $"Secret values are saved as plain text in the data folder. {Workspace.Secrets.UnprotectedReason}";
 
     public string AppVersion { get; } = "Hermes " + (typeof(MainWindowViewModel).Assembly.GetName().Version?.ToString(2) ?? "");
 

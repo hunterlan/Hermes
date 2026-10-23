@@ -13,6 +13,7 @@ public static class TestAppBuilder
     public static AppBuilder BuildAvaloniaApp()
     {
         Environment.SetEnvironmentVariable("HERMES_CONFIG_DIR", DataDirectory);
+        Environment.SetEnvironmentVariable("HERMES_SECRET_STORE", "memory");
         return AppBuilder.Configure<App>()
             .UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });

@@ -293,6 +293,13 @@
             BorderThickness="0,1,0,0" Padding="14,0,8,0">
       <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
         <TextBlock Classes="mono" Text="{Binding DataDirectory}" TextTrimming="PathSegmentEllipsis" MaxWidth="520" />
+        <Border Grid.Column="1" Classes="tag warn" HorizontalAlignment="Right" Margin="0,0,8,0" IsVisible="{Binding AreSecretsUnprotected}"
+                ToolTip.Tip="{Binding SecretsWarning}">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <PathIcon Data="{StaticResource IconAlert}" Width="11" Height="11" />
+            <TextBlock Text="Secrets not protected" />
+          </StackPanel>
+        </Border>
         <Button Grid.Column="2" Classes="ghost" Content="Cookies" Command="{Binding OpenCookiesCommand}" ToolTip.Tip="Manage cookies" />
         <Button Grid.Column="3" Classes="ghost" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Toggle light / dark theme">
           <StackPanel Orientation="Horizontal" Spacing="5">

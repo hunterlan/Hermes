@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Secrets;
 using Hermes.Core.Storage;
 
 namespace Hermes.App.Services;
@@ -33,6 +34,7 @@ public sealed class WorkspaceService
     public ObservableCollection<HistoryEntry> History { get; }
     public IReadOnlyList<string> LoadErrors => _repository.LoadErrors;
     public string DataDirectory => _repository.Root;
+    public SecretStore Secrets => _repository.Secrets;
 
     private EnvironmentModel? _activeEnvironment;
 

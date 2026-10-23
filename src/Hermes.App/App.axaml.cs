@@ -6,6 +6,7 @@ using Hermes.App.ViewModels;
 using Hermes.App.Views;
 using Hermes.Core.Auth;
 using Hermes.Core.Http;
+using Hermes.Core.Secrets;
 using Hermes.Core.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -41,7 +42,7 @@ public partial class App : Application
         {
             var settings = sp.GetRequiredService<SettingsService>().Current;
             var dataDir = string.IsNullOrWhiteSpace(settings.DataDirectory) ? AppPaths.DefaultDataDirectory : settings.DataDirectory;
-            return new WorkspaceRepository(dataDir);
+            return new WorkspaceRepository(dataDir, KeychainSecretStore.Create(dataDir));
         });
         services.AddSingleton<WorkspaceService>();
         services.AddSingleton<HttpClientProvider>();

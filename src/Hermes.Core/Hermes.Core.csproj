@@ -5,4 +5,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Hermes.Core.Tests" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Identity.Client.Extensions.Msal" Version="4.91.1" />
+  </ItemGroup>
 </Project>

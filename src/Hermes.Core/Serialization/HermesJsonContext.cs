@@ -22,4 +22,5 @@ namespace Hermes.Core.Serialization;
 [JsonSerializable(typeof(AppSettings))]
 [JsonSerializable(typeof(SessionState))]
 [JsonSerializable(typeof(List<SavedResponse>))]
+[JsonSerializable(typeof(Dictionary<string, Dictionary<string, string>>))]
 public sealed partial class HermesJsonContext : JsonSerializerContext;
