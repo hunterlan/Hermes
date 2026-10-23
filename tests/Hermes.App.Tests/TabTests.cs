@@ -30,6 +30,28 @@ public class TabTests
     }
 
     [AvaloniaFact]
+    public void Request_settings_keep_an_override_that_matches_the_app_setting()
+    {
+        var (window, vm) = ShowEmptyWindow();
+        var (_, first, _) = CreateRequests("Settings");
+        var appVerifies = App.Services.GetRequiredService<SettingsService>().Current.VerifySsl;
+        first.Settings.VerifySsl = appVerifies;
+
+        vm.OpenRequest(first);
+        var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+        tab.Name += " edited";
+
+        Assert.Equal(appVerifies, tab.BuildModel().Settings.VerifySsl);
+        Assert.Null(tab.BuildModel().Settings.FollowRedirects);
+        Assert.True(tab.HasSettingsOverrides);
+
+        tab.UseDefaultSettingsCommand.Execute(null);
+        Assert.Null(tab.BuildModel().Settings.VerifySsl);
+        Assert.False(tab.HasSettingsOverrides);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void Single_click_replaces_the_preview_tab_until_it_is_edited()
     {
         var (window, vm) = ShowEmptyWindow();
