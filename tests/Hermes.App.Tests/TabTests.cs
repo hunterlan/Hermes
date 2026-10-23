@@ -63,6 +63,9 @@ public class TabTests
         first.Method = "DELETE";
         first.Url = "https://api.test/palette-" + first.Id;
 
+        Assert.False(vm.HasTabs);
+        UiTestHelpers.Screenshot(window, "16-welcome");
+
         vm.OpenCommandPaletteCommand.Execute(null);
         Assert.True(vm.CommandPalette.IsOpen);
         vm.CommandPalette.Query = "delete palette-" + first.Id;
