@@ -74,6 +74,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             OnPropertyChanged(nameof(SecretsWarning));
         });
         Workspace.CollectionsListChanged += NotifyWorkspaceChanged;
+        Workspace.StorageProblem += message => Dispatcher.UIThread.Post(() => _ = Dialogs.ShowMessageAsync("Storage problem", message));
         RefreshEnvironmentOptions();
         CommandPalette = new CommandPaletteViewModel(PaletteItems);
 

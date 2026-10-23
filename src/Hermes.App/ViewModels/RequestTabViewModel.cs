@@ -493,7 +493,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
                         Response = response,
                         SentRequest = SecretMasker.MaskRequestText(Response.SentRequestText, SecretMasker.CollectSecrets(model, CreateContext())),
                     }) is { } saved)
-                    Response.SetSaved(saved, show: false);
+                    Response.AddSaved(saved);
             }
             else
                 Response.SetError(result.Error ?? "Unknown error");

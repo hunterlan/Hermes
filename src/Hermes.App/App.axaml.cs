@@ -28,7 +28,12 @@ public partial class App : Application
             var window = new MainWindow { DataContext = Services.GetRequiredService<MainWindowViewModel>() };
             Services.GetRequiredService<DialogService>().Owner = window;
             desktop.MainWindow = window;
-            desktop.ShutdownRequested += (_, _) => Services.GetRequiredService<HttpClientProvider>().Dispose();
+            desktop.ShutdownRequested += (_, _) =>
+            {
+                Services.GetRequiredService<HttpClientProvider>().Dispose();
+                // Give queued history writes a moment to land; a slow disk mustn't hold the app open.
+                Services.GetRequiredService<WorkspaceService>().FlushHistoryAsync().Wait(TimeSpan.FromSeconds(2));
+            };
         }
 
         base.OnFrameworkInitializationCompleted();
