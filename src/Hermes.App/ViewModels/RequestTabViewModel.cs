@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Views.Dialogs;
@@ -254,6 +255,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
                 break;
             case nameof(IsSending):
                 OnPropertyChanged(nameof(SendButtonText));
+                OnPropertyChanged(nameof(SendButtonCommand));
                 break;
             case nameof(BinaryFilePath):
                 OnPropertyChanged(nameof(BinaryFileLabel));
@@ -460,15 +462,22 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
 
     // ---- commands ----
 
+    /// <summary>What the Send button does: send, or cancel the request in flight.</summary>
+    public ICommand SendButtonCommand => IsSending ? CancelSendCommand : SendCommand;
+
+    /// <summary>Ctrl+Enter: sends, or cancels the request in flight. Doesn't wait for the response.</summary>
+    public void SendOrCancel()
+    {
+        if (SendButtonCommand.CanExecute(null))
+            SendButtonCommand.Execute(null);
+    }
+
+    [RelayCommand]
+    private void CancelSend() => _sendCts?.Cancel();
+
     [RelayCommand]
     private async Task Send()
     {
-        if (IsSending)
-        {
-            _sendCts?.Cancel();
-            return;
-        }
-
         var model = BuildModel();
         // One context for the request and its masked copy: switching environments while it's in flight changes neither.
         var (prepared, masked) = RequestPreparer.PrepareWithMasked(model, CreateContext());

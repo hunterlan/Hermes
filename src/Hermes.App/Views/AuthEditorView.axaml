@@ -200,7 +200,7 @@
                 <ComboBox Grid.Row="11" Grid.Column="1" ItemsSource="{Binding ClientAuthOptions}" SelectedItem="{Binding SelectedClientAuth}" HorizontalAlignment="Stretch" />
               </Grid>
               <StackPanel Orientation="Horizontal" Spacing="12" Margin="140,6,0,0">
-                <Button Classes="accent" Command="{Binding GetNewAccessTokenCommand}">
+                <Button Classes="accent" Command="{Binding TokenButtonCommand}">
                   <Panel>
                     <TextBlock Text="Get New Access Token" IsVisible="{Binding !IsFetchingToken}" />
                     <TextBlock Text="Cancel" IsVisible="{Binding IsFetchingToken}" />

@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.Core.Auth;
@@ -200,7 +201,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
                 break;
         }
 
-        if (!_loading && e.PropertyName is not (nameof(TokenStatus) or nameof(IsFetchingToken) or nameof(TypeDescription) or nameof(Summary) or nameof(Chain) or nameof(Overrides) or nameof(HasOverrides) or nameof(UsageSummary))
+        if (!_loading && e.PropertyName is not (nameof(TokenStatus) or nameof(IsFetchingToken) or nameof(TokenButtonCommand) or nameof(TypeDescription) or nameof(Summary) or nameof(Chain) or nameof(Overrides) or nameof(HasOverrides) or nameof(UsageSummary))
             && !e.PropertyName!.StartsWith("Is", StringComparison.Ordinal))
             Changed?.Invoke();
     }
@@ -264,15 +265,17 @@ public sealed partial class AuthEditorViewModel : ObservableObject
         },
     };
 
+    /// <summary>What the token button does: fetch a token, or cancel the fetch in progress.</summary>
+    public ICommand TokenButtonCommand => IsFetchingToken ? CancelTokenCommand : GetNewAccessTokenCommand;
+
+    partial void OnIsFetchingTokenChanged(bool value) => OnPropertyChanged(nameof(TokenButtonCommand));
+
+    [RelayCommand]
+    private void CancelToken() => _tokenCts?.Cancel();
+
     [RelayCommand]
     private async Task GetNewAccessToken()
     {
-        if (IsFetchingToken)
-        {
-            _tokenCts?.Cancel();
-            return;
-        }
-
         IsFetchingToken = true;
         TokenStatus = IsAuthCodeGrant ? "Waiting for authorization in your browser…" : "Requesting token…";
         _tokenCts = new CancellationTokenSource();
