@@ -170,6 +170,29 @@ public class SecretTests : IDisposable
     }
 
     [Fact]
+    public void A_secret_copied_by_hand_into_the_request_is_masked_too()
+    {
+        var request = new HttpRequestModel
+        {
+            Url = "https://api.test/?q=s3cret value",
+            Headers = [new KeyValueItem("X-Copy", "s3cret value"), new KeyValueItem("X-Tok", "tok-12345")],
+            Body = new RequestBody { Mode = BodyMode.Raw, Raw = "{\"key\":\"s3cret value\"}" },
+            Auth = new AuthConfig { Type = AuthType.Bearer, Bearer = { Token = "tok-12345" } },
+        };
+        var context = new RequestContext
+        {
+            Environment = new EnvironmentModel { Variables = [new Variable("apiKey", "s3cret value") { Type = VariableType.Secret }] },
+        };
+
+        var (sent, masked) = RequestPreparer.PrepareWithMasked(request, context);
+        var text = SecretMasker.MaskCredentialHeaders(RawRequestFormatter.Format(masked));
+
+        Assert.DoesNotContain("s3cret", text);
+        Assert.DoesNotContain("tok-12345", text);
+        Assert.Equal("s3cret value", sent.GetHeader("X-Copy"));
+    }
+
+    [Fact]
     public void Secret_values_are_masked_wherever_variables_are_shown()
     {
         var scope = new Variables.VariableScope().AddLayer([new Variable("apiKey", "s3cret") { Type = VariableType.Secret }, new Variable("host", "h")]);
@@ -192,14 +215,33 @@ public class SecretTests : IDisposable
     [Fact]
     public void The_workspace_id_lives_in_the_folder_and_moves_with_it()
     {
-        var id = Guid.NewGuid();
-        WorkspaceIdentity.Write(_dir, id);
+        var first = WorkspaceIdentity.Resolve(_dir);
+        Assert.True(first.IsNew);
+        WorkspaceIdentity.Write(_dir, first.Id);
         var moved = _dir + "-moved";
         Directory.Move(_dir, moved);
 
-        Assert.Equal(id, WorkspaceIdentity.Read(moved));
-        Assert.Null(WorkspaceIdentity.Read(_dir));
+        var afterMove = WorkspaceIdentity.Resolve(moved);
+
+        Assert.Equal(new WorkspaceIdentityState(first.Id, IsNew: false, CopiedFrom: null, NeedsWrite: true), afterMove);
         Directory.Move(moved, _dir);
+    }
+
+    [Fact]
+    public void A_copied_folder_gets_its_own_id()
+    {
+        WorkspaceIdentity.Write(_dir, Guid.NewGuid());
+        var original = WorkspaceIdentity.Resolve(_dir);
+        var copy = _dir + "-copy";
+        Directory.CreateDirectory(copy);
+        File.Copy(WorkspaceIdentity.FileFor(_dir), WorkspaceIdentity.FileFor(copy));
+
+        var copied = WorkspaceIdentity.Resolve(copy);
+
+        Assert.NotEqual(original.Id, copied.Id);
+        Assert.Equal(original.Id, copied.CopiedFrom);
+        Assert.Equal(original, WorkspaceIdentity.Resolve(_dir));
+        Directory.Delete(copy, recursive: true);
     }
 
     [Fact]
@@ -208,7 +250,7 @@ public class SecretTests : IDisposable
         Directory.CreateDirectory(_dir);
         File.WriteAllText(WorkspaceIdentity.FileFor(_dir), "{ cut");
 
-        Assert.Throws<IOException>(() => WorkspaceIdentity.Read(_dir));
+        Assert.Throws<IOException>(() => WorkspaceIdentity.Resolve(_dir));
     }
 
     public void Dispose()

@@ -109,6 +109,9 @@ public class CurlTests
         Assert.Equal(RawLanguage.Json, r.Body.RawLanguage);
         Assert.Equal("{\"a\":1}", r.Body.Raw);
         Assert.Contains(r.Headers, h => h.Key == "Accept" && h.Value == "application/json");
+
+        var custom = CurlParser.Parse("curl --json '{}' -H 'Content-Type: application/vnd.api+json' https://api.test/x");
+        Assert.Equal("application/vnd.api+json", Assert.Single(custom.Headers, h => h.Key == "Content-Type").Value);
     }
 
     [Fact]

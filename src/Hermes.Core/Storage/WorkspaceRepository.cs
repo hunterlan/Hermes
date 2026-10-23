@@ -134,13 +134,16 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
                 }
                 try
                 {
-                    var entries = JsonFileStore.ReadLines(file, HermesJsonContext.Default.HistoryEntry, LoadErrors);
-                    // Appends don't trim, so a busy day is cut back to its newest entries here.
-                    if (entries.Count > MaxHistoryEntriesPerDay)
-                    {
+                    var errors = new List<string>();
+                    var entries = JsonFileStore.ReadLines(file, HermesJsonContext.Default.HistoryEntry, errors);
+                    LoadErrors.AddRange(errors);
+                    // Appends don't trim, so a busy day is cut back to its newest entries here. Lines that couldn't
+                    // be read (cut short by a crash) are dropped at the same time, so they're reported only once.
+                    var trimmed = entries.Count > MaxHistoryEntriesPerDay;
+                    if (trimmed)
                         entries.RemoveRange(0, entries.Count - MaxHistoryEntriesPerDay);
+                    if (trimmed || errors.Count > 0)
                         JsonFileStore.WriteLines(file, entries, HermesJsonContext.Default.HistoryEntry);
-                    }
                     result.AddRange(entries);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -207,7 +210,16 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
     {
         var items = new List<SavedResponse>();
         var errors = new List<string>();
-        foreach (var file in ResponseFiles(requestId))
+        List<string> files;
+        try
+        {
+            files = ResponseFiles(requestId).ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new SavedResponses(items, [$"{ResponsesDirFor(requestId)}: {ex.Message}"]);
+        }
+        foreach (var file in files)
         {
             try
             {
@@ -244,9 +256,24 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
         var sequence = Math.Max(saved.Timestamp.UtcTicks, newest + 1);
         JsonFileStore.Write(Path.Combine(ResponsesDirFor(requestId), $"{sequence:D19}.json"), saved,
             HermesJsonContext.Default.SavedResponse);
-        foreach (var old in ResponseFiles(requestId).Skip(MaxSavedResponses))
-            DeleteFile(old);
+        PruneResponses(requestId);
         return saved;
+    }
+
+    /// <summary>
+    /// Removes saved responses beyond the newest <see cref="MaxSavedResponses"/>. Best effort: the save itself has
+    /// succeeded, and a file that can't be removed now (held open by a scanner) is removed after a later save.
+    /// </summary>
+    private void PruneResponses(Guid requestId)
+    {
+        try
+        {
+            foreach (var old in ResponseFiles(requestId).Skip(MaxSavedResponses))
+                File.Delete(old);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 
     public void DeleteResponses(Guid requestId)
