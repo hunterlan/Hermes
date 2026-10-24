@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
-using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Requests;
 using Hermes.Core.Secrets;
 using Hermes.Core.Storage;
 

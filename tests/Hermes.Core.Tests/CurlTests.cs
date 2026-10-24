@@ -1,8 +1,8 @@
 using Hermes.Core.CodeGen;
-using Hermes.Core.Http;
 using Hermes.Core.Import;
 using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
+using Hermes.Core.Requests;
 
 namespace Hermes.Core.Tests;
 

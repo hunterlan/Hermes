@@ -1,5 +1,5 @@
-using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Web;
 
 namespace Hermes.Core.Tests;
 

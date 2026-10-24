@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Requests;
 using Hermes.TestSupport;
 
 namespace Hermes.Core.Tests;

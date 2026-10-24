@@ -1,7 +1,7 @@
 using System.Text;
 using Hermes.Core.Models;
 
-namespace Hermes.Core.Http;
+namespace Hermes.Core.Web;
 
 /// <summary>
 /// String-level URL helpers. They deliberately don't use <see cref="Uri"/>: URLs being edited

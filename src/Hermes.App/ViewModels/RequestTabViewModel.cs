@@ -8,9 +8,11 @@ using Hermes.Core.Http;
 using Hermes.Core.Import;
 using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
+using Hermes.Core.Requests;
 using Hermes.Core.Secrets;
 using Hermes.Core.Serialization;
 using Hermes.Core.Variables;
+using Hermes.Core.Web;
 
 namespace Hermes.App.ViewModels;
 

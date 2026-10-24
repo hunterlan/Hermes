@@ -6,7 +6,7 @@ namespace Hermes.App.ViewModels;
 public static class AuthInheritance
 {
     /// <summary>The collection and folders above an item, outermost first.</summary>
-    public static IReadOnlyList<(string Kind, string Name, AuthConfig Auth)> OuterLevels(Core.Http.RequestContext? context)
+    public static IReadOnlyList<(string Kind, string Name, AuthConfig Auth)> OuterLevels(Core.Requests.RequestContext? context)
     {
         if (context?.Collection is not { } collection)
             return [];
