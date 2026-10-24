@@ -8,6 +8,9 @@ public static class JsonFileStore
 {
     private static readonly JsonWriterOptions SingleLine = new() { Indented = false };
 
+    // Windows can't rename two files onto one target at once (access denied), so writers to a path take turns.
+    private static readonly ConcurrentDictionary<string, Lock> WriteLocks = new(StringComparer.OrdinalIgnoreCase);
+
     public static T? Read<T>(string path, JsonTypeInfo<T> typeInfo) where T : class
     {
         if (!File.Exists(path))
@@ -74,9 +77,6 @@ public static class JsonFileStore
         using (var writer = new Utf8JsonWriter(stream, SingleLine))
             JsonSerializer.Serialize(writer, value, typeInfo);
     }
-
-    // Windows can't rename two files onto one target at once (access denied), so writers to a path take turns.
-    private static readonly ConcurrentDictionary<string, Lock> WriteLocks = new(StringComparer.OrdinalIgnoreCase);
 
     private static void WriteAtomically(string path, Action<Stream> write)
     {

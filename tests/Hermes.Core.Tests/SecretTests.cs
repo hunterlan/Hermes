@@ -10,6 +10,21 @@ public class SecretTests : IDisposable
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "hermes-tests-" + Guid.NewGuid());
     private readonly InMemorySecretStore _store = new();
 
+    /// <summary>Auth fields that are not credentials. Any other string field must be kept out of the data files.</summary>
+    private static readonly HashSet<string> NonSecretAuthFields =
+    [
+        "BasicAuth.Username",
+        "ApiKeyAuth.Key",
+        "OAuth2Auth.AuthUrl",
+        "OAuth2Auth.AccessTokenUrl",
+        "OAuth2Auth.ClientId",
+        "OAuth2Auth.Scope",
+        "OAuth2Auth.RedirectUri",
+        "OAuth2Auth.State",
+        "OAuth2Auth.Username",
+        "OAuth2Auth.HeaderPrefix",
+    ];
+
     private string ReadFile(params string[] parts) => File.ReadAllText(Path.Combine([_dir, .. parts]));
 
     [Fact]
@@ -211,21 +226,6 @@ public class SecretTests : IDisposable
     [InlineData("", false)]
     public void Only_literal_auth_values_count_as_secrets(string value, bool literal) =>
         Assert.Equal(literal, SecretFields.IsLiteral(value));
-
-    /// <summary>Auth fields that are not credentials. Any other string field must be kept out of the data files.</summary>
-    private static readonly HashSet<string> NonSecretAuthFields =
-    [
-        "BasicAuth.Username",
-        "ApiKeyAuth.Key",
-        "OAuth2Auth.AuthUrl",
-        "OAuth2Auth.AccessTokenUrl",
-        "OAuth2Auth.ClientId",
-        "OAuth2Auth.Scope",
-        "OAuth2Auth.RedirectUri",
-        "OAuth2Auth.State",
-        "OAuth2Auth.Username",
-        "OAuth2Auth.HeaderPrefix",
-    ];
 
     [Fact]
     public void Every_auth_string_field_is_either_a_secret_or_known_to_be_public()
