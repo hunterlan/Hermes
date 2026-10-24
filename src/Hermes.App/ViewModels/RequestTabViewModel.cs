@@ -649,10 +649,10 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         switch (SelectedRawLanguage.Value)
         {
             case RawLanguage.Json:
-                RawBody = BodyFormatter.FormatJson(RawBody);
+                RawBody = JsonFormatter.Format(RawBody);
                 break;
             case RawLanguage.Xml or RawLanguage.Html:
-                if (BodyFormatter.TryFormatXml(RawBody, out var xml))
+                if (XmlFormatter.TryFormat(RawBody, out var xml))
                     RawBody = xml;
                 break;
         }

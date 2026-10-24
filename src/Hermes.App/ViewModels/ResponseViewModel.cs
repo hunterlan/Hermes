@@ -308,9 +308,9 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         switch (language)
         {
             case "json":
-                return BodyFormatter.TryFormatJson(text, out var json) ? json : text;
+                return JsonFormatter.TryFormat(text, out var json) ? json : text;
             case "xml":
-                return BodyFormatter.TryFormatXml(text, out var xml) ? xml : text;
+                return XmlFormatter.TryFormat(text, out var xml) ? xml : text;
             default:
                 return text;
         }
