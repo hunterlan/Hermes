@@ -185,33 +185,33 @@ public class FormatterAndOAuthTests
     [Fact]
     public void Formats_valid_json()
     {
-        Assert.Equal("{\n  \"a\": [\n    1,\n    2\n  ]\n}", BodyFormatter.FormatJson("{\"a\":[1,2]}").ReplaceLineEndings("\n"));
+        Assert.Equal("{\n  \"a\": [\n    1,\n    2\n  ]\n}", JsonFormatter.Format("{\"a\":[1,2]}").ReplaceLineEndings("\n"));
     }
 
     [Fact]
     public void Formats_json_with_unquoted_variables()
     {
-        var formatted = BodyFormatter.FormatJson("{\"id\":{{id}},\"tags\":[]}");
+        var formatted = JsonFormatter.Format("{\"id\":{{id}},\"tags\":[]}");
         Assert.Equal("{\n  \"id\": {{id}},\n  \"tags\": []\n}", formatted);
     }
 
     [Fact]
     public void Strict_json_formatting_leaves_text_that_is_not_json()
     {
-        Assert.True(BodyFormatter.TryFormatJson("[1]", out var formatted));
+        Assert.True(JsonFormatter.TryFormat("[1]", out var formatted));
         Assert.Equal("[\n  1\n]", formatted.ReplaceLineEndings("\n"));
-        Assert.False(BodyFormatter.TryFormatJson("{\"id\":{{id}}}", out formatted));
+        Assert.False(JsonFormatter.TryFormat("{\"id\":{{id}}}", out formatted));
         Assert.Equal("{\"id\":{{id}}}", formatted);
         // A response's comments aren't dropped from its pretty view.
-        Assert.False(BodyFormatter.TryFormatJson("[1 /* one */]", out _));
+        Assert.False(JsonFormatter.TryFormat("[1 /* one */]", out _));
     }
 
     [Fact]
     public void Formats_xml()
     {
-        Assert.True(BodyFormatter.TryFormatXml("<a><b>1</b></a>", out var xml));
+        Assert.True(XmlFormatter.TryFormat("<a><b>1</b></a>", out var xml));
         Assert.Contains("\n  <b>1</b>", xml.ReplaceLineEndings("\n"));
-        Assert.False(BodyFormatter.TryFormatXml("<a>", out _));
+        Assert.False(XmlFormatter.TryFormat("<a>", out _));
     }
 
     [Fact]

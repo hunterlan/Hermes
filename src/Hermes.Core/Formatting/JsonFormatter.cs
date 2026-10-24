@@ -1,11 +1,9 @@
 using System.Text;
 using System.Text.Json;
-using System.Xml;
-using System.Xml.Linq;
 
 namespace Hermes.Core.Formatting;
 
-public static class BodyFormatter
+public static class JsonFormatter
 {
     private static readonly JsonSerializerOptions IndentedOptions = new()
     {
@@ -17,15 +15,15 @@ public static class BodyFormatter
     /// Pretty-prints JSON. Falls back to a lenient, token-based formatter for text that isn't strictly valid
     /// (e.g. contains unquoted <c>{{variables}}</c>), so "Beautify" still works on request bodies.
     /// </summary>
-    public static string FormatJson(string text) =>
-        TryFormatJson(text, new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip }, out var formatted)
+    public static string Format(string text) =>
+        TryFormat(text, new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip }, out var formatted)
             ? formatted
-            : LenientJsonFormat(text);
+            : FormatLenient(text);
 
     /// <summary>Pretty-prints <paramref name="text"/> if it is valid JSON; otherwise leaves it as it is.</summary>
-    public static bool TryFormatJson(string text, out string formatted) => TryFormatJson(text, default, out formatted);
+    public static bool TryFormat(string text, out string formatted) => TryFormat(text, default, out formatted);
 
-    private static bool TryFormatJson(string text, JsonDocumentOptions options, out string formatted)
+    private static bool TryFormat(string text, JsonDocumentOptions options, out string formatted)
     {
         try
         {
@@ -40,31 +38,7 @@ public static class BodyFormatter
         }
     }
 
-    public static bool TryFormatXml(string text, out string formatted)
-    {
-        try
-        {
-            var doc = XDocument.Parse(text, LoadOptions.None);
-            var sb = new StringBuilder();
-            var settings = new XmlWriterSettings
-            {
-                Indent = true,
-                IndentChars = "  ",
-                OmitXmlDeclaration = doc.Declaration is null,
-            };
-            using (var writer = XmlWriter.Create(sb, settings))
-                doc.Save(writer);
-            formatted = sb.ToString();
-            return true;
-        }
-        catch (XmlException)
-        {
-            formatted = text;
-            return false;
-        }
-    }
-
-    public static string LenientJsonFormat(string text)
+    private static string FormatLenient(string text)
     {
         const string indentUnit = "  ";
         var sb = new StringBuilder(text.Length * 2);
