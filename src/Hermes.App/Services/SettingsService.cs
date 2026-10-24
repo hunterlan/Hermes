@@ -7,14 +7,14 @@ namespace Hermes.App.Services;
 
 public sealed class SettingsService
 {
-    public AppSettings Current { get; private set; } = WorkspaceRepository.LoadSettings();
+    public AppSettings Current { get; private set; } = SettingsStore.Load();
 
     public event Action? Changed;
 
     public void Update(AppSettings settings)
     {
         Current = settings;
-        WorkspaceRepository.SaveSettings(settings);
+        SettingsStore.Save(settings);
         ApplyTheme();
         Changed?.Invoke();
     }
