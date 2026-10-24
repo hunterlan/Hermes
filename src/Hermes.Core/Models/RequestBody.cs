@@ -1,23 +1,5 @@
 namespace Hermes.Core.Models;
 
-public enum BodyMode
-{
-    None,
-    FormData,
-    UrlEncoded,
-    Raw,
-    Binary,
-}
-
-public enum RawLanguage
-{
-    Text,
-    Json,
-    Xml,
-    Html,
-    JavaScript,
-}
-
 public sealed class RequestBody
 {
     public BodyMode Mode { get; set; } = BodyMode.None;

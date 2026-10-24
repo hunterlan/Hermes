@@ -1,20 +1,5 @@
 namespace Hermes.Core.Models;
 
-public enum ThemePreference
-{
-    System,
-    Light,
-    Dark,
-}
-
-public enum ResponseLayout
-{
-    /// <summary>Response below the request.</summary>
-    Vertical,
-    /// <summary>Response to the right of the request.</summary>
-    Horizontal,
-}
-
 public sealed class AppSettings
 {
     public ThemePreference Theme { get; set; } = ThemePreference.Dark;

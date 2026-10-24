@@ -9,17 +9,6 @@ using Hermes.Core.Variables;
 
 namespace Hermes.Core.Auth;
 
-public sealed class OAuth2TokenResult
-{
-    public string? AccessToken { get; init; }
-    public string? RefreshToken { get; init; }
-    public string? TokenType { get; init; }
-    public DateTimeOffset? ExpiresAt { get; init; }
-    public string? Error { get; init; }
-
-    public bool IsSuccess => AccessToken is not null;
-}
-
 /// <summary>
 /// Fetches OAuth 2.0 tokens. Token requests use clients of their own, without cookies: cookies the identity
 /// provider sets must not end up in the user's requests, and the user's cookies must not change how it answers.

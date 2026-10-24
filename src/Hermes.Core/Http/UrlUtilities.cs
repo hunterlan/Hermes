@@ -9,8 +9,6 @@ namespace Hermes.Core.Http;
 /// </summary>
 public static class UrlUtilities
 {
-    public readonly record struct UrlParts(string Base, string? Query, string? Fragment);
-
     public static UrlParts Split(string url)
     {
         string? fragment = null;
