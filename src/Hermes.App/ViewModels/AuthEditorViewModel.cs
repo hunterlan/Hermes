@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Hermes.Core.Auth;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 using Hermes.Core.Variables;
 
 namespace Hermes.App.ViewModels;

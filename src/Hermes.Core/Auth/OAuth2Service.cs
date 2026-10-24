@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Hermes.Core.Http;
-using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 using Hermes.Core.Variables;
 
 namespace Hermes.Core.Auth;

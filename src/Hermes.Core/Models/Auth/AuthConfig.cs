@@ -1,4 +1,4 @@
-namespace Hermes.Core.Models;
+namespace Hermes.Core.Models.Auth;
 
 public sealed class AuthConfig
 {

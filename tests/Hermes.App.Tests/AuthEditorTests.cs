@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using Avalonia.Headless.XUnit;
 using Hermes.App.ViewModels;
 using Hermes.Core.Auth;
-using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 
 namespace Hermes.App.Tests;
 

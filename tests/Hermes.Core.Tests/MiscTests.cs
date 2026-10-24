@@ -3,6 +3,7 @@ using Hermes.Core.Auth;
 using Hermes.Core.Formatting;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 using Hermes.Core.Serialization;
 using Hermes.Core.Storage;
 using Hermes.TestSupport;

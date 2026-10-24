@@ -1,4 +1,4 @@
-using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 
 namespace Hermes.Core.Auth;
 

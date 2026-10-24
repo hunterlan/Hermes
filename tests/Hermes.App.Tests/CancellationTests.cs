@@ -1,7 +1,7 @@
 using Avalonia.Headless.XUnit;
 using Hermes.App.ViewModels;
 using Hermes.Core.Auth;
-using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 using Hermes.TestSupport;
 
 namespace Hermes.App.Tests;

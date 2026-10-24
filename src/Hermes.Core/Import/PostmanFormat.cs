@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 
 namespace Hermes.Core.Import;
 

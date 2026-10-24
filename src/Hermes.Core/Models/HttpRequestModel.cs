@@ -1,3 +1,5 @@
+using Hermes.Core.Models.Auth;
+
 namespace Hermes.Core.Models;
 
 public sealed class HttpRequestModel : CollectionNode
