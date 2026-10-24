@@ -29,7 +29,7 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
     /// <summary>Bodies above this are not stored with saved responses.</summary>
     public const long MaxSavedBodyBytes = 2 * 1024 * 1024;
 
-    private readonly object _historyLock = new();
+    private readonly Lock _historyLock = new();
 
     public string Root { get; } = root;
 

@@ -11,6 +11,7 @@ If avalonia-docs MCP is available, use it when you need additional information r
 - Use descriptive names for variables and methods.
 - Follow the Avalonia UI coding conventions.
 - Each class, record, enum must have own file, unless they are private and used by other class.
+- Fields of the class/record must be above methods.
 
 ## Testing instructions
 
