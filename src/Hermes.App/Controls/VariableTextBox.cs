@@ -295,13 +295,13 @@ public sealed class VariableTextBox : UserControl
     private void UpdateSuggestions()
     {
         if (IsReadOnly || !_editor.TextArea.IsFocused ||
-            !VariableResolver.TryFindPartialVariable(_editor.Text, _editor.CaretOffset, out var nameStart, out var typed))
+            !VariableCompletion.TryFindPartialVariable(_editor.Text, _editor.CaretOffset, out var nameStart, out var typed))
         {
             CloseSuggestions();
             return;
         }
 
-        var suggestions = VariableResolver.Suggest(Variables ?? VariableScope.Empty, typed);
+        var suggestions = VariableCompletion.Suggest(Variables ?? VariableScope.Empty, typed);
         if (suggestions.Count == 0)
         {
             CloseSuggestions();
