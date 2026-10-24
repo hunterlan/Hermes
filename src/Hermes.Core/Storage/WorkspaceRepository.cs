@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using Hermes.Core.Models;
 using Hermes.Core.Secrets;
@@ -21,15 +20,18 @@ namespace Hermes.Core.Storage;
 /// </summary>
 public sealed class WorkspaceRepository(string root, SecretStore? secrets = null)
 {
-    private const int MaxHistoryEntriesPerDay = 500;
+    /// <inheritdoc cref="SavedResponseStore.MaxResponsesPerRequest"/>
+    public const int MaxSavedResponses = SavedResponseStore.MaxResponsesPerRequest;
 
-    /// <summary>The latest response plus five earlier ones are kept per request.</summary>
-    public const int MaxSavedResponses = 6;
+    /// <inheritdoc cref="SavedResponseStore.MaxBodyBytes"/>
+    public const long MaxSavedBodyBytes = SavedResponseStore.MaxBodyBytes;
 
-    /// <summary>Bodies above this are not stored with saved responses.</summary>
-    public const long MaxSavedBodyBytes = 2 * 1024 * 1024;
+    private const string GlobalsOwner = "globals";
+    private const string SessionOwner = "session";
+    private static readonly Dictionary<string, string> NoSecrets = [];
 
-    private readonly Lock _historyLock = new();
+    private readonly HistoryStore _history = new(Path.Combine(root, "history"));
+    private readonly SavedResponseStore _responses = new(Path.Combine(root, "responses"));
 
     public string Root { get; } = root;
 
@@ -37,8 +39,6 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
 
     private string CollectionsDir => Path.Combine(Root, "collections");
     private string EnvironmentsDir => Path.Combine(Root, "environments");
-    private string HistoryDir => Path.Combine(Root, "history");
-    private string ResponsesDir => Path.Combine(Root, "responses");
     private string GlobalsFile => Path.Combine(Root, "globals.json");
     private string SessionFile => Path.Combine(Root, "session.json");
 
@@ -113,47 +113,7 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
 
     // ---- history ----
 
-    public List<HistoryEntry> LoadHistory(int retentionDays)
-    {
-        if (!Directory.Exists(HistoryDir))
-            return [];
-
-        var cutoff = DateTime.Today.AddDays(-Math.Max(1, retentionDays));
-        var result = new List<HistoryEntry>();
-        lock (_historyLock)
-        {
-            foreach (var file in Directory.EnumerateFiles(HistoryDir, "*" + HistoryExtension))
-            {
-                if (!DateTime.TryParseExact(Path.GetFileNameWithoutExtension(file), "yyyy-MM-dd",
-                        CultureInfo.InvariantCulture, DateTimeStyles.None, out var day))
-                    continue;
-                if (day < cutoff)
-                {
-                    DeleteFile(file);
-                    continue;
-                }
-                try
-                {
-                    var errors = new List<string>();
-                    var entries = JsonFileStore.ReadLines(file, HermesJsonContext.Default.HistoryEntry, errors);
-                    LoadErrors.AddRange(errors);
-                    // Appends don't trim, so a busy day is cut back to its newest entries here. Lines that couldn't
-                    // be read (cut short by a crash) are dropped at the same time, so they're reported only once.
-                    var trimmed = entries.Count > MaxHistoryEntriesPerDay;
-                    if (trimmed)
-                        entries.RemoveRange(0, entries.Count - MaxHistoryEntriesPerDay);
-                    if (trimmed || errors.Count > 0)
-                        JsonFileStore.WriteLines(file, entries, HermesJsonContext.Default.HistoryEntry);
-                    result.AddRange(entries);
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                    LoadErrors.Add($"{file}: {ex.Message}");
-                }
-            }
-        }
-        return result.OrderByDescending(h => h.Timestamp).ToList();
-    }
+    public List<HistoryEntry> LoadHistory(int retentionDays) => _history.Load(retentionDays, LoadErrors);
 
     /// <summary>Appends the entry without literal credentials; the in-memory <paramref name="entry"/> is left as is.</summary>
     public void AppendHistory(HistoryEntry entry)
@@ -168,149 +128,22 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
             StatusCode = entry.StatusCode,
             DurationMs = entry.DurationMs,
         };
-        lock (_historyLock)
-            JsonFileStore.AppendLine(HistoryFileFor(entry.Timestamp), entry, HermesJsonContext.Default.HistoryEntry);
+        _history.Append(entry);
     }
 
-    public void DeleteHistoryEntry(HistoryEntry entry)
-    {
-        lock (_historyLock)
-        {
-            var file = HistoryFileFor(entry.Timestamp);
-            if (!File.Exists(file))
-                return;
-            // Lines that can't be read are dropped by the rewrite; they were already reported when history loaded.
-            var entries = JsonFileStore.ReadLines(file, HermesJsonContext.Default.HistoryEntry, []);
-            entries.RemoveAll(e => e.Id == entry.Id);
-            JsonFileStore.WriteLines(file, entries, HermesJsonContext.Default.HistoryEntry);
-        }
-    }
+    public void DeleteHistoryEntry(HistoryEntry entry) => _history.Delete(entry);
 
-    public void ClearHistory()
-    {
-        lock (_historyLock)
-        {
-            if (Directory.Exists(HistoryDir))
-                Directory.Delete(HistoryDir, recursive: true);
-        }
-    }
-
-    private const string HistoryExtension = ".jsonl";
-
-    private string HistoryFileFor(DateTimeOffset timestamp) =>
-        Path.Combine(HistoryDir, timestamp.LocalDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + HistoryExtension);
+    public void ClearHistory() => _history.Clear();
 
     // ---- saved responses ----
 
-    /// <summary>
-    /// Saved responses for a request, newest first. Files that can't be read are skipped and described in
-    /// <see cref="SavedResponses.Errors"/>; they are left on disk, never overwritten.
-    /// </summary>
-    public SavedResponses LoadResponses(Guid requestId)
-    {
-        var items = new List<SavedResponse>();
-        var errors = new List<string>();
-        List<string> files;
-        try
-        {
-            files = ResponseFiles(requestId).ToList();
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            return new SavedResponses(items, [$"{ResponsesDirFor(requestId)}: {ex.Message}"]);
-        }
-        foreach (var file in files)
-        {
-            try
-            {
-                if (JsonFileStore.Read(file, HermesJsonContext.Default.SavedResponse) is { } saved)
-                    items.Add(saved);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
-            {
-                errors.Add($"{file}: {ex.Message}");
-            }
-        }
-        return new SavedResponses(items, errors);
-    }
+    /// <inheritdoc cref="SavedResponseStore.Load"/>
+    public SavedResponses LoadResponses(Guid requestId) => _responses.Load(requestId);
 
-    /// <summary>
-    /// Stores a response in a file of its own and removes those beyond the newest <see cref="MaxSavedResponses"/>.
-    /// Returns what was stored: without the body when it's larger than <see cref="MaxSavedBodyBytes"/>.
-    /// </summary>
-    public SavedResponse SaveResponse(Guid requestId, SavedResponse saved)
-    {
-        if (saved.Response.BodySize > MaxSavedBodyBytes)
-        {
-            saved = new SavedResponse
-            {
-                Timestamp = saved.Timestamp,
-                SentRequest = saved.SentRequest,
-                BodyOmitted = true,
-                Response = WithoutBody(saved.Response),
-            };
-        }
-        // Names sort by save order, so the newest files are found without reading any of them. The sequence number
-        // is the timestamp, moved past the newest existing file when two saves land on the same tick.
-        var newest = ResponseFiles(requestId).Select(SequenceOf).FirstOrDefault();
-        var sequence = Math.Max(saved.Timestamp.UtcTicks, newest + 1);
-        JsonFileStore.Write(Path.Combine(ResponsesDirFor(requestId), $"{sequence:D19}.json"), saved,
-            HermesJsonContext.Default.SavedResponse);
-        PruneResponses(requestId);
-        return saved;
-    }
+    /// <inheritdoc cref="SavedResponseStore.Save"/>
+    public SavedResponse SaveResponse(Guid requestId, SavedResponse saved) => _responses.Save(requestId, saved);
 
-    /// <summary>
-    /// Removes saved responses beyond the newest <see cref="MaxSavedResponses"/>. Best effort: the save itself has
-    /// succeeded, and a file that can't be removed now (held open by a scanner) is removed after a later save.
-    /// </summary>
-    private void PruneResponses(Guid requestId)
-    {
-        try
-        {
-            foreach (var old in ResponseFiles(requestId).Skip(MaxSavedResponses))
-                File.Delete(old);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-        }
-    }
-
-    public void DeleteResponses(Guid requestId)
-    {
-        var dir = ResponsesDirFor(requestId);
-        if (Directory.Exists(dir))
-            Directory.Delete(dir, recursive: true);
-    }
-
-    private string ResponsesDirFor(Guid requestId) => Path.Combine(ResponsesDir, requestId.ToString());
-
-    private static long SequenceOf(string file) =>
-        long.TryParse(Path.GetFileNameWithoutExtension(file), NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : 0;
-
-    /// <summary>The request's saved-response files, newest first.</summary>
-    private IEnumerable<string> ResponseFiles(Guid requestId)
-    {
-        var dir = ResponsesDirFor(requestId);
-        return Directory.Exists(dir)
-            ? Directory.EnumerateFiles(dir, "*.json").OrderByDescending(Path.GetFileName, StringComparer.Ordinal)
-            : [];
-    }
-
-    private static ResponseModel WithoutBody(ResponseModel r) => new()
-    {
-        StatusCode = r.StatusCode,
-        ReasonPhrase = r.ReasonPhrase,
-        HttpVersion = r.HttpVersion,
-        Headers = r.Headers,
-        ContentType = r.ContentType,
-        Charset = r.Charset,
-        FinalUri = r.FinalUri,
-        TimeToFirstByte = r.TimeToFirstByte,
-        TotalTime = r.TotalTime,
-        HeadersSize = r.HeadersSize,
-        Cookies = r.Cookies,
-    };
+    public void DeleteResponses(Guid requestId) => _responses.Delete(requestId);
 
     // ---- session ----
 
@@ -337,28 +170,7 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
         JsonSerializer.Deserialize(JsonSerializer.Serialize(session, HermesJsonContext.Default.SessionState),
             HermesJsonContext.Default.SessionState)!;
 
-    // ---- settings (stored in the config dir, not the data dir, because they point at the data dir) ----
-
-    public static AppSettings LoadSettings()
-    {
-        try
-        {
-            return JsonFileStore.Read(AppPaths.SettingsFile, HermesJsonContext.Default.AppSettings) ?? new AppSettings();
-        }
-        catch
-        {
-            return new AppSettings();
-        }
-    }
-
-    public static void SaveSettings(AppSettings settings) =>
-        JsonFileStore.Write(AppPaths.SettingsFile, settings, HermesJsonContext.Default.AppSettings);
-
     // ---- secrets ----
-
-    private const string GlobalsOwner = "globals";
-    private const string SessionOwner = "session";
-    private static readonly Dictionary<string, string> NoSecrets = [];
 
     private static string CollectionOwner(Guid id) => $"collection/{id}";
     private static string EnvironmentOwner(Guid id) => $"environment/{id}";
