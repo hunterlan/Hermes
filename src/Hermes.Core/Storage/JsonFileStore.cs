@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
@@ -74,23 +75,29 @@ public static class JsonFileStore
             JsonSerializer.Serialize(writer, value, typeInfo);
     }
 
+    // Windows can't rename two files onto one target at once (access denied), so writers to a path take turns.
+    private static readonly ConcurrentDictionary<string, object> WriteLocks = new(StringComparer.OrdinalIgnoreCase);
+
     private static void WriteAtomically(string path, Action<Stream> write)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var temp = $"{path}.{Path.GetRandomFileName()}.tmp";
-        try
+        lock (WriteLocks.GetOrAdd(Path.GetFullPath(path), _ => new object()))
         {
-            using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write))
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var temp = $"{path}.{Path.GetRandomFileName()}.tmp";
+            try
             {
-                write(stream);
-                stream.Flush(flushToDisk: true);
+                using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write))
+                {
+                    write(stream);
+                    stream.Flush(flushToDisk: true);
+                }
+                File.Move(temp, path, overwrite: true);
             }
-            File.Move(temp, path, overwrite: true);
-        }
-        catch
-        {
-            TryDelete(temp);
-            throw;
+            catch
+            {
+                TryDelete(temp);
+                throw;
+            }
         }
     }
 
