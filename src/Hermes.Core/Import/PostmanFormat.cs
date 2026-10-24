@@ -21,6 +21,15 @@ internal static class PostmanFormat
         (OAuth2GrantType.Password, false, "password_credentials"),
     ];
 
+    private static readonly (RawLanguage Language, string Name)[] RawLanguages =
+    [
+        (RawLanguage.Text, "text"),
+        (RawLanguage.Json, "json"),
+        (RawLanguage.Xml, "xml"),
+        (RawLanguage.Html, "html"),
+        (RawLanguage.JavaScript, "javascript"),
+    ];
+
     public static string GrantTypeName(OAuth2GrantType grant, bool pkce) =>
         GrantTypes.First(g => g.Grant == grant && g.Pkce == (pkce && grant == OAuth2GrantType.AuthorizationCode)).Name;
 
@@ -45,15 +54,6 @@ internal static class PostmanFormat
     public static string VariableTypeName(VariableType value) => value == VariableType.Secret ? "secret" : "default";
 
     public static VariableType ParseVariableType(string? name) => name == "secret" ? VariableType.Secret : VariableType.Default;
-
-    private static readonly (RawLanguage Language, string Name)[] RawLanguages =
-    [
-        (RawLanguage.Text, "text"),
-        (RawLanguage.Json, "json"),
-        (RawLanguage.Xml, "xml"),
-        (RawLanguage.Html, "html"),
-        (RawLanguage.JavaScript, "javascript"),
-    ];
 
     public static string RawLanguageName(RawLanguage language) => RawLanguages.First(l => l.Language == language).Name;
 

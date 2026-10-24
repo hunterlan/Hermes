@@ -9,6 +9,8 @@ namespace Hermes.Core.Secrets;
 /// </summary>
 public abstract class SecretStore
 {
+    private static readonly IReadOnlyDictionary<string, string> EmptySecrets = new Dictionary<string, string>();
+
     private readonly Lock _lock = new();
     private Dictionary<string, Dictionary<string, string>>? _owners;
 
@@ -101,8 +103,6 @@ public abstract class SecretStore
 
     private static bool SameSecrets(Dictionary<string, string> a, IReadOnlyDictionary<string, string> b) =>
         a.Count == b.Count && b.All(kv => a.TryGetValue(kv.Key, out var v) && v == kv.Value);
-
-    private static readonly IReadOnlyDictionary<string, string> EmptySecrets = new Dictionary<string, string>();
 
     private sealed class UnprotectedSecretStore : SecretStore
     {

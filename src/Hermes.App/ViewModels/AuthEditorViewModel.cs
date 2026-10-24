@@ -11,11 +11,24 @@ namespace Hermes.App.ViewModels;
 
 public sealed partial class AuthEditorViewModel : ObservableObject
 {
+    private static readonly Option<AuthType> InheritOption = new("Inherit auth from parent", AuthType.Inherit);
+
+    internal static readonly Option<AuthType>[] BaseTypes =
+    [
+        new("No Auth", AuthType.None),
+        new("Basic Auth", AuthType.Basic),
+        new("Bearer Token", AuthType.Bearer),
+        new("API Key", AuthType.ApiKey),
+        new("OAuth 2.0", AuthType.OAuth2),
+    ];
+
     private readonly OAuth2Service _oauth;
     private readonly Func<Uri, Task<bool>> _openBrowser;
     private readonly Func<string, Task> _copyText;
     private bool _loading;
     private CancellationTokenSource? _tokenCts;
+    private string? _refreshToken;
+    private DateTimeOffset? _expiresAt;
 
     /// <param name="openBrowser">Opens a URL in the system browser; false when none could be launched.</param>
     public AuthEditorViewModel(OAuth2Service oauth, Func<Uri, Task<bool>> openBrowser, Func<string, Task> copyText, bool allowInherit)
@@ -29,17 +42,6 @@ public sealed partial class AuthEditorViewModel : ObservableObject
         SelectedGrantType = GrantTypes[0];
         SelectedClientAuth = ClientAuthOptions[0];
     }
-
-    private static readonly Option<AuthType> InheritOption = new("Inherit auth from parent", AuthType.Inherit);
-
-    internal static readonly Option<AuthType>[] BaseTypes =
-    [
-        new("No Auth", AuthType.None),
-        new("Basic Auth", AuthType.Basic),
-        new("Bearer Token", AuthType.Bearer),
-        new("API Key", AuthType.ApiKey),
-        new("OAuth 2.0", AuthType.OAuth2),
-    ];
 
     public IReadOnlyList<Option<AuthType>> Types { get; }
 
@@ -119,9 +121,6 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     [ObservableProperty] public partial Option<OAuth2ClientAuthentication> SelectedClientAuth { get; set; }
     [ObservableProperty] public partial string OAuthHeaderPrefix { get; set; } = "Bearer";
     [ObservableProperty] public partial string OAuthAccessToken { get; set; } = "";
-
-    private string? _refreshToken;
-    private DateTimeOffset? _expiresAt;
 
     [ObservableProperty] public partial string TokenStatus { get; set; } = "";
 
