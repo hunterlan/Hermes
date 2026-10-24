@@ -5,13 +5,6 @@ using Hermes.App.Views.Dialogs;
 
 namespace Hermes.App.Services;
 
-public enum SaveChangesResult
-{
-    Save,
-    Discard,
-    Cancel,
-}
-
 /// <summary>UI-level services (dialogs, pickers, clipboard, browser) for view models.</summary>
 public sealed class DialogService
 {

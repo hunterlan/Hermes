@@ -9,13 +9,6 @@ using Hermes.Core.Serialization;
 
 namespace Hermes.App.ViewModels.Sidebar;
 
-public enum DropPosition
-{
-    Before,
-    Inside,
-    After,
-}
-
 public sealed partial class CollectionsPaneViewModel : ObservableObject
 {
     private readonly WorkspaceService _workspace;
