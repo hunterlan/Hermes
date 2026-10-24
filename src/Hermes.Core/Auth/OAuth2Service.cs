@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -86,6 +87,10 @@ public sealed class OAuth2Service : IDisposable
             return ParseTokenResponse(body, response.StatusCode);
         }
         catch (HttpRequestException ex)
+        {
+            return Fail(ex.Message);
+        }
+        catch (Exception ex) when (ex is IOException or SocketException)
         {
             return Fail(ex.Message);
         }
