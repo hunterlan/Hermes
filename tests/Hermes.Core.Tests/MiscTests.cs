@@ -28,6 +28,25 @@ public class StorageTests : IDisposable
     }
 
     [Fact]
+    public async Task A_save_waits_for_a_reader_that_briefly_holds_the_file()
+    {
+        var path = Path.Combine(_dir, "held.json");
+        JsonFileStore.Write(path, new AppSettings { ShowTabs = false }, HermesJsonContext.Default.AppSettings);
+        // Opened the way other programs usually read: the file can't be replaced until this lets go (on Windows).
+        var holder = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var release = Task.Run(async () =>
+        {
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+            await holder.DisposeAsync();
+        }, TestContext.Current.CancellationToken);
+
+        JsonFileStore.Write(path, new AppSettings { ShowTabs = true }, HermesJsonContext.Default.AppSettings);
+        await release;
+
+        Assert.True(JsonFileStore.Read(path, HermesJsonContext.Default.AppSettings)!.ShowTabs);
+    }
+
+    [Fact]
     public void Saved_responses_keep_the_newest_and_drop_large_bodies()
     {
         var repo = new WorkspaceRepository(_dir);
