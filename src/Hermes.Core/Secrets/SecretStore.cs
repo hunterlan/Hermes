@@ -9,7 +9,7 @@ namespace Hermes.Core.Secrets;
 /// </summary>
 public abstract class SecretStore
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private Dictionary<string, Dictionary<string, string>>? _owners;
 
     /// <summary>

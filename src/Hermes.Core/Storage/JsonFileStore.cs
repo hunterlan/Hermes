@@ -76,11 +76,11 @@ public static class JsonFileStore
     }
 
     // Windows can't rename two files onto one target at once (access denied), so writers to a path take turns.
-    private static readonly ConcurrentDictionary<string, object> WriteLocks = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, Lock> WriteLocks = new(StringComparer.OrdinalIgnoreCase);
 
     private static void WriteAtomically(string path, Action<Stream> write)
     {
-        lock (WriteLocks.GetOrAdd(Path.GetFullPath(path), _ => new object()))
+        lock (WriteLocks.GetOrAdd(Path.GetFullPath(path), _ => new Lock()))
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var temp = $"{path}.{Path.GetRandomFileName()}.tmp";
