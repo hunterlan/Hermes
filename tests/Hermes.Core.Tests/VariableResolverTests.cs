@@ -66,6 +66,20 @@ public class VariableResolverTests
     }
 
     [Fact]
+    public void A_replay_hands_out_only_the_values_recorded_before_it()
+    {
+        var log = new DynamicValueLog();
+        var recording = VariableScope.Empty.WithDynamicValues(log);
+        var first = VariableResolver.Resolve("{{$guid}}", recording);
+
+        var replay = VariableScope.Empty.WithDynamicValues(log.Replay());
+        var recordedLater = VariableResolver.Resolve("{{$guid}}", recording);
+
+        Assert.Equal(first, VariableResolver.Resolve("{{$guid}}", replay));
+        Assert.NotEqual(recordedLater, VariableResolver.Resolve("{{$guid}}", replay));
+    }
+
+    [Fact]
     public void Masking_or_adding_dynamic_values_leaves_the_original_scope_untouched()
     {
         var scope = new VariableScopeBuilder()
