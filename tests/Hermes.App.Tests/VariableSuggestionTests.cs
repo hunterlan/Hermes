@@ -15,7 +15,7 @@ public class VariableSuggestionTests
         var box = new VariableTextBox
         {
             Text = text,
-            Variables = new VariableScope().Set("baseUrl", "https://api.test").Set("basePath", "/v1").Set("token", "t"),
+            Variables = new VariableScopeBuilder().Set("baseUrl", "https://api.test").Set("basePath", "/v1").Set("token", "t").Build(),
         };
         var window = new Window { Content = box, Width = 600, Height = 200 };
         window.Show();
@@ -69,7 +69,7 @@ public class VariableSuggestionTests
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var tab = Assert.IsType<ViewModels.RequestTabViewModel>(vm.ActiveTab);
-        tab.Variables = new VariableScope().Set("baseUrl", "https://api.example.com").Set("userId", "42");
+        tab.Variables = new VariableScopeBuilder().Set("baseUrl", "https://api.example.com").Set("userId", "42").Build();
         var url = window.GetVisualDescendants().OfType<VariableTextBox>().First(b => b.Name == "UrlBox");
         url.FocusEditor();
         UiTestHelpers.Pump();

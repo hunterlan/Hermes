@@ -32,8 +32,8 @@ public static class RequestPreparer
     {
         var dynamicValues = new DynamicValueLog();
         var auth = context.ResolveAuth(request.Auth).Auth;
-        var prepared = Prepare(request, context, context.BuildScope().UseDynamicValues(dynamicValues), auth, includeDefaultHeaders: true);
-        var masked = Prepare(request, context, context.BuildScope().MaskSecrets().UseDynamicValues(dynamicValues.Replay()),
+        var prepared = Prepare(request, context, context.BuildScope().WithDynamicValues(dynamicValues), auth, includeDefaultHeaders: true);
+        var masked = Prepare(request, context, context.BuildScope().WithSecretsMasked().WithDynamicValues(dynamicValues.Replay()),
             SecretFields.Masked(auth), includeDefaultHeaders: true);
 
         // Secret values that reached the request some other way (a copy typed in by hand) are masked by value.

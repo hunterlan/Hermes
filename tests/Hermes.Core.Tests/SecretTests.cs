@@ -211,7 +211,7 @@ public class SecretTests : IDisposable
     [Fact]
     public void Secret_values_are_masked_wherever_variables_are_shown()
     {
-        var scope = new Variables.VariableScope().AddLayer([new Variable("apiKey", "s3cret") { Type = VariableType.Secret }, new Variable("host", "h")]);
+        var scope = new Variables.VariableScopeBuilder().AddLayer([new Variable("apiKey", "s3cret") { Type = VariableType.Secret }, new Variable("host", "h")]).Build();
 
         Assert.True(scope.TryGetDisplay("apiKey", out var shown));
         Assert.Equal(Variables.VariableScope.MaskedValue, shown);

@@ -8,10 +8,11 @@ public class VariableResolverTests
     [Fact]
     public void Resolves_with_environment_overriding_collection_and_globals()
     {
-        var scope = new VariableScope()
+        var scope = new VariableScopeBuilder()
             .AddLayer([new Variable("host", "global"), new Variable("g", "1")])
             .AddLayer([new Variable("host", "collection")])
-            .AddLayer([new Variable("host", "env")]);
+            .AddLayer([new Variable("host", "env")])
+            .Build();
 
         Assert.Equal("env/1", VariableResolver.Resolve("{{host}}/{{g}}", scope));
     }
@@ -25,25 +26,25 @@ public class VariableResolverTests
     [Fact]
     public void Resolves_nested_variables()
     {
-        var scope = new VariableScope().Set("base", "{{scheme}}://x").Set("scheme", "https");
+        var scope = new VariableScopeBuilder().Set("base", "{{scheme}}://x").Set("scheme", "https").Build();
         Assert.Equal("https://x/a", VariableResolver.Resolve("{{base}}/a", scope));
     }
 
     [Fact]
     public void Self_reference_does_not_loop_forever()
     {
-        var scope = new VariableScope().Set("a", "{{a}}");
+        var scope = new VariableScopeBuilder().Set("a", "{{a}}").Build();
         Assert.Equal("{{a}}", VariableResolver.Resolve("{{a}}", scope));
     }
 
     [Fact]
     public void Disabled_variables_and_current_values()
     {
-        var scope = new VariableScope().AddLayer(
+        var scope = new VariableScopeBuilder().AddLayer(
         [
             new Variable("a", "initial") { CurrentValue = "current" },
             new Variable("b", "x") { Enabled = false },
-        ]);
+        ]).Build();
         Assert.Equal("current {{b}}", VariableResolver.Resolve("{{a}} {{b}}", scope));
     }
 
@@ -80,13 +81,44 @@ public class VariableResolverTests
     [Fact]
     public void Suggests_at_most_five_names_with_prefix_matches_first()
     {
-        var scope = new VariableScope()
+        var scope = new VariableScopeBuilder()
             .Set("apiUrl", "a").Set("baseUrl", "b").Set("authUrl", "c").Set("urlPrefix", "d")
-            .Set("cdnUrl", "e").Set("fileUrl", "f").Set("token", "g");
+            .Set("cdnUrl", "e").Set("fileUrl", "f").Set("token", "g")
+            .Build();
 
         var names = VariableResolver.Suggest(scope, "url").Select(s => s.Name).ToList();
         Assert.Equal(["urlPrefix", "apiUrl", "authUrl", "baseUrl", "cdnUrl"], names);
         Assert.Equal("token", Assert.Single(VariableResolver.Suggest(scope, "TOK")).Name);
         Assert.Contains(VariableResolver.Suggest(scope, "$gu"), s => s is { Name: "$guid", Value: null });
+    }
+
+    [Fact]
+    public void Masking_or_adding_dynamic_values_leaves_the_original_scope_untouched()
+    {
+        var scope = new VariableScopeBuilder()
+            .AddLayer([new Variable("apiKey", "s3cret") { Type = VariableType.Secret }, new Variable("host", "h")])
+            .Build();
+
+        var masked = scope.WithSecretsMasked();
+        var withLog = scope.WithDynamicValues(new DynamicValueLog());
+
+        Assert.Equal(VariableScope.MaskedValue, masked.Values["apiKey"]);
+        Assert.Equal("h", masked.Values["host"]);
+        Assert.True(masked.IsSecret("apiKey"));
+        Assert.Equal("s3cret", scope.Values["apiKey"]);
+        Assert.Equal("s3cret", withLog.Values["apiKey"]);
+    }
+
+    [Fact]
+    public void A_built_scope_does_not_change_when_the_builder_does()
+    {
+        var builder = new VariableScopeBuilder().Set("a", "1");
+        var scope = builder.Build();
+
+        builder.Set("a", "2").Set("b", "3");
+
+        Assert.Equal("1", scope.Values["a"]);
+        Assert.False(scope.TryGet("b", out _));
+        Assert.Empty(VariableScope.Empty.Values);
     }
 }
