@@ -429,7 +429,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         try
         {
             var model = BuildModel();
-            var prepared = RequestPreparer.Prepare(model, CreateContext());
+            var prepared = RequestPreparer.Preview(model, CreateContext());
             ResolvedUrl = prepared.Url;
             var userKeys = model.Headers.Where(h => h.Enabled).Select(h => h.Key.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var hidden = prepared.Headers.Where(h => !userKeys.Contains(h.Key)).ToList();
