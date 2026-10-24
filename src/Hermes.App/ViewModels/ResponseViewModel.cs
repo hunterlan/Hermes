@@ -11,20 +11,6 @@ using Hermes.Core.Storage;
 
 namespace Hermes.App.ViewModels;
 
-public enum ResponseViewMode
-{
-    Pretty,
-    Raw,
-    Preview,
-}
-
-/// <summary>Entry in the saved-responses menu.</summary>
-public sealed record SavedResponseItem(SavedResponse Saved, bool IsLatest)
-{
-    public string Label =>
-        $"{Saved.Response.StatusCode} {Saved.Response.ReasonPhrase} · {Saved.Timestamp.LocalDateTime:g}{(IsLatest ? " · latest" : "")}";
-}
-
 public sealed partial class ResponseViewModel(DialogService dialogs, SettingsService settings) : ObservableObject
 {
     private ResponseModel? _response;

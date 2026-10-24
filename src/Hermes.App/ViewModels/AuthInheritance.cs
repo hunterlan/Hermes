@@ -3,19 +3,6 @@ using Hermes.Core.Models.Auth;
 
 namespace Hermes.App.ViewModels;
 
-/// <summary>One level of the auth chain (collection → folders → request), innermost last.</summary>
-public sealed record AuthChainNode(string Kind, string Name, string Status, string? TypeLabel, bool IsSource, bool IsSelf)
-{
-    public bool HasType => TypeLabel is not null;
-    public string Title => $"{Kind} · {Name}";
-}
-
-/// <summary>A request or folder inside a container that sets its own auth instead of inheriting.</summary>
-public sealed record AuthOverride(string? Method, string Name, string TypeLabel)
-{
-    public bool IsFolder => Method is null;
-}
-
 public static class AuthInheritance
 {
     /// <summary>The collection and folders above an item, outermost first.</summary>

@@ -10,27 +10,6 @@ using Hermes.Core.Variables;
 
 namespace Hermes.App.ViewModels;
 
-public enum SidebarPane
-{
-    Collections,
-    Environments,
-    History,
-}
-
-/// <summary>Entry in the environment selector; <see cref="Model"/> is null for "No Environment".</summary>
-public sealed record EnvironmentOption(string Name, EnvironmentModel? Model)
-{
-    public override string ToString() => Name;
-}
-
-/// <summary>Row in the environment quick-look popup.</summary>
-public sealed record QuickLookVariable(string Key, string InitialValue, string CurrentValue);
-
-public sealed record QuickLookSection(IReadOnlyList<QuickLookVariable> Rows)
-{
-    public bool IsEmpty => Rows.Count == 0;
-}
-
 public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
 {
     private readonly TabServices _services;
