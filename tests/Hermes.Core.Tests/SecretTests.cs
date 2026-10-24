@@ -215,8 +215,8 @@ public class SecretTests : IDisposable
 
         Assert.True(scope.TryGetDisplay("apiKey", out var shown));
         Assert.Equal(Variables.VariableScope.MaskedValue, shown);
-        Assert.Equal(Variables.VariableScope.MaskedValue, Assert.Single(Variables.VariableResolver.Suggest(scope, "api")).Value);
-        Assert.Equal("h", Assert.Single(Variables.VariableResolver.Suggest(scope, "hos")).Value);
+        Assert.Equal(Variables.VariableScope.MaskedValue, Assert.Single(Variables.VariableCompletion.Suggest(scope, "api")).Value);
+        Assert.Equal("h", Assert.Single(Variables.VariableCompletion.Suggest(scope, "hos")).Value);
     }
 
     [Theory]
