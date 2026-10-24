@@ -11,6 +11,11 @@ public static class JsonFileStore
     // Windows can't rename two files onto one target at once (access denied), so writers to a path take turns.
     private static readonly ConcurrentDictionary<string, Lock> WriteLocks = new(StringComparer.OrdinalIgnoreCase);
 
+    // Another process (an antivirus scan, the search indexer) can hold the target open for a moment; replacing it
+    // fails on Windows until it lets go, so the replace is retried for up to about half a second.
+    private const int ReplaceAttempts = 10;
+    private static readonly TimeSpan ReplaceRetryDelay = TimeSpan.FromMilliseconds(50);
+
     public static T? Read<T>(string path, JsonTypeInfo<T> typeInfo) where T : class
     {
         if (!File.Exists(path))
@@ -91,12 +96,28 @@ public static class JsonFileStore
                     write(stream);
                     stream.Flush(flushToDisk: true);
                 }
-                File.Move(temp, path, overwrite: true);
+                ReplaceWith(temp, path);
             }
             catch
             {
                 TryDelete(temp);
                 throw;
+            }
+        }
+    }
+
+    private static void ReplaceWith(string temp, string path)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                File.Move(temp, path, overwrite: true);
+                return;
+            }
+            catch (Exception e) when ((e is IOException or UnauthorizedAccessException) && attempt < ReplaceAttempts)
+            {
+                Thread.Sleep(ReplaceRetryDelay);
             }
         }
     }
