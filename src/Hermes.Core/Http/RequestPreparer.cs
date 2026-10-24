@@ -1,5 +1,6 @@
 using Hermes.Core.Auth;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 using Hermes.Core.Secrets;
 using Hermes.Core.Variables;
 

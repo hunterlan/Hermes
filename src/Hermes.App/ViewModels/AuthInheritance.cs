@@ -1,4 +1,5 @@
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 
 namespace Hermes.App.ViewModels;
 

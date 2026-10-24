@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 using static Hermes.Core.Import.PostmanFormat;
 
 namespace Hermes.Core.Import;

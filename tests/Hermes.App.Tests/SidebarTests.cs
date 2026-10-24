@@ -3,6 +3,7 @@ using Hermes.App.Services;
 using Hermes.App.ViewModels;
 using Hermes.App.ViewModels.Sidebar;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hermes.App.Tests;

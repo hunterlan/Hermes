@@ -1,6 +1,7 @@
 using System.Text;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 
 namespace Hermes.Core.Tests;
 

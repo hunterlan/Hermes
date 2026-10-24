@@ -7,6 +7,7 @@ using Hermes.Core.Formatting;
 using Hermes.Core.Http;
 using Hermes.Core.Import;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 using Hermes.Core.Secrets;
 using Hermes.Core.Serialization;
 using Hermes.Core.Variables;
@@ -59,7 +60,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         Auth.Changed += OnAnyChanged;
         Auth.ScopeProvider = () => CreateContext().BuildScope();
         Auth.VerifySslProvider = () => VerifySsl;
-        Auth.InheritedAuthProvider = () => CreateContext().ResolveAuth(Core.Models.AuthConfig.Inherit());
+        Auth.InheritedAuthProvider = () => CreateContext().ResolveAuth(AuthConfig.Inherit());
         Auth.ChainProvider = () => (AuthInheritance.OuterLevels(CreateContext()), "Request", Name);
 
         Response = new ResponseViewModel(services.Dialogs, services.Settings);
