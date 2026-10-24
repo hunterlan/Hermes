@@ -1,3 +1,4 @@
+using Hermes.Core.CodeGen;
 using Hermes.Core.Http;
 using Hermes.Core.Import;
 using Hermes.Core.Models;
