@@ -2,22 +2,6 @@ using Hermes.Core.Serialization;
 
 namespace Hermes.Core.Storage;
 
-/// <summary>Contents of workspace.json.</summary>
-public sealed class WorkspaceInfo
-{
-    public Guid Id { get; set; }
-
-    /// <summary>Where the folder was when it was last opened; tells a moved folder from a copied one.</summary>
-    public string? Path { get; set; }
-}
-
-/// <summary>A data folder's identity as found on opening it.</summary>
-/// <param name="Id">The id to use from now on.</param>
-/// <param name="IsNew">The folder had no id yet.</param>
-/// <param name="CopiedFrom">The folder is a copy of another one that still exists; this is that folder's id.</param>
-/// <param name="NeedsWrite">workspace.json has to be (re)written with <paramref name="Id"/> and the folder's path.</param>
-public sealed record WorkspaceIdentityState(Guid Id, bool IsNew, Guid? CopiedFrom, bool NeedsWrite);
-
 /// <summary>
 /// A data folder's own id, kept in workspace.json inside it. Things stored outside the folder for it (its keychain
 /// entry) are keyed by this id, so they follow the folder when it's moved, renamed or reached by another path; a
