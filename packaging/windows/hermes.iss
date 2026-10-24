@@ -21,7 +21,7 @@ AppId={{6B0E4F2C-3D7A-4E8B-9C1F-5A2D8E6B4C10}
 AppName=Hermes
 AppVersion={#AppVersion}
 AppVerName=Hermes {#AppVersion}
-AppPublisher=hunterlan
+AppPublisher=Kostiantyn Sharykin (hunterlan)
 AppPublisherURL=https://github.com/hunterlan/Hermes
 AppSupportURL=https://github.com/hunterlan/Hermes/issues
 DefaultDirName={autopf}\Hermes
@@ -46,6 +46,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourcePath}..\..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\Hermes"; Filename: "{app}\Hermes.exe"
