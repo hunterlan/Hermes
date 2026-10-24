@@ -17,8 +17,12 @@ public sealed class DynamicValueLog
         _replayed = new(StringComparer.Ordinal);
     }
 
-    /// <summary>A log that returns this one's values in the order they were generated (and fresh ones after that).</summary>
-    public DynamicValueLog Replay() => new(_values);
+    /// <summary>
+    /// A log that returns this one's values in the order they were generated (and fresh ones after that). It takes a
+    /// copy, so values this log records later are not handed out by the replay.
+    /// </summary>
+    public DynamicValueLog Replay() =>
+        new(_values.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value), StringComparer.Ordinal));
 
     internal bool TryResolve(string name, out string value)
     {
