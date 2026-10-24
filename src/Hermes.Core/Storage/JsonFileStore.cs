@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
@@ -8,8 +7,10 @@ public static class JsonFileStore
 {
     private static readonly JsonWriterOptions SingleLine = new() { Indented = false };
 
-    // Windows can't rename two files onto one target at once (access denied), so writers to a path take turns.
-    private static readonly ConcurrentDictionary<string, Lock> WriteLocks = new(StringComparer.OrdinalIgnoreCase);
+    // Windows can't rename two files onto one target at once (access denied), so writers to a path take turns. A
+    // fixed set of locks, picked by path, keeps memory flat however many files get written; paths sharing a lock
+    // only wait for each other a little longer.
+    private static readonly Lock[] WriteLocks = Enumerable.Range(0, 64).Select(_ => new Lock()).ToArray();
 
     // Another process (an antivirus scan, the search indexer) can hold the target open for a moment; replacing it
     // fails on Windows until it lets go, so the replace is retried for up to about half a second.
@@ -85,7 +86,7 @@ public static class JsonFileStore
 
     private static void WriteAtomically(string path, Action<Stream> write)
     {
-        lock (WriteLocks.GetOrAdd(Path.GetFullPath(path), _ => new Lock()))
+        lock (WriteLockFor(path))
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var temp = $"{path}.{Path.GetRandomFileName()}.tmp";
@@ -105,6 +106,9 @@ public static class JsonFileStore
             }
         }
     }
+
+    private static Lock WriteLockFor(string path) =>
+        WriteLocks[(int)((uint)StringComparer.OrdinalIgnoreCase.GetHashCode(Path.GetFullPath(path)) % (uint)WriteLocks.Length)];
 
     private static void ReplaceWith(string temp, string path)
     {
