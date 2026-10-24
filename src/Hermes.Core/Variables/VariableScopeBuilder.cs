@@ -35,5 +35,6 @@ public sealed class VariableScopeBuilder
 
     /// <summary>A scope holding a copy of what was added so far; adding more afterwards doesn't change it.</summary>
     public VariableScope Build() =>
-        new(_values.ToFrozenDictionary(StringComparer.Ordinal), _secretKeys.ToFrozenSet(StringComparer.Ordinal), dynamicValues: null);
+        new(_values.ToFrozenDictionary(StringComparer.Ordinal), _secretKeys.ToFrozenSet(StringComparer.Ordinal), dynamicValues: null,
+            dynamicValuesUnresolved: false);
 }

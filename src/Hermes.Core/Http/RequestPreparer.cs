@@ -23,6 +23,14 @@ public static class RequestPreparer
         Prepare(request, context, context.BuildScope(), context.ResolveAuth(request.Auth).Auth, includeDefaultHeaders);
 
     /// <summary>
+    /// The request as it will be sent, for showing before it is: dynamic variables (<c>{{$guid}}</c>, ...) are left as
+    /// written, since the values generated when sending will differ.
+    /// </summary>
+    public static PreparedRequest Preview(HttpRequestModel request, RequestContext context) =>
+        Prepare(request, context, context.BuildScope().WithDynamicValuesUnresolved(), context.ResolveAuth(request.Auth).Auth,
+            includeDefaultHeaders: true);
+
+    /// <summary>
     /// The request to send, and a copy to show or save in which secret variables and auth credentials are masked.
     /// Both come from the same context and the same dynamic values, so the copy matches what was sent except for
     /// the masked parts. (A secret whose value itself uses dynamic variables may shift later dynamic values in the
