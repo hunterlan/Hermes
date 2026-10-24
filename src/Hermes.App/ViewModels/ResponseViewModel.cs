@@ -8,6 +8,7 @@ using Hermes.Core.Formatting;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
 using Hermes.Core.Storage;
+using Hermes.Core.Web;
 
 namespace Hermes.App.ViewModels;
 

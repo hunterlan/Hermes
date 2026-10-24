@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using Hermes.Core.Models;
+using Hermes.Core.Web;
 
 namespace Hermes.Core.Http;
 

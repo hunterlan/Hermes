@@ -4,6 +4,7 @@ using Hermes.App.ViewModels;
 using Hermes.Core.Http;
 using Hermes.Core.Import;
 using Hermes.Core.Models;
+using Hermes.Core.Requests;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hermes.App.Tests;

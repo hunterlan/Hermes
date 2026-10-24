@@ -3,7 +3,7 @@ using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
 using Hermes.Core.Variables;
 
-namespace Hermes.Core.Http;
+namespace Hermes.Core.Requests;
 
 /// <summary>Everything outside the request itself that affects how it is sent.</summary>
 public sealed class RequestContext
