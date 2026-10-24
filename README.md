@@ -7,7 +7,8 @@ collections and switch environments — in a fast native app that stores everyth
 
 ## Features
 
-**Requests**
+### Requests
+
 - Multiple tabs with unsaved-changes indicator; open tabs and drafts are restored on restart
 - Preview tabs (single click previews in an italic tab, double click or editing keeps it), pinned tabs, collection
   prefix on same-named tabs; tabs can be turned off in Settings
@@ -25,66 +26,84 @@ collections and switch environments — in a fast native app that stores everyth
 - Per-request settings: follow redirects, SSL certificate verification, timeout
 - Paste a cURL command into the URL bar to import it; generate a cURL snippet for any request (`</>`)
 
-**Authorization** — Basic, Bearer token, API key (header or query), OAuth 2.0 (authorization code with PKCE,
-client credentials, password; token obtained through the system browser and a loopback callback), and
-"Inherit auth from parent" through folders up to the collection.
+### Authorization
 
-**Responses** — status, time (with time-to-first-byte breakdown) and size; Pretty / Raw / Preview (images) views
-with highlighting, folding and search (Ctrl+F); response headers and cookies; copy and save to file. Very large
-responses fall back to raw text so the UI stays responsive.
+- Basic
+- Bearer token
+- API key (header or query)
+- OAuth 2.0 (authorization code with PKCE, client credentials, password; token obtained through the system browser and a loopback callback)
+- "Inherit auth from parent" through folders up to the collection
 
-**Collections** — collections and nested folders in a sidebar tree with search, inline rename, duplicate, delete,
-drag-and-drop reordering, and per-collection/folder description and authorization; collection variables.
+### Responses
 
-**Environments & variables** — environments plus globals, each variable with an initial (shared/exported) and
-current (local) value and an optional secret type; environment selector with a quick-look popup. Precedence:
-environment > collection > globals. Dynamic variables: `{{$guid}}`, `{{$randomUUID}}`, `{{$timestamp}}`,
-`{{$isoTimestamp}}`, `{{$randomInt}}`, `{{$randomBoolean}}`, `{{$randomEmail}}`, `{{$randomFirstName}}`,
-`{{$randomLastName}}`, `{{$randomAlphaNumeric}}`.
+- Status
+- Time (with time-to-first-byte breakdown) and size
+- Pretty / Raw / Preview (images) views with highlighting, folding and search (Ctrl+F)
+- Headers and cookies
+- Copy and save to file
 
-**Secrets** — values of secret variables and literal auth credentials (passwords, tokens, API key values, OAuth
-client secrets) are kept in the OS keychain: the macOS Keychain, the Linux keyring (libsecret) or a DPAPI-encrypted
-file on Windows. The JSON files hold everything else, so the data folder is safe to commit. Auth fields written as
-`{{variables}}` stay in the files. Saved responses mask credentials in the sent request, history drops them, and
-exports ask whether to include them. Without a usable keychain (e.g. Linux with no keyring) secrets are saved as plain
-text and the status bar says so.
+> [!NOTE]
+> Responses are saved with each saved request (latest plus five earlier), and the "Sent request" tab shows the
+> exact request after variables and auth.
 
-An environments matrix edits every variable in every environment side by side and flags variables used by
-requests that are empty in the active environment. The auth editor shows where auth is inherited from and which
-items override it.
+> [!NOTE]
+> Very large responses fall back to raw text so the UI stays responsive.
 
-**Responses** are also saved with each saved request (latest plus five earlier), and the "Sent request" tab shows the
-exact request after variables and auth.
+### Collections
 
-**History** — every sent request, grouped by day, searchable; click to reopen.
+- Collections and nested folders in a sidebar tree with search
+- Inline rename, duplicate, delete
+- Drag-and-drop reordering
+- Per-collection/folder description and authorization
+- Collection variables
 
-**Import / export** — Postman Collection v2.0/v2.1 and Postman environment/globals files (import via dialog or by
-dropping files on the window), cURL import; export collections as Postman v2.1 and environments as Postman
-environment files. Pre-request/test scripts and unsupported body types (e.g. GraphQL) are preserved on round trip.
+### Environments & variables
 
-**Other** — shared cookie jar with a cookie manager, dark and light themes, response below or beside the request.
+- Custom environments and global variables
+- Each variable has an initial (shared/exported) and a current (local) value, and an optional secret type
+- Environment selector with a quick-look popup
+- Precedence: environment > collection > globals
+- [Dynamic variables](https://github.com/hunterlan/Hermes/wiki/Dynamic-variables) such as `{{$guid}}` and
+  `{{$timestamp}}`
 
-Not included (by design, for now): tests/scripts execution, collection runner, flows, mocks, monitors, AI features,
-GraphQL/WebSocket/gRPC.
+> [!NOTE]
+> An environments matrix edits every variable in every environment side by side and flags variables used by
+> requests that are empty in the active environment. The auth editor shows where auth is inherited from and which
+> items override it.
 
-## Keyboard shortcuts
+### Secrets
 
-| Shortcut | Action |
-| --- | --- |
-| Ctrl+Enter | Send request |
-| Enter (in URL bar) | Send request |
-| Ctrl+S | Save |
-| Ctrl+T / Ctrl+N | New request tab |
-| Ctrl+W | Close tab (middle-click a tab also closes it) |
-| Ctrl+Tab / Ctrl+Shift+Tab, Ctrl+PgDn / Ctrl+PgUp | Next / previous tab |
-| Ctrl+K | Command palette |
-| Ctrl+E | Switch environment |
-| Ctrl+L | Focus URL bar |
-| Ctrl+O | Import |
-| Ctrl+, | Settings |
-| Ctrl+\\ | Toggle sidebar |
-| Ctrl+F | Search in the body / response editor |
-| F2 / Delete / Enter | Rename / delete / open the selected sidebar item |
+Passwords, tokens and other secrets are stored in your operating system's keychain, not in Hermes' JSON files.
+Everything else stays in the JSON files, so you can safely commit the data folder. Fields that use a `{{variable}}`
+are stored in the files as written. Saved responses hide credentials from the sent request, history doesn't keep
+them, and exports ask whether to include them. If your system has no usable keychain, secrets are saved as plain
+text and the status bar tells you. More details are on the [Secrets](https://github.com/hunterlan/Hermes/wiki/Secrets)
+wiki page.
+
+### Importing and exporting
+
+- Postman Collection v2.0/v2.1 and Postman environment/globals files (import via dialog or by
+dropping files on the window)
+- cURL import
+- Export collections as Postman v2.1 and environments as Postman environment files. 
+
+> [!NOTE]
+> Pre-request/test scripts and unsupported body types (e.g. GraphQL) are preserved on round trip.
+
+### Other
+
+- History: every sent request, grouped by day and searchable; click to reopen
+- Shared cookie jar with a cookie manager
+- Dark and light themes
+- Response below or beside the request
+
+### Not implemented (yet)
+
+- Tests/scripts execution
+- Collection runner
+- Flows, mocks, monitors
+- AI features
+- GraphQL/WebSocket/gRPC (not planned for the near future)
 
 ## Building and running
 
@@ -108,38 +127,6 @@ dotnet publish src/Hermes.App -c Release -r win-x64     -o dist/win-x64
 dotnet publish src/Hermes.App -c Release -r osx-arm64   -o dist/osx-arm64
 ```
 
-### Releases
-
-`.github/workflows/release.yml` builds installers for x64 and arm64: a Windows setup `.exe` (Inno Setup), a macOS
-`.dmg`, and Linux `.deb` and `.rpm` packages (nfpm). Pushing a tag such as `v0.1.0` runs the tests, builds every
-package and attaches them to a GitHub release with a `SHA256SUMS.txt`; running the workflow by hand builds them as
-workflow artifacts only. The scripts under `packaging/` can also be run locally, e.g.
-`packaging/macos/build-dmg.sh osx-arm64 0.1.0 dist`.
-
-The app icon's source is `packaging/icons/hermes.svg`. After changing it, run `packaging/icons/build-icons.sh` on macOS
-to regenerate the committed `.icns`, Linux PNGs and `src/Hermes.App/Assets/hermes.ico`; the in-app logo is
-`IconLogo` in `src/Hermes.App/Themes/Icons.axaml`.
-
-The macOS app is only ad-hoc signed and not notarized, so on first launch macOS blocks it: right-click Hermes.app →
-Open, or run `xattr -dr com.apple.quarantine /Applications/Hermes.app`. The Windows installer is unsigned, so
-SmartScreen warns before running it.
-
-## Data
-
-Everything is stored as JSON in the data folder — by default `~/.config/Hermes` (Linux),
-`%APPDATA%\Hermes` (Windows) or `~/Library/Application Support/Hermes` (macOS). The data folder can be changed in
-Settings; `HERMES_CONFIG_DIR` overrides the config folder (useful for portable setups and tests).
-
-```
-settings.json              app settings
-collections/{id}.json      one file per collection
-environments/{id}.json     one file per environment
-globals.json               global variables
-history/yyyy-MM-dd.json    request history, one file per day
-responses/{requestId}.json last responses of a saved request
-session.json               open tabs, drafts, active environment
-```
-
 ## Project layout
 
 ```
@@ -149,3 +136,13 @@ src/Hermes.App      Avalonia 12 desktop app (MVVM with CommunityToolkit.Mvvm, Av
 tests/Hermes.Core.Tests   xUnit tests for the core library (HTTP tests run against a local HttpListener)
 tests/Hermes.App.Tests    Avalonia headless UI tests
 ```
+
+## Documentation
+
+More documentation lives in the [wiki](https://github.com/hunterlan/Hermes/wiki):
+
+- [Keyboard shortcuts](https://github.com/hunterlan/Hermes/wiki/Keyboard-shortcuts)
+- [Releases](https://github.com/hunterlan/Hermes/wiki/Releases) - installers, release workflow, app icon
+- [Data](https://github.com/hunterlan/Hermes/wiki/Data) - where Hermes stores its JSON files
+- [Secrets](https://github.com/hunterlan/Hermes/wiki/Secrets) - what goes into the OS keychain
+- [Dynamic variables](https://github.com/hunterlan/Hermes/wiki/Dynamic-variables) - built-in `{{$...}}` variables
