@@ -21,10 +21,11 @@ public sealed class RequestContext
 
     /// <summary>Precedence (lowest → highest): globals, collection, environment.</summary>
     public VariableScope BuildScope() =>
-        new VariableScope()
+        new VariableScopeBuilder()
             .AddLayer(Globals?.Variables)
             .AddLayer(Collection?.Variables)
-            .AddLayer(Environment?.Variables);
+            .AddLayer(Environment?.Variables)
+            .Build();
 
     public EffectiveAuth ResolveAuth(AuthConfig own) => AuthResolver.Resolve(own, Folders, Collection);
 }

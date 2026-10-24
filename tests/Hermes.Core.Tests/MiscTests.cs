@@ -263,7 +263,7 @@ public class FormatterAndOAuthTests
 
         var result = await oauth.GetTokenAsync(
             new OAuth2Auth { GrantType = OAuth2GrantType.ClientCredentials, AccessTokenUrl = server.Url + "token", ClientId = "c" },
-            new Variables.VariableScope(), _ => Task.CompletedTask, verifySsl: true, TestContext.Current.CancellationToken);
+            Variables.VariableScope.Empty, _ => Task.CompletedTask, verifySsl: true, TestContext.Current.CancellationToken);
 
         Assert.Equal("t", result.AccessToken);
         Assert.Null(cookieSent);
