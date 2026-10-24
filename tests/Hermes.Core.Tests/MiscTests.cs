@@ -269,4 +269,18 @@ public class FormatterAndOAuthTests
         Assert.Null(cookieSent);
         Assert.DoesNotContain(userClients.GetAllCookies(), c => c.Name == "idp_session");
     }
+
+    [Fact]
+    public async Task Token_endpoint_connection_failure_is_reported()
+    {
+        using var port = new ResettingPort();
+        using var oauth = new OAuth2Service();
+
+        var result = await oauth.GetTokenAsync(
+            new OAuth2Auth { GrantType = OAuth2GrantType.ClientCredentials, AccessTokenUrl = $"http://127.0.0.1:{port.Port}/token", ClientId = "c" },
+            Variables.VariableScope.Empty, _ => Task.CompletedTask, verifySsl: true, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result.Error);
+        Assert.Null(result.AccessToken);
+    }
 }
