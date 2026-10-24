@@ -2,6 +2,7 @@ using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Views.Dialogs;
+using Hermes.Core.CodeGen;
 using Hermes.Core.Formatting;
 using Hermes.Core.Http;
 using Hermes.Core.Import;
