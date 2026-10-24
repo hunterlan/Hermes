@@ -12,6 +12,8 @@ Before commiting, use `dotnet test` to make sure all tests pass.
 
 ## Commit instructions
 
+- Line shouldn't exceed 72 characters.
 - Commit message must follow conventional commit specification
 - Do not include Claude-Session info into commit body
 - You may include yourself as co-author to be transparence in usage of AI
+- For fix and hotfix commits, body message must have section "Problem:" and "Solution:" each having no more than 3 lines.
