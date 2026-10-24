@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using System.Security.Authentication;
 using Hermes.Core.Models;
 
@@ -66,7 +67,7 @@ public sealed class RequestExecutor(HttpClientProvider clients)
         {
             return new ExecutionResult { Error = Describe(ex), ResolvedUrl = request.Url };
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or SocketException)
         {
             return new ExecutionResult { Error = ex.Message, ResolvedUrl = request.Url };
         }
