@@ -14,6 +14,8 @@ public sealed class WorkspaceService
     // History is written in the background, in order, so a clear always lands after the appends before it.
     private readonly BackgroundWriter _historyWriter = new();
 
+    private EnvironmentModel? _activeEnvironment;
+
     public WorkspaceService(WorkspaceRepository repository, SettingsService settings)
     {
         _repository = repository;
@@ -33,8 +35,6 @@ public sealed class WorkspaceService
     public IReadOnlyList<string> LoadErrors => _repository.LoadErrors;
     public string DataDirectory => _repository.Root;
     public SecretStore Secrets => _repository.Secrets;
-
-    private EnvironmentModel? _activeEnvironment;
 
     public EnvironmentModel? ActiveEnvironment
     {
