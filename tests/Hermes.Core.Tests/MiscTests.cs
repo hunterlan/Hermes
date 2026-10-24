@@ -55,7 +55,9 @@ public class StorageTests : IDisposable
 
         Parallel.For(0, 200, i => JsonFileStore.Write(path, new SessionState { ActiveTabIndex = i }, HermesJsonContext.Default.SessionState));
 
-        Assert.NotNull(JsonFileStore.Read(path, HermesJsonContext.Default.SessionState));
+        var stored = JsonFileStore.Read(path, HermesJsonContext.Default.SessionState);
+        Assert.NotNull(stored);
+        Assert.InRange(stored.ActiveTabIndex, 0, 199);
         Assert.Equal(["session.json"], Directory.GetFiles(_dir).Select(Path.GetFileName));
     }
 
