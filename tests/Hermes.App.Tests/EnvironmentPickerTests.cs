@@ -141,14 +141,23 @@ public class EnvironmentPickerTests
         Assert.True(none.IsNone);
         Assert.True(none.IsActive);
         Assert.True(vm.QuickLookEnvironment.IsEmpty);
+
+        scope.OpenPicker();
+        UiTestHelpers.Screenshot(scope.Window, "41-environment-picker-none");
     }
 
     [AvaloniaFact]
     public void Popover_keeps_its_width_with_long_values()
     {
         using var scope = new PickerScope();
-        scope.Activate(scope.CreateEnvironment(
-            new Variable(new string('k', 120), "https://api.example.com/" + new string('v', 200))));
+        var env = scope.CreateEnvironment(
+            new Variable("baseUrl", "https://api.staging.payments.example"),
+            new Variable(new string('k', 120), "https://api.example.com/" + new string('v', 200)),
+            new Variable("clientSecret", "s3cr3t") { Type = VariableType.Secret },
+            new Variable("customerId", ""));
+        env.ConfirmBeforeSend = true;
+        Workspace.SaveEnvironment(env);
+        scope.Activate(env);
 
         scope.OpenPicker();
 
