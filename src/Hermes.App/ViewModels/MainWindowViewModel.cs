@@ -143,9 +143,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
 
     [ObservableProperty] public partial EnvironmentOption? SelectedEnvironment { get; set; }
 
-    public QuickLookSection QuickLookEnvironment { get; private set; } = new([]);
-    public QuickLookSection QuickLookGlobals { get; private set; } = new([]);
-    public string QuickLookEnvironmentTitle => Workspace.ActiveEnvironment?.Name ?? "No environment selected";
+    /// <summary>Rows each quick-look section shows before pointing to the matrix.</summary>
+    public const int QuickLookLimit = 5;
+
+    public QuickLookSection QuickLookEnvironment { get; private set; } = new([], 0);
+    public QuickLookSection QuickLookGlobals { get; private set; } = new([], 0);
+    public string QuickLookEnvironmentTitle => $"{Workspace.ActiveEnvironment?.Name} · {QuickLookEnvironment.Total} {(QuickLookEnvironment.Total == 1 ? "variable" : "variables")}";
+    public string QuickLookGlobalsTitle => $"Globals · {QuickLookGlobals.Total}";
+    public string EnvironmentButtonText => Workspace.ActiveEnvironment?.Name ?? "None";
     public bool HasActiveEnvironment => Workspace.ActiveEnvironment is not null;
     public bool ActiveEnvironmentConfirms => Workspace.ActiveEnvironment?.ConfirmBeforeSend == true;
 
@@ -161,28 +166,35 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         try
         {
             EnvironmentOptions.Clear();
-            EnvironmentOptions.Add(new EnvironmentOption("No Environment", null));
+            var active = Workspace.ActiveEnvironment;
+            EnvironmentOptions.Add(new EnvironmentOption("No environment", null, active is null));
             foreach (var env in Workspace.Environments)
-                EnvironmentOptions.Add(new EnvironmentOption(env.Name, env));
-            SelectedEnvironment = EnvironmentOptions.FirstOrDefault(o => o.Model == Workspace.ActiveEnvironment) ?? EnvironmentOptions[0];
+                EnvironmentOptions.Add(new EnvironmentOption(env.Name, env, env == active));
+            SelectedEnvironment = EnvironmentOptions.FirstOrDefault(o => o.IsActive) ?? EnvironmentOptions[0];
         }
         finally
         {
             _syncingEnvironment = false;
         }
 
-        static QuickLookSection Rows(EnvironmentModel? env) => new(
-            env?.Variables.Where(v => v.Enabled && v.Key.Length > 0)
-                .Select(v => new QuickLookVariable(v.Key, Mask(v, v.Value), Mask(v, v.EffectiveValue)))
-                .ToList() ?? []);
+        static List<Variable> Visible(EnvironmentModel? env) => env?.Variables.Where(v => v.Enabled && v.Key.Length > 0).ToList() ?? [];
 
-        static string Mask(Variable v, string value) => v.Type == VariableType.Secret && value.Length > 0 ? VariableScope.MaskedValue : value;
+        static QuickLookSection Section(List<Variable> variables, Func<Variable, bool> isOverridden) => new(
+            variables.Take(QuickLookLimit).Select(v => new QuickLookVariable(v.Key, Mask(v), isOverridden(v))).ToList(),
+            variables.Count);
 
-        QuickLookEnvironment = Rows(Workspace.ActiveEnvironment);
-        QuickLookGlobals = Rows(Workspace.Globals);
+        static string Mask(Variable v) =>
+            v.Type == VariableType.Secret && v.EffectiveValue.Length > 0 ? VariableScope.MaskedValue : v.EffectiveValue;
+
+        var environmentVariables = Visible(Workspace.ActiveEnvironment);
+        var environmentKeys = environmentVariables.Select(v => v.Key).ToHashSet(StringComparer.Ordinal);
+        QuickLookEnvironment = Section(environmentVariables, _ => false);
+        QuickLookGlobals = Section(Visible(Workspace.Globals), v => environmentKeys.Contains(v.Key));
         OnPropertyChanged(nameof(QuickLookEnvironment));
         OnPropertyChanged(nameof(QuickLookGlobals));
         OnPropertyChanged(nameof(QuickLookEnvironmentTitle));
+        OnPropertyChanged(nameof(QuickLookGlobalsTitle));
+        OnPropertyChanged(nameof(EnvironmentButtonText));
         OnPropertyChanged(nameof(HasActiveEnvironment));
         OnPropertyChanged(nameof(ActiveEnvironmentConfirms));
     }
