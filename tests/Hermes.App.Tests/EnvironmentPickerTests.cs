@@ -3,6 +3,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using Hermes.App.Services;
 using Hermes.App.ViewModels;
@@ -167,6 +168,12 @@ public class EnvironmentPickerTests
         Assert.DoesNotContain(presenter.GetVisualDescendants().OfType<ScrollBar>(),
             s => s.Orientation == Orientation.Horizontal && s.IsVisible);
         UiTestHelpers.Screenshot(scope.Window, "40-environment-picker");
+
+        var chevron = scope.Window.FindControl<Control>("EnvironmentChevron")!;
+        Assert.IsType<RotateTransform>(chevron.RenderTransform);
+        scope.EnvironmentButton.Flyout!.Hide();
+        UiTestHelpers.Pump();
+        Assert.Null(chevron.RenderTransform);
     }
 
     [AvaloniaFact]
