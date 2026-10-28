@@ -49,7 +49,10 @@ public class EditorTests
         var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==");
         response.SetResponse(new ResponseModel
         {
-            StatusCode = 200, ReasonPhrase = "OK", ContentType = "image/png", Body = png,
+            StatusCode = 200,
+            ReasonPhrase = "OK",
+            ContentType = "image/png",
+            Body = png,
             Headers = [new KeyValueItem("Content-Type", "image/png")],
         });
         var image = Assert.IsType<Avalonia.Media.Imaging.Bitmap>(response.PreviewImage);
