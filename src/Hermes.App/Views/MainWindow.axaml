@@ -106,8 +106,8 @@
               <PathIcon Data="{StaticResource IconChevronDown}" Width="12" Height="12" />
             </StackPanel>
             <Button.Flyout>
-              <Flyout Placement="BottomEdgeAlignedRight">
-                <StackPanel Width="520" Spacing="10" Margin="4">
+              <Flyout Placement="BottomEdgeAlignedRight" FlyoutPresenterClasses="picker">
+                <StackPanel Name="EnvironmentPicker" Spacing="10" Margin="14,10">
                   <TextBlock Classes="section" Text="Active for sending" />
                   <ListBox ItemsSource="{Binding EnvironmentOptions}" SelectedItem="{Binding SelectedEnvironment}" Background="Transparent"
                            MaxHeight="200">

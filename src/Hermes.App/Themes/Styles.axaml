@@ -158,6 +158,18 @@
     <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
   </Style>
 
+  <!-- Environment picker: a fixed 400px popover that clips instead of scrolling sideways -->
+  <Style Selector="FlyoutPresenter.picker">
+    <Setter Property="Width" Value="400" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="Background" Value="{DynamicResource BgPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+  </Style>
+
   <!-- Segmented control: a row of ToggleButton.seg inside Border.seg -->
   <Style Selector="Border.seg">
     <Setter Property="Background" Value="{DynamicResource BgTertiaryBrush}" />
