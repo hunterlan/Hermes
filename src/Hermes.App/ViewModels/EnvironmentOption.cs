@@ -6,6 +6,8 @@ namespace Hermes.App.ViewModels;
 public sealed record EnvironmentOption(string Name, EnvironmentModel? Model, bool IsActive = false)
 {
     public bool IsNone => Model is null;
+    /// <summary>"No environment" reads muted unless it is the active choice.</summary>
+    public bool IsMuted => IsNone && !IsActive;
     public bool AsksFirst => Model?.ConfirmBeforeSend == true;
 
     public override string ToString() => Name;
