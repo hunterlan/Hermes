@@ -530,10 +530,10 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
                 // Responses are kept with saved requests, so reopening shows the last result and earlier ones.
                 // The saved copy has credentials masked; the one on screen stays exact.
                 if (IsPersisted && Services.Workspace.SaveResponse(RequestId, new SavedResponse
-                    {
-                        Response = response,
-                        SentRequest = SecretMasker.MaskCredentialHeaders(RawRequestFormatter.Format(masked)),
-                    }) is { } saved)
+                {
+                    Response = response,
+                    SentRequest = SecretMasker.MaskCredentialHeaders(RawRequestFormatter.Format(masked)),
+                }) is { } saved)
                     Response.AddSaved(saved);
             }
             else
