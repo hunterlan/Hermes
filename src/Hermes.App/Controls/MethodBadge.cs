@@ -14,6 +14,8 @@ public sealed class MethodBadge : TextBlock
     public static readonly StyledProperty<bool> CompactProperty =
         AvaloniaProperty.Register<MethodBadge, bool>(nameof(Compact));
 
+    private static readonly HashSet<string> KnownMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
+
     private IDisposable? _foregroundBinding;
 
     public MethodBadge()
@@ -40,8 +42,6 @@ public sealed class MethodBadge : TextBlock
         if (change.Property == MethodProperty || change.Property == CompactProperty)
             Update();
     }
-
-    private static readonly HashSet<string> KnownMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
 
     private void Update()
     {

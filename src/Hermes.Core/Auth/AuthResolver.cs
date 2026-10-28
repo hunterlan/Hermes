@@ -1,8 +1,7 @@
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 
 namespace Hermes.Core.Auth;
-
-public readonly record struct EffectiveAuth(AuthConfig Auth, string? InheritedFrom);
 
 public static class AuthResolver
 {

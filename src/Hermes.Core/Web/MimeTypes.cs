@@ -1,4 +1,4 @@
-namespace Hermes.Core.Http;
+namespace Hermes.Core.Web;
 
 public static class MimeTypes
 {

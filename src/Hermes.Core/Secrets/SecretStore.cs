@@ -9,7 +9,9 @@ namespace Hermes.Core.Secrets;
 /// </summary>
 public abstract class SecretStore
 {
-    private readonly object _lock = new();
+    private static readonly IReadOnlyDictionary<string, string> EmptySecrets = new Dictionary<string, string>();
+
+    private readonly Lock _lock = new();
     private Dictionary<string, Dictionary<string, string>>? _owners;
 
     /// <summary>
@@ -102,8 +104,6 @@ public abstract class SecretStore
     private static bool SameSecrets(Dictionary<string, string> a, IReadOnlyDictionary<string, string> b) =>
         a.Count == b.Count && b.All(kv => a.TryGetValue(kv.Key, out var v) && v == kv.Value);
 
-    private static readonly IReadOnlyDictionary<string, string> EmptySecrets = new Dictionary<string, string>();
-
     private sealed class UnprotectedSecretStore : SecretStore
     {
         public UnprotectedSecretStore(string reason) => MarkUnprotected(reason);
@@ -112,14 +112,4 @@ public abstract class SecretStore
 
         protected override void Write(byte[] data) { }
     }
-}
-
-/// <summary>Keeps secrets in memory only. Used by tests.</summary>
-public sealed class InMemorySecretStore : SecretStore
-{
-    private byte[] _data = [];
-
-    protected override byte[] Read() => _data;
-
-    protected override void Write(byte[] data) => _data = data;
 }

@@ -1,9 +1,12 @@
 using Hermes.Core.Auth;
+using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 using Hermes.Core.Secrets;
 using Hermes.Core.Variables;
+using Hermes.Core.Web;
 
-namespace Hermes.Core.Http;
+namespace Hermes.Core.Requests;
 
 public static class RequestPreparer
 {
@@ -22,6 +25,14 @@ public static class RequestPreparer
         Prepare(request, context, context.BuildScope(), context.ResolveAuth(request.Auth).Auth, includeDefaultHeaders);
 
     /// <summary>
+    /// The request as it will be sent, for showing before it is: dynamic variables (<c>{{$guid}}</c>, ...) are left as
+    /// written, since the values generated when sending will differ.
+    /// </summary>
+    public static PreparedRequest Preview(HttpRequestModel request, RequestContext context) =>
+        Prepare(request, context, context.BuildScope().WithDynamicValuesUnresolved(), context.ResolveAuth(request.Auth).Auth,
+            includeDefaultHeaders: true);
+
+    /// <summary>
     /// The request to send, and a copy to show or save in which secret variables and auth credentials are masked.
     /// Both come from the same context and the same dynamic values, so the copy matches what was sent except for
     /// the masked parts. (A secret whose value itself uses dynamic variables may shift later dynamic values in the
@@ -31,8 +42,8 @@ public static class RequestPreparer
     {
         var dynamicValues = new DynamicValueLog();
         var auth = context.ResolveAuth(request.Auth).Auth;
-        var prepared = Prepare(request, context, context.BuildScope().UseDynamicValues(dynamicValues), auth, includeDefaultHeaders: true);
-        var masked = Prepare(request, context, context.BuildScope().MaskSecrets().UseDynamicValues(dynamicValues.Replay()),
+        var prepared = Prepare(request, context, context.BuildScope().WithDynamicValues(dynamicValues), auth, includeDefaultHeaders: true);
+        var masked = Prepare(request, context, context.BuildScope().WithSecretsMasked().WithDynamicValues(dynamicValues.Replay()),
             SecretFields.Masked(auth), includeDefaultHeaders: true);
 
         // Secret values that reached the request some other way (a copy typed in by hand) are masked by value.

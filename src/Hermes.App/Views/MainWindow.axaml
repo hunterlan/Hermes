@@ -85,54 +85,80 @@
         <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
           <!-- active environment: name always on screen; the flyout switches and previews values -->
           <Button Name="EnvironmentButton" Classes="outline" ToolTip.Tip="Active environment (Ctrl+E)"
-                  AutomationProperties.Name="{Binding QuickLookEnvironmentTitle, StringFormat='Active environment: {0}. Change environment'}">
+                  AutomationProperties.Name="{Binding EnvironmentButtonText, StringFormat='Active environment: {0}. Change environment'}">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Panel VerticalAlignment="Center">
-                <PathIcon Data="{StaticResource IconLock}" Width="12" Height="12" Foreground="{DynamicResource ErrorBrush}"
-                          IsVisible="{Binding ActiveEnvironmentConfirms}" ToolTip.Tip="Asks before sending" />
-                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}">
-                  <Ellipse.IsVisible>
-                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                      <Binding Path="HasActiveEnvironment" />
-                      <Binding Path="!ActiveEnvironmentConfirms" />
-                    </MultiBinding>
-                  </Ellipse.IsVisible>
-                </Ellipse>
+                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding HasActiveEnvironment}" />
                 <Ellipse Width="8" Height="8" Stroke="{DynamicResource TextTertiaryBrush}" StrokeThickness="1.5"
                          IsVisible="{Binding !HasActiveEnvironment}" />
               </Panel>
               <TextBlock Text="ENV" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
-              <TextBlock Text="{Binding SelectedEnvironment.Name, FallbackValue='No Environment'}" FontWeight="SemiBold" VerticalAlignment="Center" />
-              <PathIcon Data="{StaticResource IconChevronDown}" Width="12" Height="12" />
+              <TextBlock Text="{Binding EnvironmentButtonText}" FontWeight="SemiBold" VerticalAlignment="Center"
+                         MaxWidth="200" TextTrimming="CharacterEllipsis" />
+              <PathIcon Data="{StaticResource IconLock}" Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}"
+                        IsVisible="{Binding ActiveEnvironmentConfirms}" ToolTip.Tip="Asks before sending" />
+              <PathIcon Name="EnvironmentChevron" Data="{StaticResource IconChevronDown}" Width="12" Height="12" />
             </StackPanel>
             <Button.Flyout>
-              <Flyout Placement="BottomEdgeAlignedRight">
-                <StackPanel Width="520" Spacing="10" Margin="4">
-                  <TextBlock Classes="section" Text="Active for sending" />
-                  <ListBox ItemsSource="{Binding EnvironmentOptions}" SelectedItem="{Binding SelectedEnvironment}" Background="Transparent"
-                           MaxHeight="200">
+              <Flyout Placement="BottomEdgeAlignedRight" FlyoutPresenterClasses="picker"
+                      Opened="OnEnvironmentPickerOpened" Closed="OnEnvironmentPickerClosed">
+                <StackPanel Name="EnvironmentPicker">
+                  <Grid ColumnDefinitions="*,Auto" Margin="14,10,14,4" MinHeight="22">
+                    <TextBlock Classes="caption" Text="SEND WITH" />
+                    <Border Grid.Column="1" Classes="kbd"><TextBlock Text="Ctrl E" /></Border>
+                  </Grid>
+                  <!-- selection is only the keyboard cursor; Enter or a click makes an option active (the checkmark) -->
+                  <ListBox Name="EnvironmentList" Classes="picker" ItemsSource="{Binding EnvironmentOptions}"
+                           MaxHeight="232" AutomationProperties.Name="Environments"
+                           Tapped="OnEnvironmentListTapped">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="vm:EnvironmentOption">
-                        <TextBlock Text="{Binding Name}" />
+                        <Grid ColumnDefinitions="16,*,Auto,Auto" ColumnSpacing="10">
+                          <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding !IsNone}" />
+                          <Ellipse Width="8" Height="8" Stroke="{DynamicResource TextTertiaryBrush}" StrokeThickness="1.5"
+                                   IsVisible="{Binding IsNone}" />
+                          <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                     Classes.secondary="{Binding IsMuted}" Classes.active="{Binding IsActive}" />
+                          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding AsksFirst}">
+                            <PathIcon Data="{StaticResource IconLock}" Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Classes="tertiary" FontSize="11" Text="asks first" VerticalAlignment="Center" />
+                          </StackPanel>
+                          <PathIcon Grid.Column="3" Data="{StaticResource IconCheck}" Width="14" Height="14"
+                                    Foreground="{DynamicResource AccentBrush}" IsVisible="{Binding IsActive}" />
+                        </Grid>
                       </DataTemplate>
                     </ListBox.ItemTemplate>
                   </ListBox>
-                  <Separator />
-                  <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Classes="section" Text="{Binding QuickLookEnvironmentTitle}" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Classes="link" Content="Edit" Command="{Binding EditActiveEnvironmentCommand}"
-                            IsVisible="{Binding HasActiveEnvironment}" />
+
+                  <Border Classes="picker-rule" />
+                  <StackPanel IsVisible="{Binding HasActiveEnvironment}">
+                    <Grid ColumnDefinitions="*,Auto" Margin="14,4,14,4">
+                      <TextBlock Classes="caption" Text="{Binding QuickLookEnvironmentTitle, Converter={x:Static vm:UiConverters.Upper}}" />
+                      <Button Grid.Column="1" Classes="link" Content="Edit" FontSize="12" Command="{Binding EditActiveEnvironmentCommand}" />
+                    </Grid>
+                    <v:QuickLookTable DataContext="{Binding QuickLookEnvironment}" Margin="14,0,14,8" />
+                  </StackPanel>
+                  <Border IsVisible="{Binding !HasActiveEnvironment}" Background="{DynamicResource BgTertiaryBrush}" CornerRadius="7"
+                          Margin="14,2,14,10" Padding="12,10">
+                    <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
+                               Text="Requests use Globals only. Pick an environment above to layer its values on top." />
+                  </Border>
+
+                  <Border Classes="picker-rule" />
+                  <Grid ColumnDefinitions="*,Auto" Margin="14,4,14,4">
+                    <TextBlock Classes="caption" Text="{Binding QuickLookGlobalsTitle, Converter={x:Static vm:UiConverters.Upper}}" />
+                    <Button Grid.Column="1" Classes="link" Content="Edit" FontSize="12" Command="{Binding EditGlobalsCommand}" />
                   </Grid>
-                  <v:QuickLookTable DataContext="{Binding QuickLookEnvironment}"
-                                    IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).HasActiveEnvironment}" />
-                  <Separator />
-                  <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Classes="section" Text="Globals" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Classes="link" Content="Edit" Command="{Binding EditGlobalsCommand}" />
-                  </Grid>
-                  <v:QuickLookTable DataContext="{Binding QuickLookGlobals}" />
-                  <Button Classes="outline" HorizontalAlignment="Left" Content="Open environments matrix"
-                          Command="{Binding OpenEnvironmentMatrixCommand}" />
+                  <v:QuickLookTable DataContext="{Binding QuickLookGlobals}" Margin="14,0,14,8" />
+
+                  <Button Classes="picker-footer" Command="{Binding OpenEnvironmentMatrixCommand}">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                      <PathIcon Data="{StaticResource IconEnvironment}" Width="14" Height="14" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <TextBlock Grid.Column="1" Text="Open environments matrix" VerticalAlignment="Center" />
+                      <PathIcon Grid.Column="2" Data="{StaticResource IconChevronRight}" Width="12" Height="12"
+                                Foreground="{DynamicResource TextTertiaryBrush}" />
+                    </Grid>
+                  </Button>
                 </StackPanel>
               </Flyout>
             </Button.Flyout>

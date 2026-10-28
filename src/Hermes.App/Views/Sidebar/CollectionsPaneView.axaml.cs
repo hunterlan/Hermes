@@ -18,6 +18,9 @@ public partial class CollectionsPaneView : UserControl
     private TreeNodeViewModel? _dragged;
     private TreeNodeViewModel? _dropTarget;
 
+    /// <summary>DoDragDropAsync needs the event that started the gesture.</summary>
+    private PointerPressedEventArgs? _lastPressArgs;
+
     public CollectionsPaneView()
     {
         InitializeComponent();
@@ -72,9 +75,6 @@ public partial class CollectionsPaneView : UserControl
             _dragging = false;
         }
     }
-
-    /// <summary>DoDragDropAsync needs the event that started the gesture.</summary>
-    private PointerPressedEventArgs? _lastPressArgs;
 
     private void OnRowPointerReleased(object? sender, PointerReleasedEventArgs e)
     {

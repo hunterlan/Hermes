@@ -2,13 +2,17 @@ using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Views.Dialogs;
+using Hermes.Core.CodeGen;
 using Hermes.Core.Formatting;
 using Hermes.Core.Http;
 using Hermes.Core.Import;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
+using Hermes.Core.Requests;
 using Hermes.Core.Secrets;
 using Hermes.Core.Serialization;
 using Hermes.Core.Variables;
+using Hermes.Core.Web;
 
 namespace Hermes.App.ViewModels;
 
@@ -58,7 +62,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         Auth.Changed += OnAnyChanged;
         Auth.ScopeProvider = () => CreateContext().BuildScope();
         Auth.VerifySslProvider = () => VerifySsl;
-        Auth.InheritedAuthProvider = () => CreateContext().ResolveAuth(Core.Models.AuthConfig.Inherit());
+        Auth.InheritedAuthProvider = () => CreateContext().ResolveAuth(AuthConfig.Inherit());
         Auth.ChainProvider = () => (AuthInheritance.OuterLevels(CreateContext()), "Request", Name);
 
         Response = new ResponseViewModel(services.Dialogs, services.Settings);
@@ -427,7 +431,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         try
         {
             var model = BuildModel();
-            var prepared = RequestPreparer.Prepare(model, CreateContext());
+            var prepared = RequestPreparer.Preview(model, CreateContext());
             ResolvedUrl = prepared.Url;
             var userKeys = model.Headers.Where(h => h.Enabled).Select(h => h.Key.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var hidden = prepared.Headers.Where(h => !userKeys.Contains(h.Key)).ToList();
@@ -526,10 +530,10 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
                 // Responses are kept with saved requests, so reopening shows the last result and earlier ones.
                 // The saved copy has credentials masked; the one on screen stays exact.
                 if (IsPersisted && Services.Workspace.SaveResponse(RequestId, new SavedResponse
-                    {
-                        Response = response,
-                        SentRequest = SecretMasker.MaskCredentialHeaders(RawRequestFormatter.Format(masked)),
-                    }) is { } saved)
+                {
+                    Response = response,
+                    SentRequest = SecretMasker.MaskCredentialHeaders(RawRequestFormatter.Format(masked)),
+                }) is { } saved)
                     Response.AddSaved(saved);
             }
             else
@@ -649,10 +653,10 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         switch (SelectedRawLanguage.Value)
         {
             case RawLanguage.Json:
-                RawBody = BodyFormatter.FormatJson(RawBody);
+                RawBody = JsonFormatter.Format(RawBody);
                 break;
             case RawLanguage.Xml or RawLanguage.Html:
-                if (BodyFormatter.TryFormatXml(RawBody, out var xml))
+                if (XmlFormatter.TryFormat(RawBody, out var xml))
                     RawBody = xml;
                 break;
         }

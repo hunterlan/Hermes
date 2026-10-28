@@ -7,6 +7,16 @@ public static class JsonFileStore
 {
     private static readonly JsonWriterOptions SingleLine = new() { Indented = false };
 
+    // Windows can't rename two files onto one target at once (access denied), so writers to a path take turns. A
+    // fixed set of locks, picked by path, keeps memory flat however many files get written; paths sharing a lock
+    // only wait for each other a little longer.
+    private static readonly Lock[] WriteLocks = Enumerable.Range(0, 64).Select(_ => new Lock()).ToArray();
+
+    // Another process (an antivirus scan, the search indexer) can hold the target open for a moment; replacing it
+    // fails on Windows until it lets go, so the replace is retried for up to about half a second.
+    private const int ReplaceAttempts = 10;
+    private static readonly TimeSpan ReplaceRetryDelay = TimeSpan.FromMilliseconds(50);
+
     public static T? Read<T>(string path, JsonTypeInfo<T> typeInfo) where T : class
     {
         if (!File.Exists(path))
@@ -76,21 +86,43 @@ public static class JsonFileStore
 
     private static void WriteAtomically(string path, Action<Stream> write)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var temp = $"{path}.{Path.GetRandomFileName()}.tmp";
-        try
+        lock (WriteLockFor(path))
         {
-            using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write))
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var temp = $"{path}.{Path.GetRandomFileName()}.tmp";
+            try
             {
-                write(stream);
-                stream.Flush(flushToDisk: true);
+                using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write))
+                {
+                    write(stream);
+                    stream.Flush(flushToDisk: true);
+                }
+                ReplaceWith(temp, path);
             }
-            File.Move(temp, path, overwrite: true);
+            catch
+            {
+                TryDelete(temp);
+                throw;
+            }
         }
-        catch
+    }
+
+    private static Lock WriteLockFor(string path) =>
+        WriteLocks[(int)((uint)StringComparer.OrdinalIgnoreCase.GetHashCode(Path.GetFullPath(path)) % (uint)WriteLocks.Length)];
+
+    private static void ReplaceWith(string temp, string path)
+    {
+        for (var attempt = 1; ; attempt++)
         {
-            TryDelete(temp);
-            throw;
+            try
+            {
+                File.Move(temp, path, overwrite: true);
+                return;
+            }
+            catch (Exception e) when ((e is IOException or UnauthorizedAccessException) && attempt < ReplaceAttempts)
+            {
+                Thread.Sleep(ReplaceRetryDelay);
+            }
         }
     }
 

@@ -1,7 +1,7 @@
 using System.Text;
 using Hermes.Core.Models;
 
-namespace Hermes.Core.Http;
+namespace Hermes.Core.Web;
 
 /// <summary>
 /// String-level URL helpers. They deliberately don't use <see cref="Uri"/>: URLs being edited
@@ -9,8 +9,6 @@ namespace Hermes.Core.Http;
 /// </summary>
 public static class UrlUtilities
 {
-    public readonly record struct UrlParts(string Base, string? Query, string? Fragment);
-
     public static UrlParts Split(string url)
     {
         string? fragment = null;

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 
 namespace Hermes.Core.Import;
 
@@ -18,6 +19,15 @@ internal static class PostmanFormat
         (OAuth2GrantType.AuthorizationCode, true, "authorization_code_with_pkce"),
         (OAuth2GrantType.ClientCredentials, false, "client_credentials"),
         (OAuth2GrantType.Password, false, "password_credentials"),
+    ];
+
+    private static readonly (RawLanguage Language, string Name)[] RawLanguages =
+    [
+        (RawLanguage.Text, "text"),
+        (RawLanguage.Json, "json"),
+        (RawLanguage.Xml, "xml"),
+        (RawLanguage.Html, "html"),
+        (RawLanguage.JavaScript, "javascript"),
     ];
 
     public static string GrantTypeName(OAuth2GrantType grant, bool pkce) =>
@@ -44,15 +54,6 @@ internal static class PostmanFormat
     public static string VariableTypeName(VariableType value) => value == VariableType.Secret ? "secret" : "default";
 
     public static VariableType ParseVariableType(string? name) => name == "secret" ? VariableType.Secret : VariableType.Default;
-
-    private static readonly (RawLanguage Language, string Name)[] RawLanguages =
-    [
-        (RawLanguage.Text, "text"),
-        (RawLanguage.Json, "json"),
-        (RawLanguage.Xml, "xml"),
-        (RawLanguage.Html, "html"),
-        (RawLanguage.JavaScript, "javascript"),
-    ];
 
     public static string RawLanguageName(RawLanguage language) => RawLanguages.First(l => l.Language == language).Name;
 

@@ -8,22 +8,9 @@ using Hermes.Core.Formatting;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
 using Hermes.Core.Storage;
+using Hermes.Core.Web;
 
 namespace Hermes.App.ViewModels;
-
-public enum ResponseViewMode
-{
-    Pretty,
-    Raw,
-    Preview,
-}
-
-/// <summary>Entry in the saved-responses menu.</summary>
-public sealed record SavedResponseItem(SavedResponse Saved, bool IsLatest)
-{
-    public string Label =>
-        $"{Saved.Response.StatusCode} {Saved.Response.ReasonPhrase} · {Saved.Timestamp.LocalDateTime:g}{(IsLatest ? " · latest" : "")}";
-}
 
 public sealed partial class ResponseViewModel(DialogService dialogs, SettingsService settings) : ObservableObject
 {
@@ -308,9 +295,9 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         switch (language)
         {
             case "json":
-                return BodyFormatter.TryFormatJson(text, out var json) ? json : text;
+                return JsonFormatter.TryFormat(text, out var json) ? json : text;
             case "xml":
-                return BodyFormatter.TryFormatXml(text, out var xml) ? xml : text;
+                return XmlFormatter.TryFormat(text, out var xml) ? xml : text;
             default:
                 return text;
         }

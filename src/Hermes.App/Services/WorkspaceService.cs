@@ -1,16 +1,10 @@
 using System.Collections.ObjectModel;
-using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Requests;
 using Hermes.Core.Secrets;
 using Hermes.Core.Storage;
 
 namespace Hermes.App.Services;
-
-/// <summary>Location of a node inside a collection.</summary>
-public sealed record NodeLocation(CollectionModel Collection, IReadOnlyList<FolderModel> Ancestors, List<CollectionNode> Container, CollectionNode Node)
-{
-    public FolderModel? Parent => Ancestors.Count > 0 ? Ancestors[^1] : null;
-}
 
 /// <summary>In-memory workspace (collections, environments, globals, history) backed by <see cref="WorkspaceRepository"/>.</summary>
 public sealed class WorkspaceService
@@ -19,6 +13,8 @@ public sealed class WorkspaceService
 
     // History is written in the background, in order, so a clear always lands after the appends before it.
     private readonly BackgroundWriter _historyWriter = new();
+
+    private EnvironmentModel? _activeEnvironment;
 
     public WorkspaceService(WorkspaceRepository repository, SettingsService settings)
     {
@@ -39,8 +35,6 @@ public sealed class WorkspaceService
     public IReadOnlyList<string> LoadErrors => _repository.LoadErrors;
     public string DataDirectory => _repository.Root;
     public SecretStore Secrets => _repository.Secrets;
-
-    private EnvironmentModel? _activeEnvironment;
 
     public EnvironmentModel? ActiveEnvironment
     {

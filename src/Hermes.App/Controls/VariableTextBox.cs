@@ -99,7 +99,7 @@ public sealed class VariableTextBox : UserControl
             Background = Brushes.Transparent,
             MinWidth = 260,
             MaxWidth = 460,
-            ItemTemplate = new FuncDataTemplate<VariableResolver.VariableSuggestion>((item, _) => BuildSuggestionRow(item)),
+            ItemTemplate = new FuncDataTemplate<VariableSuggestion>((item, _) => BuildSuggestionRow(item)),
         };
         _suggestionList.Styles.Add(new Style(x => x.OfType<ListBoxItem>())
         {
@@ -290,18 +290,18 @@ public sealed class VariableTextBox : UserControl
     public bool IsSuggestionListOpen => _suggestionPopup.IsOpen;
 
     public IReadOnlyList<string> SuggestionNames =>
-        _suggestionList.ItemsSource is IEnumerable<VariableResolver.VariableSuggestion> items ? items.Select(i => i.Name).ToList() : [];
+        _suggestionList.ItemsSource is IEnumerable<VariableSuggestion> items ? items.Select(i => i.Name).ToList() : [];
 
     private void UpdateSuggestions()
     {
         if (IsReadOnly || !_editor.TextArea.IsFocused ||
-            !VariableResolver.TryFindPartialVariable(_editor.Text, _editor.CaretOffset, out var nameStart, out var typed))
+            !VariableCompletion.TryFindPartialVariable(_editor.Text, _editor.CaretOffset, out var nameStart, out var typed))
         {
             CloseSuggestions();
             return;
         }
 
-        var suggestions = VariableResolver.Suggest(Variables ?? VariableScope.Empty, typed);
+        var suggestions = VariableCompletion.Suggest(Variables ?? VariableScope.Empty, typed);
         if (suggestions.Count == 0)
         {
             CloseSuggestions();
@@ -338,7 +338,7 @@ public sealed class VariableTextBox : UserControl
                 _suggestionList.SelectedIndex = (_suggestionList.SelectedIndex - 1 + count) % count;
                 break;
             case Key.Enter or Key.Tab when e.KeyModifiers == KeyModifiers.None:
-                if (_suggestionList.SelectedItem is not VariableResolver.VariableSuggestion pick)
+                if (_suggestionList.SelectedItem is not VariableSuggestion pick)
                     return false;
                 AcceptSuggestion(pick);
                 break;
@@ -354,7 +354,7 @@ public sealed class VariableTextBox : UserControl
 
     private void OnSuggestionPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if ((e.Source as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true)?.DataContext is VariableResolver.VariableSuggestion pick)
+        if ((e.Source as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true)?.DataContext is VariableSuggestion pick)
         {
             e.Handled = true;
             AcceptSuggestion(pick);
@@ -362,7 +362,7 @@ public sealed class VariableTextBox : UserControl
     }
 
     /// <summary>Replaces the partial name under the caret with <paramref name="pick"/> and closes the braces.</summary>
-    private void AcceptSuggestion(VariableResolver.VariableSuggestion pick)
+    private void AcceptSuggestion(VariableSuggestion pick)
     {
         var text = _editor.Text;
         // Also swallow the rest of a name being edited in place, e.g. the "rl" in "{{baseU|rl}}".
@@ -377,7 +377,7 @@ public sealed class VariableTextBox : UserControl
         _editor.TextArea.Focus();
     }
 
-    private Control BuildSuggestionRow(VariableResolver.VariableSuggestion item)
+    private Control BuildSuggestionRow(VariableSuggestion item)
     {
         var name = new TextBlock { Text = item.Name, FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center };
         name.Bind(TextBlock.FontFamilyProperty, this.GetResourceObservable("MonoFont"));

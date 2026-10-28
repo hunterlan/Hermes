@@ -2,7 +2,7 @@ using System.Text;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
 
-namespace Hermes.Core.Import;
+namespace Hermes.Core.CodeGen;
 
 public static class CurlGenerator
 {

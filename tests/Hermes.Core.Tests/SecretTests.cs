@@ -1,5 +1,7 @@
 using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
+using Hermes.Core.Requests;
 using Hermes.Core.Secrets;
 using Hermes.Core.Storage;
 
@@ -9,6 +11,21 @@ public class SecretTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "hermes-tests-" + Guid.NewGuid());
     private readonly InMemorySecretStore _store = new();
+
+    /// <summary>Auth fields that are not credentials. Any other string field must be kept out of the data files.</summary>
+    private static readonly HashSet<string> NonSecretAuthFields =
+    [
+        "BasicAuth.Username",
+        "ApiKeyAuth.Key",
+        "OAuth2Auth.AuthUrl",
+        "OAuth2Auth.AccessTokenUrl",
+        "OAuth2Auth.ClientId",
+        "OAuth2Auth.Scope",
+        "OAuth2Auth.RedirectUri",
+        "OAuth2Auth.State",
+        "OAuth2Auth.Username",
+        "OAuth2Auth.HeaderPrefix",
+    ];
 
     private string ReadFile(params string[] parts) => File.ReadAllText(Path.Combine([_dir, .. parts]));
 
@@ -195,12 +212,12 @@ public class SecretTests : IDisposable
     [Fact]
     public void Secret_values_are_masked_wherever_variables_are_shown()
     {
-        var scope = new Variables.VariableScope().AddLayer([new Variable("apiKey", "s3cret") { Type = VariableType.Secret }, new Variable("host", "h")]);
+        var scope = new Variables.VariableScopeBuilder().AddLayer([new Variable("apiKey", "s3cret") { Type = VariableType.Secret }, new Variable("host", "h")]).Build();
 
         Assert.True(scope.TryGetDisplay("apiKey", out var shown));
         Assert.Equal(Variables.VariableScope.MaskedValue, shown);
-        Assert.Equal(Variables.VariableScope.MaskedValue, Assert.Single(Variables.VariableResolver.Suggest(scope, "api")).Value);
-        Assert.Equal("h", Assert.Single(Variables.VariableResolver.Suggest(scope, "hos")).Value);
+        Assert.Equal(Variables.VariableScope.MaskedValue, Assert.Single(Variables.VariableCompletion.Suggest(scope, "api")).Value);
+        Assert.Equal("h", Assert.Single(Variables.VariableCompletion.Suggest(scope, "hos")).Value);
     }
 
     [Theory]
@@ -211,6 +228,26 @@ public class SecretTests : IDisposable
     [InlineData("", false)]
     public void Only_literal_auth_values_count_as_secrets(string value, bool literal) =>
         Assert.Equal(literal, SecretFields.IsLiteral(value));
+
+    [Fact]
+    public void Every_auth_string_field_is_either_a_secret_or_known_to_be_public()
+    {
+        var request = new HttpRequestModel();
+        var fields = typeof(AuthConfig).GetProperties()
+            .Where(authProperty => authProperty.PropertyType.IsClass && authProperty.PropertyType != typeof(string))
+            .SelectMany(authProperty => authProperty.PropertyType.GetProperties()
+                .Where(field => field.PropertyType == typeof(string) && field.CanWrite)
+                .Select(field => (Owner: authProperty.GetValue(request.Auth)!, Field: field)))
+            .ToList();
+        foreach (var (owner, field) in fields)
+            field.SetValue(owner, $"literal-{owner.GetType().Name}.{field.Name}");
+
+        SecretFields.Strip(request);
+
+        var kept = fields.Where(entry => !string.IsNullOrEmpty((string?)entry.Field.GetValue(entry.Owner)))
+            .Select(entry => $"{entry.Owner.GetType().Name}.{entry.Field.Name}");
+        Assert.Equal(NonSecretAuthFields.Order(), kept.Order());
+    }
 
     [Fact]
     public void The_workspace_id_lives_in_the_folder_and_moves_with_it()

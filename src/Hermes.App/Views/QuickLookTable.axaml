@@ -3,25 +3,42 @@
              xmlns:vm="using:Hermes.App.ViewModels"
              x:Class="Hermes.App.Views.QuickLookTable"
              x:DataType="vm:QuickLookSection">
+  <UserControl.Styles>
+    <Style Selector="Grid.kv TextBlock">
+      <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="LineHeight" Value="24" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+  </UserControl.Styles>
   <Panel>
     <TextBlock Classes="tertiary" FontSize="12" Text="No variables" IsVisible="{Binding IsEmpty}" />
-    <StackPanel IsVisible="{Binding !IsEmpty}">
-      <Grid ColumnDefinitions="*,*,*" Margin="0,0,0,4">
-        <TextBlock Classes="tertiary" FontSize="11" Text="VARIABLE" />
-        <TextBlock Grid.Column="1" Classes="tertiary" FontSize="11" Text="INITIAL VALUE" />
-        <TextBlock Grid.Column="2" Classes="tertiary" FontSize="11" Text="CURRENT VALUE" />
-      </Grid>
+    <StackPanel IsVisible="{Binding !IsEmpty}" Grid.IsSharedSizeScope="True">
       <ItemsControl ItemsSource="{Binding Rows}">
         <ItemsControl.ItemTemplate>
+          <!-- key column grows to its widest key, up to 140px; values take the rest and end in an ellipsis -->
           <DataTemplate x:DataType="vm:QuickLookVariable">
-            <Grid ColumnDefinitions="*,*,*" Margin="0,3">
-              <TextBlock Text="{Binding Key}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" />
-              <TextBlock Grid.Column="1" Text="{Binding InitialValue}" TextTrimming="CharacterEllipsis" Classes="secondary" />
-              <TextBlock Grid.Column="2" Text="{Binding CurrentValue}" TextTrimming="CharacterEllipsis" />
+            <Grid Classes="kv">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" MaxWidth="140" SharedSizeGroup="Key" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Text="{Binding Key}" Foreground="{DynamicResource InfoBrush}" Margin="0,0,12,0" />
+              <TextBlock Grid.Column="1" Text="{Binding Value}" IsVisible="{Binding IsPlain}" />
+              <TextBlock Grid.Column="1" Text="empty" Foreground="{DynamicResource WarningBrush}" IsVisible="{Binding IsEmpty}" />
+              <TextBlock Grid.Column="1" Text="{Binding Value}" TextDecorations="Strikethrough" Foreground="{DynamicResource TextTertiaryBrush}">
+                <TextBlock.IsVisible>
+                  <MultiBinding Converter="{x:Static BoolConverters.And}">
+                    <Binding Path="IsOverridden" />
+                    <Binding Path="!IsEmpty" />
+                  </MultiBinding>
+                </TextBlock.IsVisible>
+              </TextBlock>
             </Grid>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
+      <TextBlock Classes="tertiary" FontSize="12" Margin="0,4,0,0" Text="{Binding MoreText}" IsVisible="{Binding HasMore}" />
     </StackPanel>
   </Panel>
 </UserControl>

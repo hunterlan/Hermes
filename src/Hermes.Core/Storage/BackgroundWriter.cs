@@ -6,7 +6,7 @@ namespace Hermes.Core.Storage;
 /// </summary>
 public sealed class BackgroundWriter
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private Task _tail = Task.CompletedTask;
 
     /// <summary>A queued write threw. Raised on a background thread.</summary>

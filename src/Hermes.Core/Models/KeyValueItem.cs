@@ -1,11 +1,5 @@
 namespace Hermes.Core.Models;
 
-public enum KeyValueKind
-{
-    Text,
-    File,
-}
-
 /// <summary>A row in a params / headers / form table.</summary>
 public sealed class KeyValueItem
 {

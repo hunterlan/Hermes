@@ -4,6 +4,7 @@ using Hermes.App.ViewModels;
 using Hermes.Core.Http;
 using Hermes.Core.Import;
 using Hermes.Core.Models;
+using Hermes.Core.Requests;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hermes.App.Tests;
@@ -140,5 +141,23 @@ public class WorkflowTests
         cookies.DeleteCommand.Execute(row);
         Assert.DoesNotContain(cookies.Domains, d => d.Domain == "127.0.0.1" && d.Cookies.Any(c => c.Name == "session"));
         window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Request_preview_leaves_dynamic_variables_as_written()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        try
+        {
+            vm.NewRequestCommand.Execute(null);
+            var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+            tab.Url = "https://example.com/items/{{$guid}}";
+
+            Assert.Equal("https://example.com/items/{{$guid}}", tab.ResolvedUrl);
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 }

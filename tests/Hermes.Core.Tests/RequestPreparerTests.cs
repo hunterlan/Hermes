@@ -1,6 +1,8 @@
 using System.Text;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
+using Hermes.Core.Requests;
 
 namespace Hermes.Core.Tests;
 
@@ -131,5 +133,22 @@ public class RequestPreparerTests
         };
 
         Assert.Equal("https://api.test/users/2", RequestPreparer.Prepare(request, Context()).Url);
+    }
+
+    [Fact]
+    public void Preview_leaves_dynamic_variables_as_written()
+    {
+        var env = new EnvironmentModel { Variables = [new Variable("host", "api.test"), new Variable("id", "{{$guid}}")] };
+        var request = new HttpRequestModel
+        {
+            Url = "https://{{host}}/items/{{$guid}}/{{id}}",
+            Headers = [new KeyValueItem("X-Request-Id", "{{$randomInt}}")],
+        };
+
+        var preview = RequestPreparer.Preview(request, Context(env: env));
+
+        Assert.Equal("https://api.test/items/{{$guid}}/{{$guid}}", preview.Url);
+        Assert.Equal("{{$randomInt}}", preview.GetHeader("X-Request-Id"));
+        Assert.DoesNotContain("{{", RequestPreparer.Prepare(request, Context(env: env)).Url);
     }
 }

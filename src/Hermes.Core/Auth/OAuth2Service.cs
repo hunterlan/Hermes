@@ -1,24 +1,15 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Hermes.Core.Http;
-using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 using Hermes.Core.Variables;
+using Hermes.Core.Web;
 
 namespace Hermes.Core.Auth;
-
-public sealed class OAuth2TokenResult
-{
-    public string? AccessToken { get; init; }
-    public string? RefreshToken { get; init; }
-    public string? TokenType { get; init; }
-    public DateTimeOffset? ExpiresAt { get; init; }
-    public string? Error { get; init; }
-
-    public bool IsSuccess => AccessToken is not null;
-}
 
 /// <summary>
 /// Fetches OAuth 2.0 tokens. Token requests use clients of their own, without cookies: cookies the identity
@@ -97,6 +88,10 @@ public sealed class OAuth2Service : IDisposable
             return ParseTokenResponse(body, response.StatusCode);
         }
         catch (HttpRequestException ex)
+        {
+            return Fail(ex.Message);
+        }
+        catch (Exception ex) when (ex is IOException or SocketException)
         {
             return Fail(ex.Message);
         }

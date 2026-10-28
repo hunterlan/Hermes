@@ -15,9 +15,3 @@ public abstract class CollectionNode
     /// <summary>Postman pre-request/test scripts, kept verbatim (JSON) for lossless round trips.</summary>
     public string? EventsJson { get; set; }
 }
-
-public sealed class FolderModel : CollectionNode
-{
-    public List<CollectionNode> Items { get; set; } = [];
-    public AuthConfig Auth { get; set; } = AuthConfig.Inherit();
-}

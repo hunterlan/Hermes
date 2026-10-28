@@ -2,6 +2,7 @@ using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 using Hermes.Core.Serialization;
 
 namespace Hermes.App.ViewModels;
@@ -40,7 +41,7 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         ? string.Join(" / ", new[] { location.Collection.Name }.Concat(location.Ancestors.Select(a => a.Name)))
         : "";
 
-    private Core.Http.RequestContext? CreateContext() =>
+    private Core.Requests.RequestContext? CreateContext() =>
         Services.Workspace.Find(_folder.Id) is { } location
             ? Services.Workspace.CreateContextForContainer(location.Collection, _folder)
             : null;

@@ -5,7 +5,7 @@ using Hermes.Core.Variables;
 namespace Hermes.Core.Secrets;
 
 /// <summary>
-/// Final touches on the text of a request prepared with <see cref="Http.RequestPreparer.PrepareWithMasked"/>, whose
+/// Final touches on the text of a request prepared with <see cref="Requests.RequestPreparer.PrepareWithMasked"/>, whose
 /// secret variables and auth credentials are already masked at the source.
 /// </summary>
 public static class SecretMasker

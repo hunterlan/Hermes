@@ -1,7 +1,9 @@
 using System.Text;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 using Hermes.Core.Variables;
+using Hermes.Core.Web;
 
 namespace Hermes.Core.Auth;
 

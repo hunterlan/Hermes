@@ -1,11 +1,5 @@
 namespace Hermes.Core.Models;
 
-public enum VariableType
-{
-    Default,
-    Secret,
-}
-
 public sealed class Variable
 {
     public bool Enabled { get; set; } = true;

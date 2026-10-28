@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Hermes.Core.Models;
 
 namespace Hermes.App.ViewModels.Sidebar;
 
@@ -47,55 +46,4 @@ public abstract partial class TreeNodeViewModel : ObservableObject
             foreach (var node in child.SelfAndDescendants())
                 yield return node;
     }
-}
-
-public sealed class CollectionNodeViewModel : TreeNodeViewModel
-{
-    public CollectionNodeViewModel(CollectionModel model) : base(null)
-    {
-        Model = model;
-        Name = model.Name;
-        foreach (var item in model.Items)
-            Children.Add(Create(item, this));
-    }
-
-    public CollectionModel Model { get; }
-    public override Guid Id => Model.Id;
-    public override bool IsCollection => true;
-
-    internal static TreeNodeViewModel Create(CollectionNode node, TreeNodeViewModel parent) => node switch
-    {
-        FolderModel folder => new FolderNodeViewModel(folder, parent),
-        HttpRequestModel request => new RequestNodeViewModel(request, parent),
-        _ => throw new ArgumentOutOfRangeException(nameof(node)),
-    };
-}
-
-public sealed class FolderNodeViewModel : TreeNodeViewModel
-{
-    public FolderNodeViewModel(FolderModel model, TreeNodeViewModel parent) : base(parent)
-    {
-        Model = model;
-        Name = model.Name;
-        foreach (var item in model.Items)
-            Children.Add(CollectionNodeViewModel.Create(item, this));
-    }
-
-    public FolderModel Model { get; }
-    public override Guid Id => Model.Id;
-    public override bool IsFolder => true;
-}
-
-public sealed class RequestNodeViewModel : TreeNodeViewModel
-{
-    public RequestNodeViewModel(HttpRequestModel model, TreeNodeViewModel parent) : base(parent)
-    {
-        Model = model;
-        Name = model.Name;
-    }
-
-    public HttpRequestModel Model { get; }
-    public override Guid Id => Model.Id;
-    public override bool IsRequest => true;
-    public string Method => Model.Method;
 }

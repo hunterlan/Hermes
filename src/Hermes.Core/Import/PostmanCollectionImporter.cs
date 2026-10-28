@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Hermes.Core.Models;
+using Hermes.Core.Models.Auth;
 using static Hermes.Core.Import.PostmanFormat;
 
 namespace Hermes.Core.Import;
@@ -77,7 +78,7 @@ public static class PostmanCollectionImporter
         {
             // v2.1 allows "request": "https://..."
             model.Url = Str(request) ?? "";
-            model.QueryParams = Http.UrlUtilities.ParseQuery(Http.UrlUtilities.Split(model.Url).Query);
+            model.QueryParams = Web.UrlUtilities.ParseQuery(Web.UrlUtilities.Split(model.Url).Query);
             return model;
         }
         if (request is null)
@@ -99,7 +100,7 @@ public static class PostmanCollectionImporter
         {
             case JsonValue:
                 model.Url = Str(url) ?? "";
-                model.QueryParams = Http.UrlUtilities.ParseQuery(Http.UrlUtilities.Split(model.Url).Query);
+                model.QueryParams = Web.UrlUtilities.ParseQuery(Web.UrlUtilities.Split(model.Url).Query);
                 break;
 
             case JsonObject:
@@ -119,11 +120,11 @@ public static class PostmanCollectionImporter
                 {
                     // The structured query (with disabled entries) is authoritative.
                     model.QueryParams = query;
-                    raw = Http.UrlUtilities.WithQuery(raw, query);
+                    raw = Web.UrlUtilities.WithQuery(raw, query);
                 }
                 else
                 {
-                    model.QueryParams = Http.UrlUtilities.ParseQuery(Http.UrlUtilities.Split(raw).Query);
+                    model.QueryParams = Web.UrlUtilities.ParseQuery(Web.UrlUtilities.Split(raw).Query);
                 }
                 model.Url = raw;
                 model.PathVariables = ReadKeyValues(url["variable"]);
