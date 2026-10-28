@@ -3,6 +3,7 @@ using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -156,6 +157,12 @@ public partial class MainWindow : Window
             _viewModel.SidebarWidth = SidebarColumn.ActualWidth;
         _viewModel.SaveSession();
     }
+
+    // ---- environment picker ----
+
+    private void OnEnvironmentPickerOpened(object? sender, EventArgs e) => EnvironmentChevron.RenderTransform = new RotateTransform(180);
+
+    private void OnEnvironmentPickerClosed(object? sender, EventArgs e) => EnvironmentChevron.RenderTransform = null;
 
     // ---- drop files anywhere to import ----
 

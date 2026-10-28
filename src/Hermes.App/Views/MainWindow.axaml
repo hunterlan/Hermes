@@ -88,25 +88,20 @@
                   AutomationProperties.Name="{Binding EnvironmentButtonText, StringFormat='Active environment: {0}. Change environment'}">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Panel VerticalAlignment="Center">
-                <PathIcon Data="{StaticResource IconLock}" Width="12" Height="12" Foreground="{DynamicResource ErrorBrush}"
-                          IsVisible="{Binding ActiveEnvironmentConfirms}" ToolTip.Tip="Asks before sending" />
-                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}">
-                  <Ellipse.IsVisible>
-                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                      <Binding Path="HasActiveEnvironment" />
-                      <Binding Path="!ActiveEnvironmentConfirms" />
-                    </MultiBinding>
-                  </Ellipse.IsVisible>
-                </Ellipse>
+                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding HasActiveEnvironment}" />
                 <Ellipse Width="8" Height="8" Stroke="{DynamicResource TextTertiaryBrush}" StrokeThickness="1.5"
                          IsVisible="{Binding !HasActiveEnvironment}" />
               </Panel>
               <TextBlock Text="ENV" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
-              <TextBlock Text="{Binding SelectedEnvironment.Name, FallbackValue='No Environment'}" FontWeight="SemiBold" VerticalAlignment="Center" />
-              <PathIcon Data="{StaticResource IconChevronDown}" Width="12" Height="12" />
+              <TextBlock Text="{Binding EnvironmentButtonText}" FontWeight="SemiBold" VerticalAlignment="Center"
+                         MaxWidth="200" TextTrimming="CharacterEllipsis" />
+              <PathIcon Data="{StaticResource IconLock}" Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}"
+                        IsVisible="{Binding ActiveEnvironmentConfirms}" ToolTip.Tip="Asks before sending" />
+              <PathIcon Name="EnvironmentChevron" Data="{StaticResource IconChevronDown}" Width="12" Height="12" />
             </StackPanel>
             <Button.Flyout>
-              <Flyout Placement="BottomEdgeAlignedRight" FlyoutPresenterClasses="picker">
+              <Flyout Placement="BottomEdgeAlignedRight" FlyoutPresenterClasses="picker"
+                      Opened="OnEnvironmentPickerOpened" Closed="OnEnvironmentPickerClosed">
                 <StackPanel Name="EnvironmentPicker">
                   <Grid ColumnDefinitions="*,Auto" Margin="14,10,14,4" MinHeight="22">
                     <TextBlock Classes="caption" Text="SEND WITH" />
