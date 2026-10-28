@@ -107,8 +107,10 @@
                     <TextBlock Classes="caption" Text="SEND WITH" />
                     <Border Grid.Column="1" Classes="kbd"><TextBlock Text="Ctrl E" /></Border>
                   </Grid>
-                  <ListBox Classes="picker" ItemsSource="{Binding EnvironmentOptions}" SelectedItem="{Binding SelectedEnvironment}"
-                           MaxHeight="232" AutomationProperties.Name="Environments">
+                  <!-- selection is only the keyboard cursor; Enter or a click makes an option active (the checkmark) -->
+                  <ListBox Name="EnvironmentList" Classes="picker" ItemsSource="{Binding EnvironmentOptions}"
+                           MaxHeight="232" AutomationProperties.Name="Environments"
+                           Tapped="OnEnvironmentListTapped">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="vm:EnvironmentOption">
                         <Grid ColumnDefinitions="16,*,Auto,Auto" ColumnSpacing="10">

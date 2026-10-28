@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
@@ -174,6 +176,39 @@ public class EnvironmentPickerTests
         scope.EnvironmentButton.Flyout!.Hide();
         UiTestHelpers.Pump();
         Assert.Null(chevron.RenderTransform);
+    }
+
+    [AvaloniaFact]
+    public void Arrows_move_focus_and_enter_activates_without_closing()
+    {
+        using var scope = new PickerScope();
+        var (window, vm) = (scope.Window, scope.ViewModel);
+        var env = scope.CreateEnvironment(new Variable("k", "v"));
+        scope.Activate(null);
+
+        window.KeyPressQwerty(PhysicalKey.E, RawInputModifiers.Control);
+        UiTestHelpers.Pump();
+        var button = scope.EnvironmentButton;
+        Assert.True(button.Flyout!.IsOpen);
+        var list = window.FindControl<ListBox>("EnvironmentList")!;
+        Assert.Same(vm.EnvironmentOptions[0], list.SelectedItem);
+
+        var target = vm.EnvironmentOptions.IndexOf(vm.EnvironmentOptions.Single(o => o.Model == env));
+        for (var i = 0; i < target; i++)
+            window.KeyPressQwerty(PhysicalKey.ArrowDown, RawInputModifiers.None);
+        UiTestHelpers.Pump();
+        Assert.Same(env, ((EnvironmentOption)list.SelectedItem!).Model);
+        Assert.Null(Workspace.ActiveEnvironment);
+
+        window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        UiTestHelpers.Pump();
+        Assert.Same(env, Workspace.ActiveEnvironment);
+        Assert.True(button.Flyout.IsOpen);
+        Assert.True(((EnvironmentOption)list.SelectedItem!).IsActive);
+
+        window.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+        UiTestHelpers.Pump();
+        Assert.False(button.Flyout.IsOpen);
     }
 
     [AvaloniaFact]

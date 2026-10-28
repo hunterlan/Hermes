@@ -25,6 +25,8 @@ public partial class MainWindow : Window
         InitializeComponent();
         // Tunnel so shortcuts work even when a text editor has focus (AvaloniaEdit swallows Ctrl+Enter, Ctrl+S, ...).
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+        // Tunnel: a bubbling KeyDown handler on the list never sees Enter.
+        EnvironmentList.AddHandler(KeyDownEvent, OnEnvironmentListKeyDown, RoutingStrategies.Tunnel);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
         _sessionTimer.Tick += (_, _) => _viewModel?.SaveSession();
@@ -160,9 +162,45 @@ public partial class MainWindow : Window
 
     // ---- environment picker ----
 
-    private void OnEnvironmentPickerOpened(object? sender, EventArgs e) => EnvironmentChevron.RenderTransform = new RotateTransform(180);
+    private void OnEnvironmentPickerOpened(object? sender, EventArgs e)
+    {
+        EnvironmentChevron.RenderTransform = new RotateTransform(180);
+        FocusActiveEnvironment();
+    }
 
     private void OnEnvironmentPickerClosed(object? sender, EventArgs e) => EnvironmentChevron.RenderTransform = null;
+
+    private void OnEnvironmentListKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || EnvironmentList.SelectedItem is not EnvironmentOption option)
+            return;
+        ActivateEnvironment(option);
+        e.Handled = true;
+    }
+
+    private void OnEnvironmentListTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Source is Control { DataContext: EnvironmentOption option })
+            ActivateEnvironment(option);
+    }
+
+    // The picker stays open so the newly active environment's values are visible.
+    private void ActivateEnvironment(EnvironmentOption option)
+    {
+        if (_viewModel is null)
+            return;
+        _viewModel.SelectedEnvironment = option;
+        // Switching rebuilds the options, which drops the list's selection and focus.
+        FocusActiveEnvironment();
+    }
+
+    private void FocusActiveEnvironment() => Dispatcher.UIThread.Post(() =>
+    {
+        var active = _viewModel?.EnvironmentOptions.FirstOrDefault(o => o.IsActive);
+        EnvironmentList.SelectedItem = active;
+        if (active is not null)
+            EnvironmentList.ContainerFromItem(active)?.Focus(NavigationMethod.Directional);
+    }, DispatcherPriority.Loaded);
 
     // ---- drop files anywhere to import ----
 
