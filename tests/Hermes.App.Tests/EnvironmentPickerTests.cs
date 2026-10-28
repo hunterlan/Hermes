@@ -1,5 +1,9 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
+using Avalonia.Layout;
+using Avalonia.LogicalTree;
+using Avalonia.VisualTree;
 using Hermes.App.Services;
 using Hermes.App.ViewModels;
 using Hermes.Core.Models;
@@ -48,8 +52,17 @@ public class EnvironmentPickerTests
         public void Activate(EnvironmentModel? env) =>
             ViewModel.SelectedEnvironment = ViewModel.EnvironmentOptions.Single(o => o.Model == env);
 
+        public Button EnvironmentButton => Window.FindControl<Button>("EnvironmentButton")!;
+
+        public void OpenPicker()
+        {
+            EnvironmentButton.Flyout!.ShowAt(EnvironmentButton);
+            UiTestHelpers.Pump();
+        }
+
         public void Dispose()
         {
+            EnvironmentButton.Flyout!.Hide();
             Workspace.ActiveEnvironment = null;
             foreach (var env in _environments)
                 Workspace.DeleteEnvironment(env);
@@ -128,6 +141,23 @@ public class EnvironmentPickerTests
         Assert.True(none.IsNone);
         Assert.True(none.IsActive);
         Assert.True(vm.QuickLookEnvironment.IsEmpty);
+    }
+
+    [AvaloniaFact]
+    public void Popover_keeps_its_width_with_long_values()
+    {
+        using var scope = new PickerScope();
+        scope.Activate(scope.CreateEnvironment(
+            new Variable(new string('k', 120), "https://api.example.com/" + new string('v', 200))));
+
+        scope.OpenPicker();
+
+        var content = scope.Window.FindControl<Control>("EnvironmentPicker")!;
+        var presenter = Assert.IsType<FlyoutPresenter>(content.FindAncestorOfType<FlyoutPresenter>());
+        Assert.Equal(400, presenter.Bounds.Width);
+        Assert.DoesNotContain(presenter.GetVisualDescendants().OfType<ScrollBar>(),
+            s => s.Orientation == Orientation.Horizontal && s.IsVisible);
+        UiTestHelpers.Screenshot(scope.Window, "40-environment-picker");
     }
 
     [AvaloniaFact]
