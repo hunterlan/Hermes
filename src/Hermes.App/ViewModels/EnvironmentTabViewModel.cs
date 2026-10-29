@@ -30,6 +30,10 @@ public sealed partial class EnvironmentTabViewModel : TabViewModelBase
 
     [ObservableProperty] public partial string Name { get; set; } = "";
     [ObservableProperty] public partial bool ConfirmBeforeSend { get; set; }
+    [ObservableProperty] public partial EnvironmentColor Color { get; set; }
+
+    /// <summary>The editor's swatch row: no colour first, then the eight colours.</summary>
+    public IReadOnlyList<EnvironmentColor> ColorChoices { get; } = Enum.GetValues<EnvironmentColor>();
 
     public bool IsActiveEnvironment => Services.Workspace.ActiveEnvironment == _environment;
 
@@ -39,6 +43,7 @@ public sealed partial class EnvironmentTabViewModel : TabViewModelBase
         Name = _environment.Name;
         Title = _environment.Name;
         ConfirmBeforeSend = _environment.ConfirmBeforeSend;
+        Color = _environment.Color;
         Variables.Load(_environment.Variables);
         _loading = false;
     }
@@ -49,9 +54,12 @@ public sealed partial class EnvironmentTabViewModel : TabViewModelBase
         Name = Name,
         Variables = Variables.ToModels(),
         ConfirmBeforeSend = ConfirmBeforeSend,
+        Color = Color,
     });
 
     partial void OnConfirmBeforeSendChanged(bool value) => UpdateDirty();
+
+    partial void OnColorChanged(EnvironmentColor value) => UpdateDirty();
 
     private void UpdateDirty()
     {
@@ -71,6 +79,7 @@ public sealed partial class EnvironmentTabViewModel : TabViewModelBase
             _environment.Name = string.IsNullOrWhiteSpace(Name) ? "New Environment" : Name.Trim();
         _environment.Variables = Variables.ToModels();
         _environment.ConfirmBeforeSend = ConfirmBeforeSend && !IsGlobals;
+        _environment.Color = IsGlobals ? EnvironmentColor.None : Color;
         Services.Workspace.SaveEnvironment(_environment);
         Name = _environment.Name;
         _snapshot = Snapshot();

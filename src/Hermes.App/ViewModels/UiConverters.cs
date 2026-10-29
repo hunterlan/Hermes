@@ -1,4 +1,5 @@
 using Avalonia.Data.Converters;
+using Hermes.Core.Models;
 
 namespace Hermes.App.ViewModels;
 
@@ -12,4 +13,8 @@ public static class UiConverters
 
     /// <summary>Upper-cases caption text (the design's text-transform: uppercase).</summary>
     public static readonly IValueConverter Upper = new FuncValueConverter<string?, string>(text => text?.ToUpperInvariant() ?? "");
+
+    /// <summary>Spoken and tooltip name of an environment colour swatch ("No color", "Red", ...).</summary>
+    public static readonly IValueConverter EnvironmentColorName =
+        new FuncValueConverter<EnvironmentColor, string>(color => color == EnvironmentColor.None ? "No color" : color.ToString());
 }
