@@ -20,6 +20,10 @@ public static class HistoryRetention
         return today.AddDays(-(int)daysBeforeToday);
     }
 
+    /// <summary>
+    /// Whether the entry's day, in the machine's local time zone (the zone its file is named in), is before
+    /// <paramref name="oldestKeptDay"/>. Pass the day from a clock that uses the same zone.
+    /// </summary>
     public static bool IsExpired(DateTimeOffset timestamp, DateOnly? oldestKeptDay) =>
         oldestKeptDay is { } oldest && DateOnly.FromDateTime(timestamp.LocalDateTime) < oldest;
 }
