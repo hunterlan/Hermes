@@ -613,6 +613,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         SidebarWidth = Math.Clamp(session.SidebarWidth, 200, 600);
 
         // ActiveTabIndex counts the saved tabs, some of which may not come back (their entity was deleted).
+        var restored = new List<TabViewModelBase>();
         TabViewModelBase? active = null;
         foreach (var (saved, index) in session.Tabs.Select((t, i) => (t, i)))
         {
@@ -620,11 +621,15 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             if (tab is not null)
             {
                 tab.IsPinned = saved.IsPinned;
-                Tabs.Add(tab);
+                restored.Add(tab);
                 if (index <= session.ActiveTabIndex || active is null)
                     active = tab;
             }
         }
+
+        // With tabs turned off only the active tab and tabs with unsaved changes come back.
+        foreach (var tab in restored.Where(t => ShowTabs || t == active || t.IsDirty))
+            Tabs.Add(tab);
 
         if (active is null)
             NewRequest();

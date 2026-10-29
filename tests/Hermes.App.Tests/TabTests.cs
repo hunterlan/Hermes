@@ -300,6 +300,31 @@ public class TabTests
     }
 
     [AvaloniaFact]
+    public void Without_tabs_a_session_restores_only_the_active_and_unsaved_tabs() => WithTabsOff((_, _) =>
+    {
+        var (_, first, second) = CreateRequests("Restore");
+        var environments = Enumerable.Range(0, 2).Select(i => Workspace.CreateEnvironment($"Restore {i} {Guid.NewGuid()}")).ToList();
+        var draft = ModelCloner.Clone(first);
+        draft.Url = "https://example.com/draft";
+        SessionTab EnvTab(EnvironmentModel env) => new() { Kind = SessionTabKind.Environment, EntityId = env.Id, IsPinned = true };
+        Workspace.SaveSession(new SessionState
+        {
+            Tabs = [EnvTab(environments[0]), new SessionTab { Kind = SessionTabKind.Request, EntityId = first.Id, RequestDraft = draft },
+                EnvTab(environments[1]), new SessionTab { Kind = SessionTabKind.Request, EntityId = second.Id }],
+            ActiveTabIndex = 2,
+        });
+
+        var restored = new MainWindowViewModel(App.Services.GetRequiredService<TabServices>());
+
+        Assert.Equal([first.Id, environments[1].Id], restored.Tabs.Select(t => t.EntityId));
+        Assert.Equal(environments[1].Id, restored.ActiveTab?.EntityId);
+        Assert.True(restored.Tabs[0].IsDirty);
+        Assert.True(restored.IsTabStripVisible);
+        foreach (var env in environments)
+            Workspace.DeleteEnvironment(env);
+    });
+
+    [AvaloniaFact]
     public void Turning_tabs_off_closes_clean_tabs_only_once_confirmed() => WithShowTabs(true, (window, vm) =>
     {
         var (collection, first, second) = CreateRequests("Turn off");
