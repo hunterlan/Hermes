@@ -108,6 +108,19 @@ public class PostmanTests
     }
 
     [Fact]
+    public void Environment_colour_is_neither_exported_nor_imported()
+    {
+        var json = PostmanEnvironmentConverter.Export(new EnvironmentModel { Name = "Prod", Color = EnvironmentColor.Red });
+        Assert.DoesNotContain("color", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Red", json);
+
+        var withStrayColor = JsonNode.Parse(json)!.AsObject();
+        withStrayColor["color"] = "Red";
+        var back = PostmanEnvironmentConverter.Import(withStrayColor);
+        Assert.Equal(EnvironmentColor.None, back.Color);
+    }
+
+    [Fact]
     public void ImportService_detects_formats()
     {
         var result = new ImportResult();
