@@ -247,6 +247,9 @@
             <DataTemplate DataType="vm:EnvironmentMatrixTabViewModel">
               <v:EnvironmentMatrixView />
             </DataTemplate>
+            <DataTemplate DataType="vm:HelpTabViewModel">
+              <v:HelpView />
+            </DataTemplate>
           </ContentControl.DataTemplates>
         </ContentControl>
 
@@ -285,6 +288,16 @@
                     <TextBlock Text="New collection" FontWeight="SemiBold" FontSize="14" />
                     <TextBlock Classes="secondary" FontSize="12.5" Text="Group requests and share auth and variables" TextWrapping="Wrap" />
                   </StackPanel>
+                </Grid>
+              </Button>
+              <Button Classes="welcome" Command="{Binding OpenManualCommand}" CommandParameter="{x:Null}">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Border Classes="welcomeIcon"><PathIcon Data="{StaticResource IconHelp}" /></Border>
+                  <StackPanel Grid.Column="1" Margin="14,0">
+                    <TextBlock Text="User manual" FontWeight="SemiBold" FontSize="14" />
+                    <TextBlock Classes="secondary" FontSize="12.5" Text="Works offline" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <Border Grid.Column="2" Classes="kbd"><TextBlock Text="F1" /></Border>
                 </Grid>
               </Button>
             </StackPanel>

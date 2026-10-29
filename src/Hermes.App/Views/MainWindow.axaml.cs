@@ -226,6 +226,13 @@ public partial class MainWindow : Window
         if (_viewModel is not { } vm)
             return;
 
+        if (e.Key == Key.F1)
+        {
+            vm.OpenManualCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
         var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.KeyModifiers.HasFlag(KeyModifiers.Meta);
         if (!ctrl)
             return;

@@ -94,6 +94,14 @@
             <Button Grid.Column="1" Content="Browse…" Margin="8,0,0,0" Command="{Binding BrowseDataDirectoryCommand}" />
           </Grid>
         </Grid>
+        <TextBlock Classes="section" Text="HELP" Margin="0,8,0,10" />
+        <Grid Classes="setting" ColumnDefinitions="*,Auto">
+          <StackPanel>
+            <TextBlock Classes="title" Text="User manual" />
+            <TextBlock Classes="hint" Text="Works offline. Closes this dialog without saving changes." />
+          </StackPanel>
+          <Button Grid.Column="1" Content="Open manual" Command="{Binding OpenManualCommand}" />
+        </Grid>
         <TextBlock Text="Restart Hermes to use the new data folder." Foreground="{DynamicResource AccentBrush}" FontSize="12"
                    IsVisible="{Binding DataDirectoryChanged}" Margin="0,-8,0,8" />
       </StackPanel>

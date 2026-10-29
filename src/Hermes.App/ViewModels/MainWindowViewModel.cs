@@ -85,6 +85,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         yield return new PaletteItem("Toggle light / dark theme", null, null, null, () => _services.Settings.ToggleTheme());
         yield return new PaletteItem("Manage cookies", null, null, null, () => _ = OpenCookies());
         yield return new PaletteItem("Settings", null, null, "Ctrl ,", () => _ = OpenSettings());
+        yield return new PaletteItem("Open manual", null, null, "F1", () => OpenManual());
     }
 
     private WorkspaceService Workspace => _services.Workspace;
@@ -222,6 +223,15 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     [RelayCommand]
     public void OpenEnvironmentMatrix() =>
         OpenOrFocus(EnvironmentMatrixTabViewModel.MatrixId, () => new EnvironmentMatrixTabViewModel(_services));
+
+    /// <summary>Opens the manual, at <paramref name="fileName"/> when given.</summary>
+    [RelayCommand]
+    public void OpenManual(string? fileName = null)
+    {
+        OpenOrFocus(HelpTabViewModel.HelpId, () => new HelpTabViewModel(_services));
+        if (fileName is not null && ActiveTab is HelpTabViewModel help)
+            help.Navigate(fileName);
+    }
 
     public void OpenEnvironment(EnvironmentModel environment) =>
         OpenOrFocus(environment.Id, () => new EnvironmentTabViewModel(_services, environment));
@@ -519,6 +529,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     {
         var vm = new SettingsDialogViewModel(_services.Settings, Dialogs, _services.Http, Workspace.DataDirectory);
         await Dialogs.ShowDialogAsync<bool>(new Views.Dialogs.SettingsDialog { DataContext = vm });
+        if (vm.ManualRequested)
+            OpenManual();
         foreach (var tab in Tabs)
             tab.OnVariablesChanged();
     }
@@ -606,6 +618,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
                 return Workspace.FindEnvironment(id) is { } environment ? new EnvironmentTabViewModel(_services, environment) : null;
             case SessionTabKind.EnvironmentMatrix:
                 return new EnvironmentMatrixTabViewModel(_services);
+            case SessionTabKind.Help:
+                return new HelpTabViewModel(_services);
             default:
                 return null;
         }

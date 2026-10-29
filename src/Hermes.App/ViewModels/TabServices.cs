@@ -11,7 +11,8 @@ public sealed class TabServices(
     OAuth2Service oauth,
     DialogService dialogs,
     SettingsService settings,
-    HttpClientProvider http)
+    HttpClientProvider http,
+    ManualService manual)
 {
     public WorkspaceService Workspace { get; } = workspace;
     public RequestExecutor Executor { get; } = executor;
@@ -19,6 +20,7 @@ public sealed class TabServices(
     public DialogService Dialogs { get; } = dialogs;
     public SettingsService Settings { get; } = settings;
     public HttpClientProvider Http { get; } = http;
+    public ManualService Manual { get; } = manual;
 
     public AuthEditorViewModel CreateAuthEditor(bool allowInherit) =>
         new(OAuth, Dialogs.OpenUrlAsync, Dialogs.CopyTextAsync, allowInherit) { VerifySslProvider = () => Settings.Current.VerifySsl };
