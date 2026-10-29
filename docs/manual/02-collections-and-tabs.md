@@ -10,12 +10,24 @@ inherit. Use the sidebar to create, rename (`F2`) and delete items. `Ctrl+\` sho
 
 - **Preview tab:** opening an item from the sidebar with a single click shows it in a preview tab, which the next
   item you open replaces.
-- **Pinned tab:** pin a tab to keep it. A pinned tab is not replaced.
+- **Pinned tab:** pin a tab to keep it. A pinned tab is not replaced while tabs are on.
 - **Unsaved changes:** a tab with unsaved changes is kept until you save (`Ctrl+S`) or close it.
 
 Close a tab with `Ctrl+W` or a middle click. Switch tabs with `Ctrl+Tab` and `Ctrl+Shift+Tab`.
 
 ## Turning tabs off
 
-In [Settings](09-settings.md), turn off **Tabs**. Opening a request then replaces the current one. Tabs with unsaved
-changes stay until you save or close them.
+In [Settings](09-settings.md), turn off **Tabs** to work on one item at a time. Only the current tab and tabs with
+unsaved changes stay open:
+
+- **Turning it off** closes every other tab without unsaved changes, pinned tabs included. Hermes first says how
+  many tabs will close; cancel to keep tabs on.
+- **Opening an item** (request, folder, collection or environment) replaces the current tab. If the current tab has
+  unsaved changes, the item opens next to it instead.
+- **The tab strip** only shows while another tab has unsaved changes. Once those are saved or closed, it hides again.
+- **Switching** to an unsaved tab, by clicking it or with `Ctrl+Tab`, closes the tab you were on if it has no unsaved
+  changes.
+- **Pinning** has no effect: pinned tabs are replaced and closed like any other.
+- **Restarting** brings back only the current tab and tabs with unsaved changes.
+
+Turning tabs back on doesn't reopen the tabs that were closed.

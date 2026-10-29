@@ -18,6 +18,6 @@ public sealed class AppSettings
 
     public int HistoryRetentionDays { get; set; } = 30;
 
-    /// <summary>When off, opening an item replaces the current clean tab and the strip only shows while unsaved tabs remain.</summary>
+    /// <summary>When off, only the active tab and tabs with unsaved changes stay open; the strip shows while another tab is unsaved.</summary>
     public bool ShowTabs { get; set; } = true;
 }
