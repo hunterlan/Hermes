@@ -16,6 +16,7 @@ public static class TestAppBuilder
         Environment.SetEnvironmentVariable("HERMES_SECRET_STORE", "memory");
         return AppBuilder.Configure<App>()
             .UseSkia()
+            .WithInterFont()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
     }
 }

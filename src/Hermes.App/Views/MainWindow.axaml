@@ -41,8 +41,9 @@
     <Style Selector="Border.statusBar Button.ghost">
       <Setter Property="Padding" Value="6,0" />
       <Setter Property="MinHeight" Value="0" />
-      <Setter Property="Height" Value="22" />
+      <Setter Property="Height" Value="23" />
       <Setter Property="FontSize" Value="12" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
   </Window.Styles>
 
@@ -312,10 +313,12 @@
             <TextBlock Text="Secrets not protected" />
           </StackPanel>
         </Border>
-        <Button Grid.Column="2" Classes="ghost" Content="Cookies" Command="{Binding OpenCookiesCommand}" ToolTip.Tip="Manage cookies" />
+        <Button Grid.Column="2" Classes="ghost" Command="{Binding OpenCookiesCommand}" ToolTip.Tip="Manage cookies">
+          <TextBlock Text="Cookies" />
+        </Button>
         <Button Grid.Column="3" Classes="ghost" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Toggle light / dark theme">
           <StackPanel Orientation="Horizontal" Spacing="5">
-            <PathIcon Data="{StaticResource IconSun}" Width="12" Height="12" />
+            <PathIcon Data="{StaticResource IconSun}" Width="11" Height="11" />
             <TextBlock Text="Theme" />
           </StackPanel>
         </Button>
