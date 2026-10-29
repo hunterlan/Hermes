@@ -24,7 +24,15 @@ Open Settings with `Ctrl+,`.
 
 | Setting | Meaning |
 | --- | --- |
-| History retention (days) | How long history is kept |
+| History retention (days) | How many days of history are kept. Today counts as one of the days. 0 keeps history forever. At most 36500 |
 | Data folder | Where the JSON files are stored. Restart Hermes after changing it |
+
+### History retention
+
+With a retention of 7, Hermes keeps today and the 6 days before it. With 1 it keeps only today. A value of 0 keeps history forever. The most you can enter is 36500 days.
+
+Older history is removed as soon as you save the setting, and again each time the date changes while Hermes is open. You don't need to restart. Removed entries leave the History sidebar and their files are deleted, so they can't be brought back.
+
+The value must be a whole number, 0 or more. If it isn't, the dialog explains why under the field and Save stays disabled until you fix it.
 
 See [Data folder](08-data-folder.md).
