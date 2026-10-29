@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="https://github.com/whistyun/Markdown.Avalonia.Tight"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:svc="using:Hermes.App.Services"
+             x:Class="Hermes.App.Views.HelpView"
+             x:DataType="vm:HelpTabViewModel">
+  <Grid ColumnDefinitions="220,Auto,*">
+    <ListBox ItemsSource="{Binding Pages}" SelectedItem="{Binding SelectedPage}" Margin="8">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="svc:ManualPage">
+          <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+    <Border Grid.Column="1" Width="1" Background="{DynamicResource BorderBrush}" />
+    <md:MarkdownScrollViewer x:Name="Viewer" Grid.Column="2" Markdown="{Binding Markdown}" Margin="24,16">
+      <md:MarkdownScrollViewer.Styles>
+        <!-- The default Markdown theme sets code blocks in a proportional, coloured font, which breaks aligned text such as the data folder layout. -->
+        <Style Selector="TextBlock.CodeBlock">
+          <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+          <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
+      </md:MarkdownScrollViewer.Styles>
+    </md:MarkdownScrollViewer>
+  </Grid>
+</UserControl>

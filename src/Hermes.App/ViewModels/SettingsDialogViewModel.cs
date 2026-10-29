@@ -48,6 +48,9 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
     [ObservableProperty] public partial string HistoryRetentionText { get; set; }
     [ObservableProperty] public partial string DataDirectory { get; set; }
     [ObservableProperty] public partial bool ShowTabs { get; set; }
+
+    /// <summary>Set when the dialog was closed to open the manual, so the caller can open it.</summary>
+    public bool ManualRequested { get; private set; }
     [ObservableProperty] public partial string CookieStatus { get; set; } = "";
 
     public bool DataDirectoryChanged => !string.Equals(Path.GetFullPath(DataDirectory), Path.GetFullPath(_currentDataDirectory), StringComparison.Ordinal);
@@ -93,4 +96,11 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
 
     [RelayCommand]
     private void Cancel() => CloseRequested?.Invoke(false);
+
+    [RelayCommand]
+    private void OpenManual()
+    {
+        ManualRequested = true;
+        CloseRequested?.Invoke(false);
+    }
 }

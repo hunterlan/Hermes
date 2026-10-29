@@ -79,6 +79,7 @@ public partial class App : Application
         services.AddSingleton<RequestExecutor>();
         services.AddSingleton<OAuth2Service>();
         services.AddSingleton<DialogService>();
+        services.AddSingleton<ManualService>();
         services.AddSingleton<TabServices>();
         services.AddSingleton<MainWindowViewModel>();
         return services.BuildServiceProvider();
