@@ -10,21 +10,24 @@ namespace Hermes.App.Services;
 public sealed class WorkspaceService
 {
     private readonly WorkspaceRepository _repository;
+    private readonly TimeProvider _timeProvider;
 
     // History is written in the background, in order, so a clear always lands after the appends before it.
     private readonly BackgroundWriter _historyWriter = new();
 
     private EnvironmentModel? _activeEnvironment;
 
-    public WorkspaceService(WorkspaceRepository repository, SettingsService settings)
+    public WorkspaceService(WorkspaceRepository repository, SettingsService settings, TimeProvider timeProvider)
     {
         _repository = repository;
+        _timeProvider = timeProvider;
         _historyWriter.Failed += ex => StorageProblem?.Invoke($"History couldn't be saved: {ex.Message}");
         Settings = settings;
         Collections = repository.LoadCollections();
         Environments = repository.LoadEnvironments();
         Globals = repository.LoadGlobals();
-        History = new ObservableCollection<HistoryEntry>(repository.LoadHistory(settings.Current.HistoryRetentionDays));
+        History = new ObservableCollection<HistoryEntry>(repository.LoadHistory());
+        ApplyHistoryRetention();
     }
 
     public SettingsService Settings { get; }
@@ -268,6 +271,20 @@ public sealed class WorkspaceService
     {
         History.Clear();
         _historyWriter.Enqueue(_repository.ClearHistory);
+    }
+
+    /// <summary>
+    /// Drops history older than the retention setting from the sidebar now and deletes its files on the history
+    /// writer, after the appends already queued.
+    /// </summary>
+    private void ApplyHistoryRetention()
+    {
+        var retentionDays = Settings.Current.HistoryRetentionDays;
+        var today = DateOnly.FromDateTime(_timeProvider.GetLocalNow().DateTime);
+        var oldestKeptDay = HistoryRetention.OldestKeptDay(retentionDays, today);
+        foreach (var expired in History.Where(entry => HistoryRetention.IsExpired(entry.Timestamp, oldestKeptDay)).ToList())
+            History.Remove(expired);
+        _historyWriter.Enqueue(() => _repository.PruneHistory(retentionDays));
     }
 
     /// <summary>Completes when queued history writes are on disk (or have failed).</summary>

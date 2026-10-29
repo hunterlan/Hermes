@@ -102,12 +102,12 @@ public class StorageTests : IDisposable
         repo.AppendHistory(new HistoryEntry { StatusCode = 404 });
 
         var fresh = new WorkspaceRepository(_dir);
-        Assert.Equal([404, 200], fresh.LoadHistory(30).Select(h => h.StatusCode));
+        Assert.Equal([404, 200], fresh.LoadHistory().Select(h => h.StatusCode));
         Assert.Single(fresh.LoadErrors);
 
         // Reported once: the damaged line is gone from the file after that.
         var again = new WorkspaceRepository(_dir);
-        Assert.Equal([404, 200], again.LoadHistory(30).Select(h => h.StatusCode));
+        Assert.Equal([404, 200], again.LoadHistory().Select(h => h.StatusCode));
         Assert.Empty(again.LoadErrors);
     }
 
@@ -126,7 +126,7 @@ public class StorageTests : IDisposable
         release.Set();
         await writer.FlushAsync();
 
-        Assert.Empty(new WorkspaceRepository(_dir).LoadHistory(30));
+        Assert.Empty(new WorkspaceRepository(_dir).LoadHistory());
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class StorageTests : IDisposable
         var loadedRequest = Assert.IsType<HttpRequestModel>(Assert.IsType<FolderModel>(loaded.Items[0]).Items[0]);
         Assert.Equal("http://x", loadedRequest.Url);
         Assert.Equal("1", Assert.Single(fresh.LoadEnvironments()).Variables[0].Value);
-        Assert.Equal(200, Assert.Single(fresh.LoadHistory(30)).StatusCode);
+        Assert.Equal(200, Assert.Single(fresh.LoadHistory()).StatusCode);
         Assert.Equal(2, fresh.LoadSession().ActiveTabIndex);
 
         fresh.DeleteCollection(collection.Id);
