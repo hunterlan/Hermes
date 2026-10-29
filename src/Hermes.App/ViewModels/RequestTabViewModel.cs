@@ -511,7 +511,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
     {
         var model = BuildModel();
         // One context for the request and its masked copy: switching environments while it's in flight changes neither.
-        var (prepared, masked) = RequestPreparer.PrepareWithMasked(model, CreateContext());
+        var context = CreateContext();
+        var (prepared, masked) = RequestPreparer.PrepareWithMasked(model, context);
         if (!await ConfirmSendAsync(prepared))
             return;
 
@@ -526,7 +527,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
                 Response.SetCancelled();
             else if (result.Response is { } response)
             {
-                Response.SetResponse(response);
+                Response.SetResponse(response, sentWith: context.Environment);
                 // Responses are kept with saved requests, so reopening shows the last result and earlier ones.
                 // The saved copy has credentials masked; the one on screen stays exact.
                 if (IsPersisted && Services.Workspace.SaveResponse(RequestId, new SavedResponse

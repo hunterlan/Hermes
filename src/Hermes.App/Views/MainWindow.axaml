@@ -87,11 +87,7 @@
           <Button Name="EnvironmentButton" Classes="outline" ToolTip.Tip="Active environment (Ctrl+E)"
                   AutomationProperties.Name="{Binding EnvironmentButtonText, StringFormat='Active environment: {0}. Change environment'}">
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <Panel VerticalAlignment="Center">
-                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding HasActiveEnvironment}" />
-                <Ellipse Width="8" Height="8" Stroke="{DynamicResource TextTertiaryBrush}" StrokeThickness="1.5"
-                         IsVisible="{Binding !HasActiveEnvironment}" />
-              </Panel>
+              <c:EnvironmentColorDot Name="EnvironmentButtonDot" Color="{Binding ActiveEnvironmentColor}" />
               <TextBlock Text="ENV" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
               <TextBlock Text="{Binding EnvironmentButtonText}" FontWeight="SemiBold" VerticalAlignment="Center"
                          MaxWidth="200" TextTrimming="CharacterEllipsis" />
@@ -114,9 +110,7 @@
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="vm:EnvironmentOption">
                         <Grid ColumnDefinitions="16,*,Auto,Auto" ColumnSpacing="10">
-                          <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding !IsNone}" />
-                          <Ellipse Width="8" Height="8" Stroke="{DynamicResource TextTertiaryBrush}" StrokeThickness="1.5"
-                                   IsVisible="{Binding IsNone}" />
+                          <c:EnvironmentColorDot Color="{Binding Color}" HorizontalAlignment="Center" />
                           <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                                      Classes.secondary="{Binding IsMuted}" Classes.active="{Binding IsActive}" />
                           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding AsksFirst}">

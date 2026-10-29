@@ -11,4 +11,6 @@ public sealed class MatrixColumn(EnvironmentModel model, bool isGlobals, bool is
     public string Name => IsGlobals ? "Globals" : Model.Name;
     public string Caption => IsGlobals ? "fallback" : IsActive ? "active" : Model.ConfirmBeforeSend ? "asks before sending" : "";
     public bool ConfirmBeforeSend => Model.ConfirmBeforeSend;
+    public EnvironmentColor Color => Model.Color;
+    public bool ShowsColor => !IsGlobals;
 }

@@ -32,6 +32,10 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     [ObservableProperty] public partial bool IsClientError { get; set; }
     [ObservableProperty] public partial bool IsServerError { get; set; }
 
+    /// <summary>The environment the shown response was sent with, as it was at the time; null when unknown or none.</summary>
+    [ObservableProperty] public partial string? SentWithEnvironmentName { get; set; }
+    [ObservableProperty] public partial EnvironmentColor SentWithEnvironmentColor { get; set; }
+
     /// <summary>The exact request that went out (after variables and auth), shown in the "Sent request" tab.</summary>
     [ObservableProperty] public partial string SentRequestText { get; set; } = "";
 
@@ -173,11 +177,14 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         Error = error;
     }
 
-    public void SetResponse(ResponseModel response)
+    /// <param name="sentWith">The environment the request was resolved with; null for none or a saved response, which doesn't record it.</param>
+    public void SetResponse(ResponseModel response, EnvironmentModel? sentWith = null)
     {
         _response = response;
         IsLoading = false;
         Error = null;
+        SentWithEnvironmentName = sentWith?.Name;
+        SentWithEnvironmentColor = sentWith?.Color ?? EnvironmentColor.None;
 
         StatusText = $"{response.StatusCode} {response.ReasonPhrase}";
         IsSuccess = response.StatusCode is >= 200 and < 300;
