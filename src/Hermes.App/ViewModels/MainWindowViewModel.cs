@@ -46,6 +46,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         {
             foreach (var tab in Tabs)
                 tab.OnSettingsChanged();
+            CloseTabsNotKeptInSingleTabMode();
             OnPropertyChanged(nameof(ShowTabs));
             OnPropertyChanged(nameof(IsTabStripVisible));
         };
@@ -359,6 +360,18 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             RemoveTab(tab);
     }
 
+    /// <summary>Asks whether to close the tabs that turning Tabs off would close. True when there are none or the user confirmed.</summary>
+    public async Task<bool> ConfirmTurningTabsOffAsync()
+    {
+        var closingCount = TabsNotKeptInSingleTabMode.Count();
+        if (closingCount == 0)
+            return true;
+        return await Dialogs.ConfirmAsync("Turn off tabs?",
+            $"{closingCount} {(closingCount == 1 ? "tab" : "tabs")} will be closed: every tab except the current one and " +
+            "those with unsaved changes, including pinned tabs.",
+            "Close tabs");
+    }
+
     private void OnTabPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(TabViewModelBase.Title))
@@ -554,7 +567,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     [RelayCommand]
     private async Task OpenSettings()
     {
-        var vm = new SettingsDialogViewModel(_services.Settings, Dialogs, _services.Http, Workspace.DataDirectory);
+        var vm = new SettingsDialogViewModel(_services.Settings, Dialogs, _services.Http, Workspace.DataDirectory, ConfirmTurningTabsOffAsync);
         await Dialogs.ShowDialogAsync<bool>(new Views.Dialogs.SettingsDialog { DataContext = vm });
         if (vm.ManualRequested)
             OpenManual();
