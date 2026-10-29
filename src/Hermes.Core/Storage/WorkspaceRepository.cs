@@ -18,7 +18,7 @@ namespace Hermes.Core.Storage;
 /// Secret variables and literal auth credentials go to <see cref="Secrets"/> instead of these files while it can
 /// protect them; history keeps no credentials at all.
 /// </summary>
-public sealed class WorkspaceRepository(string root, SecretStore? secrets = null)
+public sealed class WorkspaceRepository(string root, SecretStore? secrets = null, TimeProvider? timeProvider = null)
 {
     /// <inheritdoc cref="SavedResponseStore.MaxResponsesPerRequest"/>
     public const int MaxSavedResponses = SavedResponseStore.MaxResponsesPerRequest;
@@ -30,7 +30,7 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
     private const string SessionOwner = "session";
     private static readonly Dictionary<string, string> NoSecrets = [];
 
-    private readonly HistoryStore _history = new(Path.Combine(root, "history"));
+    private readonly HistoryStore _history = new(Path.Combine(root, "history"), timeProvider);
     private readonly SavedResponseStore _responses = new(Path.Combine(root, "responses"));
 
     public string Root { get; } = root;
@@ -113,7 +113,10 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
 
     // ---- history ----
 
-    public List<HistoryEntry> LoadHistory(int retentionDays) => _history.Load(retentionDays, LoadErrors);
+    public List<HistoryEntry> LoadHistory() => _history.Load(LoadErrors);
+
+    /// <inheritdoc cref="HistoryStore.Prune"/>
+    public void PruneHistory(int retentionDays) => _history.Prune(retentionDays);
 
     /// <summary>Appends the entry without literal credentials; the in-memory <paramref name="entry"/> is left as is.</summary>
     public void AppendHistory(HistoryEntry entry)

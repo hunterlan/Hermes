@@ -68,11 +68,12 @@ public partial class App : Application
     private static ServiceProvider ConfigureServices()
     {
         var services = new ServiceCollection();
+        services.AddSingleton(TimeProvider.System);
         services.AddSingleton<SettingsService>();
         services.AddSingleton(sp =>
         {
             var dataDir = DataDirectoryOf(sp.GetRequiredService<SettingsService>());
-            return new WorkspaceRepository(dataDir, KeychainSecretStore.Create(dataDir));
+            return new WorkspaceRepository(dataDir, KeychainSecretStore.Create(dataDir), sp.GetRequiredService<TimeProvider>());
         });
         services.AddSingleton<WorkspaceService>();
         services.AddSingleton<HttpClientProvider>();
