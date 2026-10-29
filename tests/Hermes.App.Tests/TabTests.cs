@@ -1,7 +1,11 @@
 using System.Text.Json;
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.LogicalTree;
 using Hermes.App.Services;
 using Hermes.App.ViewModels;
+using Hermes.App.Views.Dialogs;
+using Hermes.Core.Http;
 using Hermes.Core.Models;
 using Hermes.Core.Serialization;
 using Microsoft.Extensions.DependencyInjection;
@@ -252,14 +256,14 @@ public class TabTests
         return copy;
     }
 
-    /// <summary>Runs <paramref name="test"/> on an empty window with tabs turned off; settings are shared, so they're restored after.</summary>
-    private static void WithTabsOff(Action<Views.MainWindow, MainWindowViewModel> test)
+    /// <summary>Runs <paramref name="test"/> on an empty window with Tabs set to <paramref name="showTabs"/>; settings are shared, so they're restored after.</summary>
+    private static void WithShowTabs(bool showTabs, Action<Views.MainWindow, MainWindowViewModel> test)
     {
         var original = Settings.Current;
         var (window, vm) = ShowEmptyWindow();
         try
         {
-            Settings.Update(CopyWithShowTabs(original, false));
+            Settings.Update(CopyWithShowTabs(original, showTabs));
             test(window, vm);
         }
         finally
@@ -272,6 +276,8 @@ public class TabTests
         }
     }
 
+    private static void WithTabsOff(Action<Views.MainWindow, MainWindowViewModel> test) => WithShowTabs(false, test);
+
     private static RequestTabViewModel EditActiveRequest(MainWindowViewModel vm)
     {
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
@@ -279,6 +285,88 @@ public class TabTests
         Assert.True(tab.IsDirty);
         return tab;
     }
+
+    /// <summary>A settings dialog with Tabs switched off, about to be saved.</summary>
+    private static SettingsDialogViewModel SettingsTurningTabsOff(MainWindowViewModel vm) =>
+        new(Settings, App.Services.GetRequiredService<DialogService>(), App.Services.GetRequiredService<HttpClientProvider>(),
+            Workspace.DataDirectory, vm.ConfirmTurningTabsOffAsync)
+        { ShowTabs = false };
+
+    private static string MessageOf(Avalonia.Controls.Window window)
+    {
+        UiTestHelpers.Pump();
+        var dialog = Assert.IsType<MessageDialog>(Assert.Single(window.OwnedWindows));
+        return string.Join("\n", dialog.GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text));
+    }
+
+    [AvaloniaFact]
+    public void Turning_tabs_off_closes_clean_tabs_only_once_confirmed() => WithShowTabs(true, (window, vm) =>
+    {
+        var (collection, first, second) = CreateRequests("Turn off");
+        vm.OpenRequest(first);
+        vm.OpenCollection(collection);
+        vm.OpenRequest(second);
+        var active = vm.ActiveTab!;
+        var dialog = SettingsTurningTabsOff(vm);
+        var dialogClosed = false;
+        dialog.CloseRequested += _ => dialogClosed = true;
+
+        var saving = dialog.SaveCommand.ExecuteAsync(null);
+        Assert.Contains("2 tabs will be closed", MessageOf(window));
+        Answer(window, "cancel");
+
+        Assert.True(saving.IsCompleted);
+        Assert.True(Settings.Current.ShowTabs);
+        Assert.True(dialog.ShowTabs);
+        Assert.False(dialogClosed);
+        Assert.Equal(3, vm.Tabs.Count);
+
+        dialog.ShowTabs = false;
+        saving = dialog.SaveCommand.ExecuteAsync(null);
+        Answer(window, "confirm");
+
+        Assert.True(saving.IsCompleted);
+        Assert.False(Settings.Current.ShowTabs);
+        Assert.True(dialogClosed);
+        Assert.Same(active, Assert.Single(vm.Tabs));
+        Assert.False(vm.IsTabStripVisible);
+    });
+
+    [AvaloniaFact]
+    public void Turning_tabs_off_closes_pinned_tabs_too() => WithShowTabs(true, (window, vm) =>
+    {
+        var (_, first, second) = CreateRequests("Turn off pinned");
+        vm.OpenRequest(first);
+        vm.TogglePinCommand.Execute(vm.ActiveTab);
+        vm.OpenRequest(second);
+        var active = vm.ActiveTab!;
+
+        var saving = SettingsTurningTabsOff(vm).SaveCommand.ExecuteAsync(null);
+        Assert.Contains("1 tab will be closed", MessageOf(window));
+        Answer(window, "confirm");
+
+        Assert.True(saving.IsCompleted);
+        Assert.Same(active, Assert.Single(vm.Tabs));
+    });
+
+    [AvaloniaFact]
+    public void Turning_tabs_off_keeps_unsaved_tabs_without_asking() => WithShowTabs(true, (window, vm) =>
+    {
+        var (_, first, second) = CreateRequests("Turn off dirty");
+        vm.OpenRequest(first);
+        var dirty = EditActiveRequest(vm);
+        vm.OpenRequest(second);
+        var active = vm.ActiveTab!;
+
+        var saving = SettingsTurningTabsOff(vm).SaveCommand.ExecuteAsync(null);
+        UiTestHelpers.Pump();
+
+        Assert.Empty(window.OwnedWindows);
+        Assert.True(saving.IsCompleted);
+        Assert.False(Settings.Current.ShowTabs);
+        Assert.Equal([dirty, active], vm.Tabs);
+        Assert.True(vm.IsTabStripVisible);
+    });
 
     [AvaloniaFact]
     public void Without_tabs_opening_an_item_replaces_a_clean_tab_and_opens_beside_a_dirty_one() => WithTabsOff((_, vm) =>
