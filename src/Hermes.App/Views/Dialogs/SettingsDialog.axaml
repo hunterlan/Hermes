@@ -83,8 +83,11 @@
         <Grid Classes="setting" ColumnDefinitions="*,Auto">
           <StackPanel>
             <TextBlock Classes="title" Text="History retention (days)" />
+            <TextBlock Classes="hint" Text="How many days of history to keep, today included: 1 keeps only today, 7 keeps today and the 6 days before it. 0 keeps history forever." />
+            <TextBlock Classes="hint" Text="{Binding HistoryRetentionError}" Foreground="{DynamicResource ErrorBrush}"
+                       IsVisible="{Binding HistoryRetentionError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>
-          <TextBox Grid.Column="1" Width="140" Text="{Binding HistoryRetentionText}" />
+          <TextBox Grid.Column="1" Width="140" VerticalAlignment="Top" Text="{Binding HistoryRetentionText}" />
         </Grid>
         <Grid Classes="setting" RowDefinitions="Auto,Auto,Auto">
           <TextBlock Classes="title" Text="Data folder" />
