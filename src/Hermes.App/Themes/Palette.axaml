@@ -43,6 +43,14 @@
       <SolidColorBrush x:Key="MethodHEADBrush" Color="#80B9FF" />
       <SolidColorBrush x:Key="MethodOPTIONSBrush" Color="#A3ACBA" />
       <SolidColorBrush x:Key="MethodOTHERBrush" Color="#A3ACBA" />
+      <SolidColorBrush x:Key="EnvironmentColorRedBrush" Color="#FF8179" />
+      <SolidColorBrush x:Key="EnvironmentColorOrangeBrush" Color="#FF9F5A" />
+      <SolidColorBrush x:Key="EnvironmentColorAmberBrush" Color="#F0B84A" />
+      <SolidColorBrush x:Key="EnvironmentColorGreenBrush" Color="#62D6A0" />
+      <SolidColorBrush x:Key="EnvironmentColorTealBrush" Color="#4FD1D9" />
+      <SolidColorBrush x:Key="EnvironmentColorBlueBrush" Color="#80B9FF" />
+      <SolidColorBrush x:Key="EnvironmentColorPurpleBrush" Color="#B69CFF" />
+      <SolidColorBrush x:Key="EnvironmentColorPinkBrush" Color="#F58CC8" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Light">
       <SolidColorBrush x:Key="BgPrimaryBrush" Color="#FFFFFF" />
@@ -84,6 +92,14 @@
       <SolidColorBrush x:Key="MethodHEADBrush" Color="#1B5BB8" />
       <SolidColorBrush x:Key="MethodOPTIONSBrush" Color="#465062" />
       <SolidColorBrush x:Key="MethodOTHERBrush" Color="#465062" />
+      <SolidColorBrush x:Key="EnvironmentColorRedBrush" Color="#C62F26" />
+      <SolidColorBrush x:Key="EnvironmentColorOrangeBrush" Color="#B8540F" />
+      <SolidColorBrush x:Key="EnvironmentColorAmberBrush" Color="#8F5600" />
+      <SolidColorBrush x:Key="EnvironmentColorGreenBrush" Color="#0D6E45" />
+      <SolidColorBrush x:Key="EnvironmentColorTealBrush" Color="#0B6E78" />
+      <SolidColorBrush x:Key="EnvironmentColorBlueBrush" Color="#1B5BB8" />
+      <SolidColorBrush x:Key="EnvironmentColorPurpleBrush" Color="#6C45C9" />
+      <SolidColorBrush x:Key="EnvironmentColorPinkBrush" Color="#B02C7A" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 
