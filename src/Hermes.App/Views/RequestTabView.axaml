@@ -20,9 +20,14 @@
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
     <Style Selector="ToggleButton.sectionHeader:pointerover /template/ ContentPresenter#PART_ContentPresenter,
-                     ToggleButton.sectionHeader:checked /template/ ContentPresenter#PART_ContentPresenter">
+                     ToggleButton.sectionHeader:checked /template/ ContentPresenter#PART_ContentPresenter,
+                     ToggleButton.sectionHeader:pressed /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <!-- Fluent shrinks pressed buttons; a shrunken header moves the arrow out from under the pointer before release -->
+    <Style Selector="ToggleButton.sectionHeader:pressed">
+      <Setter Property="RenderTransform" Value="none" />
     </Style>
     <Style Selector="ToggleButton.sectionHeader PathIcon.chevron">
       <Setter Property="Width" Value="12" />
