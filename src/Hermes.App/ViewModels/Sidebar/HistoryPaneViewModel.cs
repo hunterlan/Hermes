@@ -53,6 +53,12 @@ public sealed partial class HistoryPaneViewModel : ObservableObject
         OnPropertyChanged(nameof(IsEmpty));
     }
 
+    /// <summary>"Open in new tab" is hidden in single-tab mode, where every open replaces the current tab.</summary>
+    public bool IsOpenInTabAvailable => _host.ShowTabs;
+
+    /// <summary>Called when Settings → Tabs changed.</summary>
+    public void OnShowTabsChanged() => OnPropertyChanged(nameof(IsOpenInTabAvailable));
+
     [RelayCommand]
     public void Open(HistoryItemViewModel? item)
     {

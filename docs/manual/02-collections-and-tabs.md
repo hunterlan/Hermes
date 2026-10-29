@@ -28,6 +28,7 @@ unsaved changes stay open:
 - **Switching** to an unsaved tab, by clicking it or with `Ctrl+Tab`, closes the tab you were on if it has no unsaved
   changes.
 - **Pinning** has no effect: pinned tabs are replaced and closed like any other.
+- **Open in tab** and **Open in new tab** are hidden from the sidebar and History menus.
 - **Restarting** brings back only the current tab and tabs with unsaved changes.
 
 Turning tabs back on doesn't reopen the tabs that were closed.

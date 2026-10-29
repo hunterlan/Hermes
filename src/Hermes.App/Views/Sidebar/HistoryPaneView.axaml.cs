@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Hermes.App.ViewModels.Sidebar;
@@ -28,11 +29,18 @@ public partial class HistoryPaneView : UserControl
     {
         if (sender is not Control { DataContext: HistoryItemViewModel item } control || ViewModel is not { } vm)
             return;
+        CreateMenu(vm, item).Open(control);
+        e.Handled = true;
+    }
+
+    internal static ContextMenu CreateMenu(HistoryPaneViewModel vm, HistoryItemViewModel item)
+    {
         var open = new MenuItem { Header = "Open in new tab" };
         open.Click += (_, _) => vm.Open(item);
+        // Hidden while Settings → Tabs is off; the binding follows the setting as it changes.
+        open.Bind(IsVisibleProperty, new Binding(nameof(HistoryPaneViewModel.IsOpenInTabAvailable)) { Source = vm });
         var delete = new MenuItem { Header = "Delete" };
         delete.Click += (_, _) => vm.DeleteCommand.Execute(item);
-        new ContextMenu { ItemsSource = new List<Control> { open, delete } }.Open(control);
-        e.Handled = true;
+        return new ContextMenu { ItemsSource = new List<Control> { open, delete } };
     }
 }

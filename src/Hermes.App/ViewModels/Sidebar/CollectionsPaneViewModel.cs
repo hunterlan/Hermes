@@ -92,6 +92,12 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
 
     // ---- open ----
 
+    /// <summary>"Open in tab" is hidden in single-tab mode, where every open replaces the current tab.</summary>
+    public bool IsOpenInTabAvailable => _host.ShowTabs;
+
+    /// <summary>Called when Settings → Tabs changed.</summary>
+    public void OnShowTabsChanged() => OnPropertyChanged(nameof(IsOpenInTabAvailable));
+
     /// <summary>Single click: requests open in the preview tab; folders and collections only expand or collapse.</summary>
     public void Activate(TreeNodeViewModel? node)
     {

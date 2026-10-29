@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
@@ -211,7 +212,11 @@ public partial class CollectionsPaneView : UserControl
         if (ViewModel is not { } vm)
             return;
         vm.SelectedNode = node;
+        CreateMenu(vm, node).Open(anchor);
+    }
 
+    internal static ContextMenu CreateMenu(CollectionsPaneViewModel vm, TreeNodeViewModel node)
+    {
         MenuItem Item(string header, Action action, string? gesture = null)
         {
             var item = new MenuItem { Header = header };
@@ -231,7 +236,12 @@ public partial class CollectionsPaneView : UserControl
         if (!node.IsRequest)
             items.Add(Item(node.IsCollection ? "Edit collection" : "Edit folder", () => vm.Open(node)));
         else
-            items.Add(Item("Open in tab", () => vm.Open(node)));
+        {
+            // Hidden while Settings → Tabs is off; the binding follows the setting as it changes.
+            var openInTab = Item("Open in tab", () => vm.Open(node));
+            openInTab.Bind(IsVisibleProperty, new Binding(nameof(CollectionsPaneViewModel.IsOpenInTabAvailable)) { Source = vm });
+            items.Add(openInTab);
+        }
         items.Add(Item("Rename", () => vm.RenameCommand.Execute(node), "F2"));
         items.Add(Item("Duplicate", () => vm.DuplicateCommand.Execute(node)));
         if (node.IsCollection)
@@ -239,8 +249,7 @@ public partial class CollectionsPaneView : UserControl
         items.Add(new Separator());
         items.Add(Item("Delete", () => vm.DeleteCommand.Execute(node), "Delete"));
 
-        var menu = new ContextMenu { ItemsSource = items };
-        menu.Open(anchor);
+        return new ContextMenu { ItemsSource = items };
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

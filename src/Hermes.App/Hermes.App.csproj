@@ -40,6 +40,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Hermes.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Hermes.Core\Hermes.Core.csproj" />
   </ItemGroup>
 </Project>
