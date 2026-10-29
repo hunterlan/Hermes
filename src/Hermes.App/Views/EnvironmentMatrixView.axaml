@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:c="using:Hermes.App.Controls"
              x:Class="Hermes.App.Views.EnvironmentMatrixView"
              x:DataType="vm:EnvironmentMatrixTabViewModel">
   <UserControl.Styles>
@@ -79,6 +80,7 @@
                   <Border Classes="cell headerCell" Classes.active="{Binding IsActive}">
                     <StackPanel VerticalAlignment="Center" Spacing="1">
                       <StackPanel Orientation="Horizontal" Spacing="6">
+                        <c:EnvironmentColorDot Color="{Binding Color}" IsVisible="{Binding ShowsColor}" />
                         <PathIcon Data="{StaticResource IconLock}" Width="11" Height="11" Foreground="{DynamicResource ErrorBrush}"
                                   IsVisible="{Binding ConfirmBeforeSend}" />
                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />

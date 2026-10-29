@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sb="using:Hermes.App.ViewModels.Sidebar"
              xmlns:sbv="using:Hermes.App.Views.Sidebar"
+             xmlns:c="using:Hermes.App.Controls"
              x:Class="Hermes.App.Views.Sidebar.EnvironmentsPaneView"
              x:DataType="sb:EnvironmentsPaneViewModel">
   <UserControl.Styles>
@@ -41,8 +42,12 @@
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="sb:EnvironmentItemViewModel">
           <Grid ColumnDefinitions="Auto,*,Auto,Auto" Background="Transparent" Tapped="OnItemTapped" ContextRequested="OnContextRequested">
-            <PathIcon Data="{StaticResource IconEnvironment}" Width="14" Height="14" Margin="0,0,10,0"
-                      Foreground="{DynamicResource TextSecondaryBrush}" />
+            <!-- Globals keep the generic icon; environments show their colour -->
+            <Panel Width="14" Margin="0,0,10,0">
+              <PathIcon Data="{StaticResource IconEnvironment}" Width="14" Height="14" Foreground="{DynamicResource TextSecondaryBrush}"
+                        IsVisible="{Binding IsGlobals}" />
+              <c:EnvironmentColorDot Color="{Binding Color}" HorizontalAlignment="Center" IsVisible="{Binding IsRegular}" />
+            </Panel>
             <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                        IsVisible="{Binding !IsRenaming}" FontWeight="{Binding IsGlobals, Converter={x:Static sbv:EnvironmentsPaneView.BoldIf}}" />
             <TextBox Grid.Column="1" Text="{Binding Name, Mode=OneWay}" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1"

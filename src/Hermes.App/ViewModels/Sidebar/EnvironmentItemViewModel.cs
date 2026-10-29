@@ -11,6 +11,7 @@ public sealed partial class EnvironmentItemViewModel(EnvironmentModel model, boo
     public bool IsActive { get; } = isActive;
     public bool IsRegular => !IsGlobals;
     public bool ConfirmBeforeSend => Model.ConfirmBeforeSend;
+    public EnvironmentColor Color => Model.Color;
 
     [ObservableProperty] public partial bool IsVisible { get; set; } = true;
     [ObservableProperty] public partial bool IsRenaming { get; set; }

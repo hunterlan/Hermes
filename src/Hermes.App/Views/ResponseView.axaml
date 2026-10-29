@@ -84,6 +84,16 @@
         </Panel>
         <TextBlock Grid.Column="1" Classes="mono secondary" Text="{Binding TimeText}" ToolTip.Tip="{Binding TimingDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
         <TextBlock Grid.Column="2" Classes="mono secondary" Text="{Binding SizeText}" ToolTip.Tip="{Binding SizeDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
+        <!-- the environment this response was sent with, which may differ from the one active now -->
+        <Grid Grid.Column="3" Name="SentWithEnvironment" ColumnDefinitions="Auto,*" ColumnSpacing="6" Margin="12,0,8,0"
+              HorizontalAlignment="Left" VerticalAlignment="Center"
+              IsVisible="{Binding SentWithEnvironmentName, Converter={x:Static ObjectConverters.IsNotNull}}"
+              ToolTip.Tip="{Binding SentWithEnvironmentName, StringFormat='Sent with {0}'}"
+              AutomationProperties.Name="{Binding SentWithEnvironmentName, StringFormat='Sent with {0}'}">
+          <c:EnvironmentColorDot Color="{Binding SentWithEnvironmentColor}" />
+          <TextBlock Grid.Column="1" Classes="mono secondary" Text="{Binding SentWithEnvironmentName}" VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis" />
+        </Grid>
         <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="2">
           <Border Classes="tag warn" Margin="0,0,6,0" IsVisible="{Binding ViewingEarlier, Converter={x:Static ObjectConverters.IsNotNull}}"
                   ToolTip.Tip="{Binding ViewingEarlier.Label}">

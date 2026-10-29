@@ -154,6 +154,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     public string EnvironmentButtonText => Workspace.ActiveEnvironment?.Name ?? "None";
     public bool HasActiveEnvironment => Workspace.ActiveEnvironment is not null;
     public bool ActiveEnvironmentConfirms => Workspace.ActiveEnvironment?.ConfirmBeforeSend == true;
+    public EnvironmentColor ActiveEnvironmentColor => Workspace.ActiveEnvironment?.Color ?? EnvironmentColor.None;
 
     partial void OnSelectedEnvironmentChanged(EnvironmentOption? value)
     {
@@ -198,6 +199,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         OnPropertyChanged(nameof(EnvironmentButtonText));
         OnPropertyChanged(nameof(HasActiveEnvironment));
         OnPropertyChanged(nameof(ActiveEnvironmentConfirms));
+        OnPropertyChanged(nameof(ActiveEnvironmentColor));
     }
 
     [RelayCommand]
