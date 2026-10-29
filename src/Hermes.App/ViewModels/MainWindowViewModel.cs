@@ -264,6 +264,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             if (newValue is not EnvironmentTabViewModel)
                 Collections.Reveal(newValue.EntityId);
         }
+        CloseTabsNotKeptInSingleTabMode();
+        OnPropertyChanged(nameof(IsTabStripVisible));
     }
 
     // ---- tabs ----
@@ -273,8 +275,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
 
     public void AddTab(TabViewModelBase tab)
     {
-        // Single-tab mode: the new tab takes the place of a clean current one.
-        if (!ShowTabs && ActiveTab is { IsDirty: false, IsPinned: false } replaced)
+        // Single-tab mode: the new tab takes the place of a clean current one, pinned or not.
+        if (!ShowTabs && ActiveTab is { IsDirty: false } replaced)
         {
             Tabs[Tabs.IndexOf(replaced)] = tab;
             ActiveTab = tab;
@@ -339,13 +341,36 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
 
     public bool ShowTabs => _services.Settings.Current.ShowTabs;
 
-    /// <summary>With tabs turned off the strip still appears while more than one tab (unsaved work) is open.</summary>
-    public bool IsTabStripVisible => ShowTabs || Tabs.Count > 1;
+    /// <summary>With tabs turned off the strip only appears while another tab has unsaved changes.</summary>
+    public bool IsTabStripVisible => ShowTabs || Tabs.Any(t => t.IsDirty && t != ActiveTab);
+
+    /// <summary>Pinned tabs are only kept apart while tabs are on; in single-tab mode they're like any other tab.</summary>
+    private bool IsKeptByPin(TabViewModelBase tab) => ShowTabs && tab.IsPinned;
+
+    /// <summary>Tabs single-tab mode doesn't keep: clean ones other than the active tab, pinned or not.</summary>
+    private IEnumerable<TabViewModelBase> TabsNotKeptInSingleTabMode => Tabs.Where(t => t != ActiveTab && !t.IsDirty);
+
+    /// <summary>With tabs turned off only the active tab and tabs with unsaved changes stay open.</summary>
+    private void CloseTabsNotKeptInSingleTabMode()
+    {
+        if (ShowTabs)
+            return;
+        foreach (var tab in TabsNotKeptInSingleTabMode.ToList())
+            RemoveTab(tab);
+    }
 
     private void OnTabPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(TabViewModelBase.Title))
+        {
             UpdateTitlePrefixes();
+        }
+        else if (e.PropertyName == nameof(TabViewModelBase.IsDirty))
+        {
+            // A background tab that was saved isn't kept in single-tab mode.
+            CloseTabsNotKeptInSingleTabMode();
+            OnPropertyChanged(nameof(IsTabStripVisible));
+        }
     }
 
     private void OnTabsChanged()
@@ -428,7 +453,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     [RelayCommand]
     private async Task CloseOtherTabs(TabViewModelBase tab)
     {
-        foreach (var other in Tabs.Where(t => t != tab && !t.IsPinned).ToList())
+        foreach (var other in Tabs.Where(t => t != tab && !IsKeptByPin(t)).ToList())
             if (!await TryCloseTabAsync(other))
                 return;
     }
@@ -436,7 +461,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     [RelayCommand]
     private async Task CloseAllTabs()
     {
-        foreach (var tab in Tabs.Where(t => !t.IsPinned).ToList())
+        foreach (var tab in Tabs.Where(t => !IsKeptByPin(t)).ToList())
             if (!await TryCloseTabAsync(tab))
                 return;
     }

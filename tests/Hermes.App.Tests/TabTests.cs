@@ -1,7 +1,9 @@
+using System.Text.Json;
 using Avalonia.Headless.XUnit;
 using Hermes.App.Services;
 using Hermes.App.ViewModels;
 using Hermes.Core.Models;
+using Hermes.Core.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hermes.App.Tests;
@@ -9,6 +11,7 @@ namespace Hermes.App.Tests;
 public class TabTests
 {
     private static WorkspaceService Workspace => App.Services.GetRequiredService<WorkspaceService>();
+    private static SettingsService Settings => App.Services.GetRequiredService<SettingsService>();
 
     /// <summary>The session is shared across tests, so start from an empty strip.</summary>
     private static (Views.MainWindow, MainWindowViewModel) ShowEmptyWindow()
@@ -238,4 +241,114 @@ public class TabTests
         Assert.Same(pinned, Assert.Single(vm.Tabs));
         window.Close();
     }
+
+    // ---- single-tab mode (Settings → Tabs off) ----
+
+    private static AppSettings CopyWithShowTabs(AppSettings settings, bool showTabs)
+    {
+        var json = JsonSerializer.Serialize(settings, HermesJsonContext.Default.AppSettings);
+        var copy = JsonSerializer.Deserialize(json, HermesJsonContext.Default.AppSettings)!;
+        copy.ShowTabs = showTabs;
+        return copy;
+    }
+
+    /// <summary>Runs <paramref name="test"/> on an empty window with tabs turned off; settings are shared, so they're restored after.</summary>
+    private static void WithTabsOff(Action<Views.MainWindow, MainWindowViewModel> test)
+    {
+        var original = Settings.Current;
+        var (window, vm) = ShowEmptyWindow();
+        try
+        {
+            Settings.Update(CopyWithShowTabs(original, false));
+            test(window, vm);
+        }
+        finally
+        {
+            // Leave no drafts in the shared session for other tests.
+            foreach (var tab in vm.Tabs.ToList())
+                vm.RemoveTab(tab);
+            Settings.Update(original);
+            window.Close();
+        }
+    }
+
+    private static RequestTabViewModel EditActiveRequest(MainWindowViewModel vm)
+    {
+        var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+        tab.Url = "https://example.com/edited-" + Guid.NewGuid();
+        Assert.True(tab.IsDirty);
+        return tab;
+    }
+
+    [AvaloniaFact]
+    public void Without_tabs_opening_an_item_replaces_a_clean_tab_and_opens_beside_a_dirty_one() => WithTabsOff((_, vm) =>
+    {
+        var (collection, first, second) = CreateRequests("Single");
+        var folder = new FolderModel { Name = "Folder " + Guid.NewGuid() };
+        Workspace.AddNode(collection, null, folder);
+        var environment = Workspace.CreateEnvironment("Single " + Guid.NewGuid());
+
+        vm.OpenRequest(first);
+        Assert.False(vm.IsTabStripVisible);
+        foreach (var open in new Action[] { () => vm.OpenFolder(folder), () => vm.OpenCollection(collection), () => vm.OpenEnvironment(environment) })
+        {
+            open();
+            Assert.Single(vm.Tabs);
+            Assert.False(vm.IsTabStripVisible);
+        }
+        Assert.Equal(environment.Id, vm.ActiveTab!.EntityId);
+
+        vm.OpenRequest(first);
+        var dirty = EditActiveRequest(vm);
+        vm.OpenRequest(second);
+        Assert.Equal([dirty.RequestId, second.Id], vm.Tabs.Select(t => t.EntityId));
+        Assert.Equal(second.Id, vm.ActiveTab!.EntityId);
+        Assert.True(vm.IsTabStripVisible);
+        Workspace.DeleteEnvironment(environment);
+    });
+
+    [AvaloniaFact]
+    public void Without_tabs_a_pinned_tab_is_replaced_like_any_other() => WithTabsOff((_, vm) =>
+    {
+        var (_, first, second) = CreateRequests("Pinned");
+
+        vm.OpenRequest(first);
+        vm.TogglePinCommand.Execute(vm.ActiveTab);
+        vm.OpenRequest(second);
+
+        Assert.Equal(second.Id, Assert.Single(vm.Tabs).EntityId);
+    });
+
+    [AvaloniaFact]
+    public void Without_tabs_saving_the_other_dirty_tab_hides_the_strip() => WithTabsOff((_, vm) =>
+    {
+        var (_, first, second) = CreateRequests("Save");
+        vm.OpenRequest(first);
+        var dirty = EditActiveRequest(vm);
+        vm.OpenRequest(second);
+        var current = vm.ActiveTab!;
+        Assert.True(vm.IsTabStripVisible);
+        var stripChanges = 0;
+        vm.PropertyChanged += (_, e) => stripChanges += e.PropertyName == nameof(MainWindowViewModel.IsTabStripVisible) ? 1 : 0;
+
+        dirty.SaveCommand.Execute(null);
+
+        Assert.Same(current, Assert.Single(vm.Tabs));
+        Assert.False(vm.IsTabStripVisible);
+        Assert.True(stripChanges > 0);
+    });
+
+    [AvaloniaFact]
+    public void Without_tabs_switching_to_a_dirty_tab_closes_the_clean_one() => WithTabsOff((_, vm) =>
+    {
+        var (_, first, second) = CreateRequests("Switch");
+        vm.OpenRequest(first);
+        var dirty = EditActiveRequest(vm);
+        vm.OpenRequest(second);
+
+        vm.SelectTabCommand.Execute(dirty);
+
+        Assert.Same(dirty, Assert.Single(vm.Tabs));
+        Assert.False(vm.IsTabStripVisible);
+    });
 }
