@@ -4,6 +4,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.LogicalTree;
 using Hermes.App.Services;
 using Hermes.App.ViewModels;
+using Hermes.App.ViewModels.Sidebar;
 using Hermes.App.Views.Dialogs;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
@@ -322,6 +323,35 @@ public class TabTests
         Assert.True(restored.IsTabStripVisible);
         foreach (var env in environments)
             Workspace.DeleteEnvironment(env);
+    });
+
+    private static MenuItem MenuItemNamed(ContextMenu menu, string header) =>
+        menu.Items.OfType<MenuItem>().Single(item => (string?)item.Header == header);
+
+    [AvaloniaFact]
+    public void Open_in_tab_menu_items_are_hidden_while_tabs_are_off() => WithShowTabs(true, (_, vm) =>
+    {
+        var (_, first, _) = CreateRequests("Menu");
+        var requestNode = vm.Collections.Find(first.Id)!;
+        var historyItem = new HistoryItemViewModel(new HistoryEntry { Request = first });
+        // Menus are built when opened; the ones kept here also show that items follow the setting while open.
+        var requestMenu = Views.Sidebar.CollectionsPaneView.CreateMenu(vm.Collections, requestNode);
+        var historyMenu = Views.Sidebar.HistoryPaneView.CreateMenu(vm.History, historyItem);
+        bool[] Visibility() =>
+        [
+            MenuItemNamed(requestMenu, "Open in tab").IsVisible,
+            MenuItemNamed(historyMenu, "Open in new tab").IsVisible,
+        ];
+
+        Assert.Equal([true, true], Visibility());
+
+        Settings.Update(CopyWithShowTabs(Settings.Current, false));
+        Assert.Equal([false, false], Visibility());
+        Assert.False(MenuItemNamed(Views.Sidebar.CollectionsPaneView.CreateMenu(vm.Collections, requestNode), "Open in tab").IsVisible);
+        Assert.False(MenuItemNamed(Views.Sidebar.HistoryPaneView.CreateMenu(vm.History, historyItem), "Open in new tab").IsVisible);
+
+        Settings.Update(CopyWithShowTabs(Settings.Current, true));
+        Assert.Equal([true, true], Visibility());
     });
 
     [AvaloniaFact]

@@ -47,6 +47,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             foreach (var tab in Tabs)
                 tab.OnSettingsChanged();
             CloseTabsNotKeptInSingleTabMode();
+            Collections.OnShowTabsChanged();
+            History.OnShowTabsChanged();
             OnPropertyChanged(nameof(ShowTabs));
             OnPropertyChanged(nameof(IsTabStripVisible));
         };

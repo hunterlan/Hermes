@@ -5,6 +5,9 @@ namespace Hermes.App.ViewModels.Sidebar;
 /// <summary>What sidebar panes need from the main window: opening and closing tabs.</summary>
 public interface ITabHost
 {
+    /// <summary>False in single-tab mode (Settings → Tabs off), where opening an item replaces the current tab.</summary>
+    bool ShowTabs { get; }
+
     void OpenRequest(HttpRequestModel model);
 
     /// <summary>Opens a request in the preview tab (single click), replacing the previous preview.</summary>
