@@ -8,36 +8,31 @@ namespace Hermes.Core.Storage;
 /// Request history as one JSON Lines file per day (<c>yyyy-MM-dd.jsonl</c>), stored as given: callers strip
 /// credentials before appending.
 /// </summary>
-public sealed class HistoryStore(string directory)
+public sealed class HistoryStore(string directory, TimeProvider? timeProvider = null)
 {
     private const int MaxEntriesPerDay = 500;
     private const string FileExtension = ".jsonl";
+    private const string DayFormat = "yyyy-MM-dd";
 
     private readonly Lock _lock = new();
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <summary>
-    /// Entries from the last <paramref name="retentionDays"/> days, newest first; older files are deleted. Lines and
-    /// files that can't be read are skipped and described in <paramref name="errors"/>.
+    /// All stored entries, newest first. Lines and files that can't be read are skipped and described in
+    /// <paramref name="errors"/>. Doesn't remove expired days; see <see cref="Prune"/>.
     /// </summary>
-    public List<HistoryEntry> Load(int retentionDays, ICollection<string> errors)
+    public List<HistoryEntry> Load(ICollection<string> errors)
     {
         if (!Directory.Exists(directory))
             return [];
 
-        var cutoff = DateTime.Today.AddDays(-Math.Max(1, retentionDays));
         var result = new List<HistoryEntry>();
         lock (_lock)
         {
             foreach (var file in Directory.EnumerateFiles(directory, "*" + FileExtension))
             {
-                if (!DateTime.TryParseExact(Path.GetFileNameWithoutExtension(file), "yyyy-MM-dd",
-                        CultureInfo.InvariantCulture, DateTimeStyles.None, out var day))
+                if (!TryParseDay(file, out _))
                     continue;
-                if (day < cutoff)
-                {
-                    File.Delete(file);
-                    continue;
-                }
                 try
                 {
                     var lineErrors = new List<string>();
@@ -60,6 +55,24 @@ public sealed class HistoryStore(string directory)
             }
         }
         return result.OrderByDescending(h => h.Timestamp).ToList();
+    }
+
+    /// <summary>
+    /// Deletes the files of days older than the last <paramref name="retentionDays"/> days (today included). Does
+    /// nothing for <see cref="HistoryRetention.KeepForever"/>.
+    /// </summary>
+    public void Prune(int retentionDays)
+    {
+        var today = DateOnly.FromDateTime(_timeProvider.GetLocalNow().DateTime);
+        if (HistoryRetention.OldestKeptDay(retentionDays, today) is not { } oldestKeptDay || !Directory.Exists(directory))
+            return;
+
+        lock (_lock)
+        {
+            foreach (var file in Directory.EnumerateFiles(directory, "*" + FileExtension))
+                if (TryParseDay(file, out var day) && day < oldestKeptDay)
+                    File.Delete(file);
+        }
     }
 
     public void Append(HistoryEntry entry)
@@ -91,6 +104,10 @@ public sealed class HistoryStore(string directory)
         }
     }
 
+    private static bool TryParseDay(string file, out DateOnly day) =>
+        DateOnly.TryParseExact(Path.GetFileNameWithoutExtension(file), DayFormat, CultureInfo.InvariantCulture,
+            DateTimeStyles.None, out day);
+
     private string FileFor(DateTimeOffset timestamp) =>
-        Path.Combine(directory, timestamp.LocalDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + FileExtension);
+        Path.Combine(directory, timestamp.LocalDateTime.ToString(DayFormat, CultureInfo.InvariantCulture) + FileExtension);
 }

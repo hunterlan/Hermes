@@ -9,6 +9,7 @@ public sealed record EnvironmentOption(string Name, EnvironmentModel? Model, boo
     /// <summary>"No environment" reads muted unless it is the active choice.</summary>
     public bool IsMuted => IsNone && !IsActive;
     public bool AsksFirst => Model?.ConfirmBeforeSend == true;
+    public EnvironmentColor Color => Model?.Color ?? EnvironmentColor.None;
 
     public override string ToString() => Name;
 }

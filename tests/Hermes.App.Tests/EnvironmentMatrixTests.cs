@@ -47,6 +47,24 @@ public class EnvironmentMatrixTests
     }
 
     [AvaloniaFact]
+    public void Matrix_minimum_width_grows_with_each_environment_column()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        vm.OpenEnvironmentMatrixCommand.Execute(null);
+        var matrix = Assert.IsType<EnvironmentMatrixTabViewModel>(vm.ActiveTab);
+        const double fixedColumnsWidth = 190 + 110;
+        const double environmentColumnMinWidth = 230;
+        Assert.Equal(fixedColumnsWidth + matrix.Columns.Count * environmentColumnMinWidth, matrix.TableMinWidth);
+
+        var widthBefore = matrix.TableMinWidth;
+        Workspace.CreateEnvironment("Staging " + Guid.NewGuid());
+        matrix.OnVariablesChanged();
+
+        Assert.Equal(widthBefore + environmentColumnMinWidth, matrix.TableMinWidth);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void Matrix_keeps_secret_types_and_renames_variables()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();

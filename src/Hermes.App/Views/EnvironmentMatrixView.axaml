@@ -1,11 +1,12 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:c="using:Hermes.App.Controls"
              x:Class="Hermes.App.Views.EnvironmentMatrixView"
              x:DataType="vm:EnvironmentMatrixTabViewModel">
   <UserControl.Styles>
     <Style Selector="Border.cell">
-      <Setter Property="Width" Value="230" />
+      <Setter Property="MinWidth" Value="230" />
       <Setter Property="MinHeight" Value="40" />
       <Setter Property="Padding" Value="4,0" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
@@ -66,19 +67,20 @@
     <Border Grid.Row="2" Margin="0,14,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" ClipToBounds="True"
             VerticalAlignment="Top">
       <ScrollViewer HorizontalScrollBarVisibility="Auto">
-        <StackPanel>
+        <StackPanel MinWidth="{Binding TableMinWidth}">
           <!-- header row -->
-          <StackPanel Orientation="Horizontal">
+          <Grid ColumnDefinitions="Auto,*,Auto">
             <Border Classes="cell nameCell headerCell"><TextBlock Text="Name" FontWeight="SemiBold" VerticalAlignment="Center" /></Border>
-            <ItemsControl ItemsSource="{Binding Columns}">
+            <ItemsControl Grid.Column="1" ItemsSource="{Binding Columns}">
               <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:MatrixColumn">
                   <Border Classes="cell headerCell" Classes.active="{Binding IsActive}">
                     <StackPanel VerticalAlignment="Center" Spacing="1">
                       <StackPanel Orientation="Horizontal" Spacing="6">
+                        <c:EnvironmentColorDot Color="{Binding Color}" IsVisible="{Binding ShowsColor}" />
                         <PathIcon Data="{StaticResource IconLock}" Width="11" Height="11" Foreground="{DynamicResource ErrorBrush}"
                                   IsVisible="{Binding ConfirmBeforeSend}" />
                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
@@ -89,19 +91,19 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <Border Classes="cell usedCell headerCell"><TextBlock Text="Used by" FontWeight="SemiBold" VerticalAlignment="Center" /></Border>
-          </StackPanel>
+            <Border Grid.Column="2" Classes="cell usedCell headerCell"><TextBlock Text="Used by" FontWeight="SemiBold" VerticalAlignment="Center" /></Border>
+          </Grid>
 
           <ItemsControl ItemsSource="{Binding Rows}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:MatrixRow">
-                <StackPanel Orientation="Horizontal">
+                <Grid ColumnDefinitions="Auto,*,Auto">
                   <Border Classes="cell nameCell">
                     <TextBox Classes="cell matrix" Text="{Binding Name}" PlaceholderText="name" Foreground="{DynamicResource InfoBrush}" />
                   </Border>
-                  <ItemsControl ItemsSource="{Binding Cells}">
+                  <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}">
                     <ItemsControl.ItemsPanel>
-                      <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                      <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:MatrixCell">
@@ -116,10 +118,10 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <Border Classes="cell usedCell" Padding="12,0">
+                  <Border Grid.Column="2" Classes="cell usedCell" Padding="12,0">
                     <TextBlock Text="{Binding UsedByText}" Classes="secondary" FontSize="12" VerticalAlignment="Center" />
                   </Border>
-                </StackPanel>
+                </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>

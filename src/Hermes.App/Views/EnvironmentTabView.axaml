@@ -2,8 +2,56 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hermes.App.ViewModels"
              xmlns:v="using:Hermes.App.Views"
+             xmlns:c="using:Hermes.App.Controls"
+             xmlns:m="using:Hermes.Core.Models"
              x:Class="Hermes.App.Views.EnvironmentTabView"
              x:DataType="vm:EnvironmentTabViewModel">
+  <UserControl.Styles>
+    <!-- environment colour swatches: 32px round hit targets around a 20px dot -->
+    <Style Selector="ListBox.swatches">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <!-- room for the selection ring, which sits just outside each swatch -->
+      <Setter Property="Padding" Value="4" />
+      <Setter Property="Margin" Value="-4" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+    <Style Selector="ListBox.swatches ListBoxItem" x:DataType="m:EnvironmentColor">
+      <Setter Property="Width" Value="32" />
+      <Setter Property="Height" Value="32" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="ClipToBounds" Value="False" />
+      <Setter Property="AutomationProperties.Name" Value="{Binding Converter={x:Static vm:UiConverters.EnvironmentColorName}}" />
+      <Setter Property="ToolTip.Tip" Value="{Binding Converter={x:Static vm:UiConverters.EnvironmentColorName}}" />
+    </Style>
+    <Style Selector="ListBox.swatches ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.swatches ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource BgHoverBrush}" />
+    </Style>
+    <Style Selector="ListBox.swatches ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.swatches ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource BgHoverBrush}" />
+    </Style>
+    <Style Selector="ListBox.swatches Border.swatchRing">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="ListBox.swatches ListBoxItem:selected Border.swatchRing">
+      <Setter Property="IsVisible" Value="True" />
+      <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <!-- focus shows the ring in the accent colour. Not :focus-visible: ListBox arrow keys move focus without it. -->
+    <Style Selector="ListBox.swatches ListBoxItem:focus Border.swatchRing">
+      <Setter Property="IsVisible" Value="True" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+  </UserControl.Styles>
   <Grid RowDefinitions="Auto,Auto,*" Margin="20,14,20,0">
     <Grid ColumnDefinitions="*,Auto">
       <StackPanel Orientation="Horizontal" Spacing="10">
@@ -27,16 +75,43 @@
       <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
                  Text="Use variables as {{name}} in URLs, headers, bodies and auth. Environment variables override collection variables, which override globals." />
       <Border IsVisible="{Binding CanRename}" Background="{DynamicResource BgPrimaryBrush}" BorderBrush="{DynamicResource BorderBrush}"
-              BorderThickness="1" CornerRadius="10" Padding="14,10" HorizontalAlignment="Left" MaxWidth="640">
-        <Grid ColumnDefinitions="Auto,*,Auto">
-          <PathIcon Data="{StaticResource IconLock}" Width="16" Height="16" Foreground="{DynamicResource ErrorBrush}" Margin="0,0,12,0" />
-          <StackPanel Grid.Column="1" Spacing="2">
-            <TextBlock Text="Ask before sending" FontWeight="SemiBold" />
-            <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
-                       Text="While this environment is active, every send shows the target and waits for confirmation. Use it for Production." />
+              BorderThickness="1" CornerRadius="10" Padding="14,12" HorizontalAlignment="Left" MaxWidth="640">
+        <StackPanel Spacing="12">
+          <StackPanel Spacing="6">
+            <TextBlock Text="Color" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
+            <!-- a radio group: one tab stop, arrow keys move the choice -->
+            <ListBox Name="ColorSwatches" Classes="swatches" ItemsSource="{Binding ColorChoices}" SelectedItem="{Binding Color}"
+                     SelectionMode="Single,AlwaysSelected" AutomationProperties.Name="Environment color">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="6" />
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="m:EnvironmentColor">
+                  <Panel Width="32" Height="32">
+                    <!-- the selection ring: 2px of panel colour, then 2px of text colour, just outside the hit target -->
+                    <Border Classes="swatchRing" Margin="-2" CornerRadius="18" BorderThickness="2">
+                      <Border CornerRadius="16" BorderThickness="2" BorderBrush="{DynamicResource BgPrimaryBrush}" />
+                    </Border>
+                    <c:EnvironmentColorDot Color="{Binding}" Width="20" Height="20" IsNoneRingDashed="True" HorizontalAlignment="Center" />
+                  </Panel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Classes="tertiary" FontSize="12" TextWrapping="Wrap" Text="Shown next to the name everywhere this environment appears." />
           </StackPanel>
-          <ToggleSwitch Grid.Column="2" IsChecked="{Binding ConfirmBeforeSend}" OnContent="" OffContent="" Margin="12,0,0,0" />
-        </Grid>
+          <Border Height="1" Background="{DynamicResource BorderBrush}" />
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <PathIcon Data="{StaticResource IconLock}" Width="16" Height="16" Foreground="{DynamicResource ErrorBrush}" Margin="0,0,12,0" />
+            <StackPanel Grid.Column="1" Spacing="2">
+              <TextBlock Text="Ask before sending" FontWeight="SemiBold" />
+              <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
+                         Text="While this environment is active, every send shows the target and waits for confirmation. Use it for Production." />
+            </StackPanel>
+            <ToggleSwitch Grid.Column="2" IsChecked="{Binding ConfirmBeforeSend}" OnContent="" OffContent="" Margin="12,0,0,0" />
+          </Grid>
+        </StackPanel>
       </Border>
     </StackPanel>
     <ScrollViewer Grid.Row="2">

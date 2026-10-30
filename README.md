@@ -63,7 +63,7 @@ collections and switch environments — in a fast native app that stores everyth
 - Each variable has an initial (shared/exported) and a current (local) value, and an optional secret type
 - Environment selector with a quick-look popup
 - Precedence: environment > collection > globals
-- [Dynamic variables](https://github.com/hunterlan/Hermes/wiki/Dynamic-variables) such as `{{$guid}}` and
+- [Dynamic variables](docs/manual/dynamic-variables.md) such as `{{$guid}}` and
   `{{$timestamp}}`
 
 > [!NOTE]
@@ -77,8 +77,8 @@ Passwords, tokens and other secrets are stored in your operating system's keycha
 Everything else stays in the JSON files, so you can safely commit the data folder. Fields that use a `{{variable}}`
 are stored in the files as written. Saved responses hide credentials from the sent request, history doesn't keep
 them, and exports ask whether to include them. If your system has no usable keychain, secrets are saved as plain
-text and the status bar tells you. More details are on the [Secrets](https://github.com/hunterlan/Hermes/wiki/Secrets)
-wiki page.
+text and the status bar tells you. More details are on the [Secrets](docs/manual/secrets.md)
+manual page.
 
 ### Importing and exporting
 
@@ -139,10 +139,12 @@ tests/Hermes.App.Tests    Avalonia headless UI tests
 
 ## Documentation
 
-More documentation lives in the [wiki](https://github.com/hunterlan/Hermes/wiki):
+The [user manual](docs/manual/index.md) ships with the app and opens offline with `F1`:
 
-- [Keyboard shortcuts](https://github.com/hunterlan/Hermes/wiki/Keyboard-shortcuts)
-- [Releases](https://github.com/hunterlan/Hermes/wiki/Releases) - installers, release workflow, app icon
-- [Data](https://github.com/hunterlan/Hermes/wiki/Data) - where Hermes stores its JSON files
-- [Secrets](https://github.com/hunterlan/Hermes/wiki/Secrets) - what goes into the OS keychain
-- [Dynamic variables](https://github.com/hunterlan/Hermes/wiki/Dynamic-variables) - built-in `{{$...}}` variables
+- [Keyboard shortcuts](docs/manual/07-keyboard-shortcuts.md)
+- [Data](docs/manual/08-data-folder.md) - where Hermes stores its JSON files
+- [Secrets](docs/manual/secrets.md) - what goes into the OS keychain
+- [Dynamic variables](docs/manual/dynamic-variables.md) - built-in `{{$...}}` variables
+
+Maintainer notes live in the wiki: [Releases](https://github.com/hunterlan/Hermes/wiki/Releases) - installers,
+release workflow, app icon.

@@ -37,7 +37,7 @@
         <Grid Classes="setting" ColumnDefinitions="*,Auto">
           <StackPanel>
             <TextBlock Classes="title" Text="Tabs" />
-            <TextBlock Classes="hint" Text="When off, opening a request replaces the current one. Tabs with unsaved changes stay until saved or closed." />
+            <TextBlock Classes="hint" Text="When off, only one tab is open. Opening another item replaces it, and asks to save unsaved changes first." />
           </StackPanel>
           <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowTabs}" OnContent="" OffContent="" />
         </Grid>
@@ -83,8 +83,11 @@
         <Grid Classes="setting" ColumnDefinitions="*,Auto">
           <StackPanel>
             <TextBlock Classes="title" Text="History retention (days)" />
+            <TextBlock Classes="hint" Text="How many days of history to keep, today included: 1 keeps only today, 7 keeps today and the 6 days before it. 0 keeps history forever." />
+            <TextBlock Classes="hint" Text="{Binding HistoryRetentionError}" Foreground="{DynamicResource ErrorBrush}"
+                       IsVisible="{Binding HistoryRetentionError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>
-          <TextBox Grid.Column="1" Width="140" Text="{Binding HistoryRetentionText}" />
+          <TextBox Grid.Column="1" Width="140" VerticalAlignment="Top" Text="{Binding HistoryRetentionText}" />
         </Grid>
         <Grid Classes="setting" RowDefinitions="Auto,Auto,Auto">
           <TextBlock Classes="title" Text="Data folder" />
@@ -93,6 +96,14 @@
             <TextBox Text="{Binding DataDirectory}" />
             <Button Grid.Column="1" Content="Browse…" Margin="8,0,0,0" Command="{Binding BrowseDataDirectoryCommand}" />
           </Grid>
+        </Grid>
+        <TextBlock Classes="section" Text="HELP" Margin="0,8,0,10" />
+        <Grid Classes="setting" ColumnDefinitions="*,Auto">
+          <StackPanel>
+            <TextBlock Classes="title" Text="User manual" />
+            <TextBlock Classes="hint" Text="Works offline. Closes this dialog without saving changes." />
+          </StackPanel>
+          <Button Grid.Column="1" Content="Open manual" Command="{Binding OpenManualCommand}" />
         </Grid>
         <TextBlock Text="Restart Hermes to use the new data folder." Foreground="{DynamicResource AccentBrush}" FontSize="12"
                    IsVisible="{Binding DataDirectoryChanged}" Margin="0,-8,0,8" />

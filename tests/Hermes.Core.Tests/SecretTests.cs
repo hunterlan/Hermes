@@ -146,7 +146,7 @@ public class SecretTests : IDisposable
         var entry = new HistoryEntry { Request = new HttpRequestModel { Auth = new AuthConfig { Type = AuthType.Bearer, Bearer = { Token = "history-token" } } } };
         new WorkspaceRepository(_dir, _store).AppendHistory(entry);
 
-        var loaded = Assert.Single(new WorkspaceRepository(_dir, _store).LoadHistory(30));
+        var loaded = Assert.Single(new WorkspaceRepository(_dir, _store).LoadHistory());
         Assert.Equal("", loaded.Request.Auth.Bearer.Token);
         Assert.Equal("history-token", entry.Request.Auth.Bearer.Token);
     }

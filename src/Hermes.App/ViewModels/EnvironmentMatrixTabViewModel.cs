@@ -13,12 +13,17 @@ public sealed partial class EnvironmentMatrixTabViewModel : TabViewModelBase
     /// <summary>The matrix is a singleton tab.</summary>
     public static readonly Guid MatrixId = new("6d0b5f0e-1c55-4a8e-9b1f-3c2f1d7a9e01");
 
+    private const double NameColumnWidth = 190;
+    private const double UsedByColumnWidth = 110;
+    private const double EnvironmentColumnMinWidth = 230;
+
     private string _snapshot = "";
     private bool _loading;
 
     public EnvironmentMatrixTabViewModel(TabServices services) : base(services)
     {
         Title = "Environments";
+        Columns.CollectionChanged += (_, _) => OnPropertyChanged(nameof(TableMinWidth));
         Load();
     }
 
@@ -28,6 +33,9 @@ public sealed partial class EnvironmentMatrixTabViewModel : TabViewModelBase
 
     public ObservableCollection<MatrixColumn> Columns { get; } = [];
     public ObservableCollection<MatrixRow> Rows { get; } = [];
+
+    /// <summary>Narrowest the table can get before it scrolls horizontally: fixed columns plus each environment's minimum.</summary>
+    public double TableMinWidth => NameColumnWidth + UsedByColumnWidth + Columns.Count * EnvironmentColumnMinWidth;
 
     /// <summary>Variables used by requests that would be sent empty or literally in the active environment.</summary>
     [ObservableProperty] public partial string? MissingWarning { get; set; }

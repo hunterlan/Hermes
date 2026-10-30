@@ -54,7 +54,7 @@ public class SidebarTests
     }
 
     [AvaloniaFact]
-    public void Activating_a_tab_reveals_its_request_in_the_tree()
+    public async Task Activating_a_tab_reveals_its_request_in_the_tree()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var collection = Workspace.CreateCollection("Reveal test " + Guid.NewGuid());
@@ -63,7 +63,7 @@ public class SidebarTests
         folder.Items.Add(request);
         Workspace.AddNode(collection, null, folder);
 
-        vm.OpenRequest(request);
+        await vm.OpenRequestAsync(request);
 
         Assert.Equal(request.Id, vm.Collections.SelectedNode?.Id);
         Assert.True(vm.Collections.Find(folder.Id)!.IsExpanded);
@@ -154,7 +154,7 @@ public class SidebarTests
         Assert.Equal(historyBefore + 1, Workspace.History.Count);
         Assert.Equal("{{baseUrl}}/env-test", Workspace.History[0].Request.Url);
 
-        vm.OpenEnvironment(env);
+        await vm.OpenEnvironmentAsync(env);
         Assert.IsType<EnvironmentTabViewModel>(vm.ActiveTab);
         vm.SelectedPane = SidebarPane.Environments;
         UiTestHelpers.Screenshot(window, "11-environment");
@@ -169,11 +169,11 @@ public class SidebarTests
     }
 
     [AvaloniaFact]
-    public void Collection_tab_edits_auth_and_variables_used_by_requests()
+    public async Task Collection_tab_edits_auth_and_variables_used_by_requests()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var collection = CreateCollection(vm, "Auth test " + Guid.NewGuid());
-        vm.OpenCollection(collection.Model);
+        await vm.OpenCollectionAsync(collection.Model);
         var collectionTab = Assert.IsType<CollectionTabViewModel>(vm.ActiveTab);
 
         collectionTab.Auth.SelectedType = collectionTab.Auth.Types.Single(t => t.Value == AuthType.Bearer);
@@ -194,7 +194,7 @@ public class SidebarTests
         Assert.True(tab.Auth.Chain[0].IsSource);
         Assert.Equal("Inherits", tab.Auth.Chain[1].Status);
 
-        vm.OpenCollection(collection.Model);
+        await vm.OpenCollectionAsync(collection.Model);
         collectionTab.SelectedSection = 1;
         Assert.Equal("Used by 1 request.", collectionTab.Auth.UsageSummary);
         UiTestHelpers.Screenshot(window, "13-collection-settings");

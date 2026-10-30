@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+using Avalonia.Threading;
 using Hermes.Core.Models;
 using Hermes.Core.Requests;
 using Hermes.Core.Secrets;
@@ -7,31 +7,41 @@ using Hermes.Core.Storage;
 namespace Hermes.App.Services;
 
 /// <summary>In-memory workspace (collections, environments, globals, history) backed by <see cref="WorkspaceRepository"/>.</summary>
-public sealed class WorkspaceService
+public sealed class WorkspaceService : IDisposable
 {
+    // Fires a little after midnight so the new day has certainly started.
+    private static readonly TimeSpan MidnightMargin = TimeSpan.FromSeconds(1);
+
     private readonly WorkspaceRepository _repository;
+    private readonly TimeProvider _timeProvider;
+    private readonly ITimer _dayChangeTimer;
 
     // History is written in the background, in order, so a clear always lands after the appends before it.
     private readonly BackgroundWriter _historyWriter = new();
 
     private EnvironmentModel? _activeEnvironment;
+    private bool _disposed;
 
-    public WorkspaceService(WorkspaceRepository repository, SettingsService settings)
+    public WorkspaceService(WorkspaceRepository repository, SettingsService settings, TimeProvider timeProvider)
     {
         _repository = repository;
+        _timeProvider = timeProvider;
         _historyWriter.Failed += ex => StorageProblem?.Invoke($"History couldn't be saved: {ex.Message}");
         Settings = settings;
         Collections = repository.LoadCollections();
         Environments = repository.LoadEnvironments();
         Globals = repository.LoadGlobals();
-        History = new ObservableCollection<HistoryEntry>(repository.LoadHistory(settings.Current.HistoryRetentionDays));
+        History = new HistoryCollection(repository.LoadHistory());
+        ApplyHistoryRetention();
+        Settings.Changed += ApplyHistoryRetention;
+        _dayChangeTimer = timeProvider.CreateTimer(_ => OnDayChanged(), null, UntilNextMidnight(), Timeout.InfiniteTimeSpan);
     }
 
     public SettingsService Settings { get; }
     public List<CollectionModel> Collections { get; }
     public List<EnvironmentModel> Environments { get; }
     public EnvironmentModel Globals { get; }
-    public ObservableCollection<HistoryEntry> History { get; }
+    public HistoryCollection History { get; }
     public IReadOnlyList<string> LoadErrors => _repository.LoadErrors;
     public string DataDirectory => _repository.Root;
     public SecretStore Secrets => _repository.Secrets;
@@ -268,6 +278,44 @@ public sealed class WorkspaceService
     {
         History.Clear();
         _historyWriter.Enqueue(_repository.ClearHistory);
+    }
+
+    /// <summary>
+    /// Drops history older than the retention setting from the sidebar now and deletes its files on the history
+    /// writer, after the appends already queued. Must run on the UI thread, which owns <see cref="History"/>.
+    /// </summary>
+    private void ApplyHistoryRetention()
+    {
+        var retentionDays = Settings.Current.HistoryRetentionDays;
+        var today = DateOnly.FromDateTime(_timeProvider.GetLocalNow().DateTime);
+        var oldestKeptDay = HistoryRetention.OldestKeptDay(retentionDays, today);
+        History.RemoveWhere(entry => HistoryRetention.IsExpired(entry.Timestamp, oldestKeptDay));
+        _historyWriter.Enqueue(() => _repository.PruneHistory(retentionDays));
+    }
+
+    private TimeSpan UntilNextMidnight()
+    {
+        var now = _timeProvider.GetLocalNow().DateTime;
+        return now.Date.AddDays(1) - now + MidnightMargin;
+    }
+
+    // The timer fires on a thread-pool thread; History belongs to the UI thread.
+    private void OnDayChanged()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed)
+                return;
+            ApplyHistoryRetention();
+            _dayChangeTimer.Change(UntilNextMidnight(), Timeout.InfiniteTimeSpan);
+        });
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        Settings.Changed -= ApplyHistoryRetention;
+        _dayChangeTimer.Dispose();
     }
 
     /// <summary>Completes when queued history writes are on disk (or have failed).</summary>

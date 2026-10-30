@@ -19,7 +19,7 @@ public partial class EnvironmentsPaneView : UserControl
     private void OnItemTapped(object? sender, TappedEventArgs e)
     {
         if (sender is Control { DataContext: EnvironmentItemViewModel { IsRenaming: false } item })
-            ViewModel?.Open(item);
+            ViewModel?.OpenCommand.Execute(item);
     }
 
     private void OnContextRequested(object? sender, ContextRequestedEventArgs e)
@@ -50,7 +50,7 @@ public partial class EnvironmentsPaneView : UserControl
             return menuItem;
         }
 
-        var items = new List<Control> { Item("Open", () => vm.Open(item)) };
+        var items = new List<Control> { Item("Open", () => vm.OpenCommand.Execute(item)) };
         if (item.IsRegular)
         {
             items.Add(Item(item.IsActive ? "Deactivate" : "Set active", () => vm.SetActiveCommand.Execute(item)));

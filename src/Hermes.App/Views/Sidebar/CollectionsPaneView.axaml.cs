@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
@@ -83,9 +84,9 @@ public partial class CollectionsPaneView : UserControl
         {
             // A double click keeps the request open in its own tab.
             if (_lastPressArgs?.ClickCount >= 2 && node.IsRequest)
-                ViewModel?.Open(node);
+                ViewModel?.OpenCommand.Execute(node);
             else
-                ViewModel?.Activate(node);
+                ViewModel?.ActivateCommand.Execute(node);
         }
         _pressedNode = null;
         _lastPressArgs = null;
@@ -211,7 +212,11 @@ public partial class CollectionsPaneView : UserControl
         if (ViewModel is not { } vm)
             return;
         vm.SelectedNode = node;
+        CreateMenu(vm, node).Open(anchor);
+    }
 
+    internal static ContextMenu CreateMenu(CollectionsPaneViewModel vm, TreeNodeViewModel node)
+    {
         MenuItem Item(string header, Action action, string? gesture = null)
         {
             var item = new MenuItem { Header = header };
@@ -229,9 +234,14 @@ public partial class CollectionsPaneView : UserControl
             items.Add(new Separator());
         }
         if (!node.IsRequest)
-            items.Add(Item(node.IsCollection ? "Edit collection" : "Edit folder", () => vm.Open(node)));
+            items.Add(Item(node.IsCollection ? "Edit collection" : "Edit folder", () => vm.OpenCommand.Execute(node)));
         else
-            items.Add(Item("Open in tab", () => vm.Open(node)));
+        {
+            // Hidden while Settings → Tabs is off; the binding follows the setting as it changes.
+            var openInTab = Item("Open in tab", () => vm.OpenCommand.Execute(node));
+            openInTab.Bind(IsVisibleProperty, new Binding(nameof(CollectionsPaneViewModel.IsOpenInTabAvailable)) { Source = vm });
+            items.Add(openInTab);
+        }
         items.Add(Item("Rename", () => vm.RenameCommand.Execute(node), "F2"));
         items.Add(Item("Duplicate", () => vm.DuplicateCommand.Execute(node)));
         if (node.IsCollection)
@@ -239,8 +249,7 @@ public partial class CollectionsPaneView : UserControl
         items.Add(new Separator());
         items.Add(Item("Delete", () => vm.DeleteCommand.Execute(node), "Delete"));
 
-        var menu = new ContextMenu { ItemsSource = items };
-        menu.Open(anchor);
+        return new ContextMenu { ItemsSource = items };
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -259,7 +268,7 @@ public partial class CollectionsPaneView : UserControl
                 e.Handled = true;
                 break;
             case Key.Enter:
-                vm.Open(node);
+                vm.OpenCommand.Execute(node);
                 e.Handled = true;
                 break;
         }

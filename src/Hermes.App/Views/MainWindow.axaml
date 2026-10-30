@@ -41,8 +41,9 @@
     <Style Selector="Border.statusBar Button.ghost">
       <Setter Property="Padding" Value="6,0" />
       <Setter Property="MinHeight" Value="0" />
-      <Setter Property="Height" Value="22" />
+      <Setter Property="Height" Value="23" />
       <Setter Property="FontSize" Value="12" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
   </Window.Styles>
 
@@ -87,11 +88,7 @@
           <Button Name="EnvironmentButton" Classes="outline" ToolTip.Tip="Active environment (Ctrl+E)"
                   AutomationProperties.Name="{Binding EnvironmentButtonText, StringFormat='Active environment: {0}. Change environment'}">
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <Panel VerticalAlignment="Center">
-                <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding HasActiveEnvironment}" />
-                <Ellipse Width="8" Height="8" Stroke="{DynamicResource TextTertiaryBrush}" StrokeThickness="1.5"
-                         IsVisible="{Binding !HasActiveEnvironment}" />
-              </Panel>
+              <c:EnvironmentColorDot Name="EnvironmentButtonDot" Color="{Binding ActiveEnvironmentColor}" />
               <TextBlock Text="ENV" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
               <TextBlock Text="{Binding EnvironmentButtonText}" FontWeight="SemiBold" VerticalAlignment="Center"
                          MaxWidth="200" TextTrimming="CharacterEllipsis" />
@@ -114,9 +111,7 @@
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="vm:EnvironmentOption">
                         <Grid ColumnDefinitions="16,*,Auto,Auto" ColumnSpacing="10">
-                          <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding !IsNone}" />
-                          <Ellipse Width="8" Height="8" Stroke="{DynamicResource TextTertiaryBrush}" StrokeThickness="1.5"
-                                   IsVisible="{Binding IsNone}" />
+                          <c:EnvironmentColorDot Color="{Binding Color}" HorizontalAlignment="Center" />
                           <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                                      Classes.secondary="{Binding IsMuted}" Classes.active="{Binding IsActive}" />
                           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding AsksFirst}">
@@ -247,69 +242,61 @@
             <DataTemplate DataType="vm:EnvironmentMatrixTabViewModel">
               <v:EnvironmentMatrixView />
             </DataTemplate>
+            <DataTemplate DataType="vm:HelpTabViewModel">
+              <v:HelpView />
+            </DataTemplate>
           </ContentControl.DataTemplates>
         </ContentControl>
 
         <!-- no tabs -->
         <ScrollViewer Grid.Row="1" Grid.RowSpan="1" IsVisible="{Binding !HasTabs}">
-          <WrapPanel Margin="56,48" ItemSpacing="56" LineSpacing="32">
-            <StackPanel Width="440" Spacing="0">
-              <PathIcon Data="{StaticResource IconLogo}" Width="40" Height="40" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Left" />
-              <TextBlock Text="Send a request." FontSize="32" FontWeight="SemiBold" Margin="0,14,0,6" />
-              <TextBlock Classes="secondary" FontSize="14" TextWrapping="Wrap" Margin="0,0,0,24"
-                         Text="There is no sign-up and no cloud. Everything is kept as plain JSON files in your data folder." />
-              <StackPanel Spacing="10">
-                <Button Classes="welcome" Command="{Binding NewRequestCommand}">
-                  <Grid ColumnDefinitions="Auto,*,Auto">
-                    <Border Classes="welcomeIcon"><PathIcon Data="{StaticResource IconPlus}" /></Border>
-                    <StackPanel Grid.Column="1" Margin="14,0">
-                      <TextBlock Text="New request" FontWeight="SemiBold" FontSize="14" />
-                      <TextBlock Classes="secondary" FontSize="12.5" Text="Paste a cURL command into the URL bar to import it" TextWrapping="Wrap" />
-                    </StackPanel>
-                    <Border Grid.Column="2" Classes="kbd"><TextBlock Text="Ctrl T" /></Border>
-                  </Grid>
-                </Button>
-                <Button Classes="welcome" Command="{Binding OpenImportCommand}" CommandParameter="{x:Null}">
-                  <Grid ColumnDefinitions="Auto,*,Auto">
-                    <Border Classes="welcomeIcon"><PathIcon Data="{StaticResource IconImport}" /></Border>
-                    <StackPanel Grid.Column="1" Margin="14,0">
-                      <TextBlock Text="Import" FontWeight="SemiBold" FontSize="14" />
-                      <TextBlock Classes="secondary" FontSize="12.5" Text="Postman collection or environment, cURL" TextWrapping="Wrap" />
-                    </StackPanel>
-                    <Border Grid.Column="2" Classes="kbd"><TextBlock Text="Ctrl O" /></Border>
-                  </Grid>
-                </Button>
-                <Button Classes="welcome" Command="{Binding Collections.NewCollectionCommand}">
-                  <Grid ColumnDefinitions="Auto,*">
-                    <Border Classes="welcomeIcon"><PathIcon Data="{StaticResource IconFolderOutline}" /></Border>
-                    <StackPanel Grid.Column="1" Margin="14,0">
-                      <TextBlock Text="New collection" FontWeight="SemiBold" FontSize="14" />
-                      <TextBlock Classes="secondary" FontSize="12.5" Text="Group requests and share auth and variables" TextWrapping="Wrap" />
-                    </StackPanel>
-                  </Grid>
-                </Button>
-              </StackPanel>
+          <StackPanel Width="440" Spacing="0" Margin="56,48" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <PathIcon Data="{StaticResource IconLogo}" Width="40" Height="40" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" />
+            <TextBlock Text="Send a request." FontSize="32" FontWeight="SemiBold" Margin="0,14,0,6" TextAlignment="Center" />
+            <TextBlock Classes="secondary" FontSize="14" TextWrapping="Wrap" Margin="0,0,0,24" TextAlignment="Center"
+                       Text="There is no sign-up and no cloud. Everything is kept as plain JSON files in your data folder." />
+            <StackPanel Spacing="10">
+              <Button Classes="welcome" Command="{Binding NewRequestCommand}">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Border Classes="welcomeIcon"><PathIcon Data="{StaticResource IconPlus}" /></Border>
+                  <StackPanel Grid.Column="1" Margin="14,0">
+                    <TextBlock Text="New request" FontWeight="SemiBold" FontSize="14" />
+                    <TextBlock Classes="secondary" FontSize="12.5" Text="Paste a cURL command into the URL bar to import it" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <Border Grid.Column="2" Classes="kbd"><TextBlock Text="Ctrl T" /></Border>
+                </Grid>
+              </Button>
+              <Button Classes="welcome" Command="{Binding OpenImportCommand}" CommandParameter="{x:Null}">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Border Classes="welcomeIcon"><PathIcon Data="{StaticResource IconImport}" /></Border>
+                  <StackPanel Grid.Column="1" Margin="14,0">
+                    <TextBlock Text="Import" FontWeight="SemiBold" FontSize="14" />
+                    <TextBlock Classes="secondary" FontSize="12.5" Text="Postman collection or environment, cURL" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <Border Grid.Column="2" Classes="kbd"><TextBlock Text="Ctrl O" /></Border>
+                </Grid>
+              </Button>
+              <Button Classes="welcome" Command="{Binding Collections.NewCollectionCommand}">
+                <Grid ColumnDefinitions="Auto,*">
+                  <Border Classes="welcomeIcon"><PathIcon Data="{StaticResource IconFolderOutline}" /></Border>
+                  <StackPanel Grid.Column="1" Margin="14,0">
+                    <TextBlock Text="New collection" FontWeight="SemiBold" FontSize="14" />
+                    <TextBlock Classes="secondary" FontSize="12.5" Text="Group requests and share auth and variables" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Grid>
+              </Button>
+              <Button Classes="welcome" Command="{Binding OpenManualCommand}" CommandParameter="{x:Null}">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Border Classes="welcomeIcon"><PathIcon Data="{StaticResource IconHelp}" /></Border>
+                  <StackPanel Grid.Column="1" Margin="14,0">
+                    <TextBlock Text="User manual" FontWeight="SemiBold" FontSize="14" />
+                    <TextBlock Classes="secondary" FontSize="12.5" Text="Works offline" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <Border Grid.Column="2" Classes="kbd"><TextBlock Text="F1" /></Border>
+                </Grid>
+              </Button>
             </StackPanel>
-
-            <StackPanel Width="440" Spacing="10">
-              <TextBlock Classes="section mono" Text="WHAT LIVES ON YOUR DISK" />
-              <Border Background="{DynamicResource BgPrimaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                      CornerRadius="12" Padding="18,14">
-                <StackPanel Spacing="10">
-                  <SelectableTextBlock Classes="mono" FontSize="12.5" Text="{Binding DataDirectory}" TextWrapping="Wrap" />
-                  <TextBlock Classes="mono secondary" FontSize="12.5" LineHeight="22"
-                             Text="├─ collections/{id}.json&#10;├─ environments/{id}.json&#10;├─ globals.json&#10;├─ history/yyyy-MM-dd.json&#10;├─ responses/{request id}.json&#10;└─ session.json" />
-                  <Button Classes="link" Content="Reveal in file manager" Command="{Binding RevealDataDirectoryCommand}" Padding="0" />
-                </StackPanel>
-              </Border>
-              <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="14,12">
-                <StackPanel Spacing="2">
-                  <TextBlock Text="Nothing is uploaded." FontWeight="SemiBold" />
-                  <TextBlock Classes="secondary" TextWrapping="Wrap" Text="Requests go only to the URLs you enter." />
-                </StackPanel>
-              </Border>
-            </StackPanel>
-          </WrapPanel>
+          </StackPanel>
         </ScrollViewer>
       </Grid>
     </Grid>
@@ -326,10 +313,12 @@
             <TextBlock Text="Secrets not protected" />
           </StackPanel>
         </Border>
-        <Button Grid.Column="2" Classes="ghost" Content="Cookies" Command="{Binding OpenCookiesCommand}" ToolTip.Tip="Manage cookies" />
+        <Button Grid.Column="2" Classes="ghost" Command="{Binding OpenCookiesCommand}" ToolTip.Tip="Manage cookies">
+          <TextBlock Text="Cookies" />
+        </Button>
         <Button Grid.Column="3" Classes="ghost" Command="{Binding ToggleThemeCommand}" ToolTip.Tip="Toggle light / dark theme">
           <StackPanel Orientation="Horizontal" Spacing="5">
-            <PathIcon Data="{StaticResource IconSun}" Width="12" Height="12" />
+            <PathIcon Data="{StaticResource IconSun}" Width="11" Height="11" />
             <TextBlock Text="Theme" />
           </StackPanel>
         </Button>
