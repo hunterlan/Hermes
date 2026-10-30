@@ -16,6 +16,77 @@ public class InheritedVariablesTests
     private static WorkspaceService Workspace => App.Services.GetRequiredService<WorkspaceService>();
 
     [AvaloniaFact]
+    public async Task Collection_auth_field_sees_collection_and_environment_variables()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var collection = CreateCollectionWithVariable("collectionVar");
+        var stagingEnvironment = CreateEnvironment("stagingVar");
+        var productionEnvironment = CreateEnvironment("productionVar");
+        try
+        {
+            vm.SelectedEnvironment = vm.EnvironmentOptions.Single(o => o.Model == stagingEnvironment);
+            await vm.OpenCollectionAsync(collection);
+            var tab = Assert.IsType<CollectionTabViewModel>(vm.ActiveTab);
+            tab.SelectedSection = 1;
+            SelectBearer(tab.Auth);
+            UiTestHelpers.Pump();
+
+            var tokenBox = VisibleBoxes(window).Single(box => box.PlaceholderText == "Token");
+            Assert.True(tokenBox.Variables!.TryGet("collectionVar", out _));
+            Assert.True(tokenBox.Variables.TryGet("stagingVar", out _));
+            Assert.False(tokenBox.Variables.TryGet("productionVar", out _));
+
+            vm.SelectedEnvironment = vm.EnvironmentOptions.Single(o => o.Model == productionEnvironment);
+            UiTestHelpers.Pump();
+
+            Assert.True(tokenBox.Variables!.TryGet("collectionVar", out _));
+            Assert.True(tokenBox.Variables.TryGet("productionVar", out _));
+            Assert.False(tokenBox.Variables.TryGet("stagingVar", out _));
+        }
+        finally
+        {
+            Cleanup(collection, stagingEnvironment, productionEnvironment);
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Folder_auth_field_sees_collection_and_environment_variables()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var collection = CreateCollectionWithVariable("collectionVar");
+        var folder = new FolderModel { Name = "Users" };
+        Workspace.AddNode(collection, null, folder);
+        var stagingEnvironment = CreateEnvironment("stagingVar");
+        var productionEnvironment = CreateEnvironment("productionVar");
+        try
+        {
+            vm.SelectedEnvironment = vm.EnvironmentOptions.Single(o => o.Model == stagingEnvironment);
+            await vm.OpenFolderAsync(folder);
+            var tab = Assert.IsType<FolderTabViewModel>(vm.ActiveTab);
+            tab.SelectedSection = 1;
+            SelectBearer(tab.Auth);
+            UiTestHelpers.Pump();
+
+            var tokenBox = VisibleBoxes(window).Single(box => box.PlaceholderText == "Token");
+            Assert.True(tokenBox.Variables!.TryGet("collectionVar", out _));
+            Assert.True(tokenBox.Variables.TryGet("stagingVar", out _));
+
+            vm.SelectedEnvironment = vm.EnvironmentOptions.Single(o => o.Model == productionEnvironment);
+            UiTestHelpers.Pump();
+
+            Assert.True(tokenBox.Variables!.TryGet("collectionVar", out _));
+            Assert.True(tokenBox.Variables.TryGet("productionVar", out _));
+            Assert.False(tokenBox.Variables.TryGet("stagingVar", out _));
+        }
+        finally
+        {
+            Cleanup(collection, stagingEnvironment, productionEnvironment);
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public void Request_editors_get_the_request_scope()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
@@ -40,7 +111,7 @@ public class InheritedVariablesTests
         }
         finally
         {
-            Cleanup(environment);
+            Cleanup(null, environment);
             window.Close();
         }
     }
@@ -65,7 +136,7 @@ public class InheritedVariablesTests
         }
         finally
         {
-            Cleanup(environment);
+            Cleanup(null, environment);
             window.Close();
         }
     }
@@ -76,6 +147,14 @@ public class InheritedVariablesTests
     private static void SelectBearer(AuthEditorViewModel auth) =>
         auth.SelectedType = auth.Types.Single(type => type.Value == AuthType.Bearer);
 
+    private static CollectionModel CreateCollectionWithVariable(string key)
+    {
+        var collection = Workspace.CreateCollection("Inherited " + Guid.NewGuid());
+        collection.Variables.Add(new Variable(key, "from collection"));
+        Workspace.SaveCollection(collection);
+        return collection;
+    }
+
     private static EnvironmentModel CreateEnvironment(string variableKey)
     {
         var environment = Workspace.CreateEnvironment("Inherited " + Guid.NewGuid());
@@ -85,9 +164,12 @@ public class InheritedVariablesTests
     }
 
     /// <summary>An environment left active would change how later tests resolve variables.</summary>
-    private static void Cleanup(EnvironmentModel environment)
+    private static void Cleanup(CollectionModel? collection, params EnvironmentModel[] environments)
     {
         Workspace.ActiveEnvironment = null;
-        Workspace.DeleteEnvironment(environment);
+        foreach (var environment in environments)
+            Workspace.DeleteEnvironment(environment);
+        if (collection is not null)
+            Workspace.DeleteCollection(collection);
     }
 }

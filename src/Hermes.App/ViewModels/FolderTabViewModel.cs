@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
 using Hermes.Core.Serialization;
+using Hermes.Core.Variables;
 
 namespace Hermes.App.ViewModels;
 
@@ -19,12 +20,13 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         _folder = folder;
         Auth = services.CreateAuthEditor(allowInherit: true);
         Auth.Changed += UpdateDirty;
-        Auth.ScopeProvider = () => CreateContext()?.BuildScope() ?? Core.Variables.VariableScope.Empty;
+        Auth.ScopeProvider = BuildScope;
         Auth.InheritedAuthProvider = () => CreateContext()?.ResolveAuth(AuthConfig.Inherit()) ?? new Core.Auth.EffectiveAuth(AuthConfig.NoAuth(), null);
         Auth.ChainProvider = () => (AuthInheritance.OuterLevels(CreateContext()), "Folder", Name);
         Auth.ContainedItemsProvider = () => _folder.Items;
         Load();
         _snapshot = Snapshot();
+        Scope = BuildScope();
     }
 
     public override SessionTabKind Kind => SessionTabKind.Folder;
@@ -32,6 +34,9 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
     public override string KindLabel => "DIR";
 
     public AuthEditorViewModel Auth { get; }
+
+    /// <summary>The variables in scope for this folder (globals, its collection's and the active environment's), shown by the editors in the tab.</summary>
+    [ObservableProperty] public partial VariableScope Scope { get; set; } = VariableScope.Empty;
 
     [ObservableProperty] public partial string Name { get; set; } = "";
     [ObservableProperty] public partial string Description { get; set; } = "";
@@ -45,6 +50,8 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         Services.Workspace.Find(_folder.Id) is { } location
             ? Services.Workspace.CreateContextForContainer(location.Collection, _folder)
             : null;
+
+    private VariableScope BuildScope() => CreateContext()?.BuildScope() ?? VariableScope.Empty;
 
     private void Load()
     {
@@ -98,6 +105,7 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
     public override void OnWorkspaceChanged()
     {
         OnPropertyChanged(nameof(Breadcrumb));
+        Scope = BuildScope();
         Auth.RefreshInherited();
         if (!IsDirty && Name != _folder.Name)
         {
@@ -106,5 +114,9 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         }
     }
 
-    public override void OnVariablesChanged() => Auth.RefreshInherited();
+    public override void OnVariablesChanged()
+    {
+        Scope = BuildScope();
+        Auth.RefreshInherited();
+    }
 }
