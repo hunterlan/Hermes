@@ -383,9 +383,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     /// <summary>With tabs turned off there's only ever one tab, so the strip is hidden.</summary>
     public bool IsTabStripVisible => ShowTabs;
 
-    /// <summary>Pinned tabs are only kept apart while tabs are on; in single-tab mode they're like any other tab.</summary>
-    private bool IsKeptByPin(TabViewModelBase tab) => ShowTabs && tab.IsPinned;
-
     /// <summary>Tabs single-tab mode doesn't keep: every tab but the active one, pinned or not.</summary>
     private IEnumerable<TabViewModelBase> TabsNotKeptInSingleTabMode => Tabs.Where(t => t != ActiveTab);
 
@@ -497,7 +494,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     [RelayCommand]
     private async Task CloseOtherTabs(TabViewModelBase tab)
     {
-        foreach (var other in Tabs.Where(t => t != tab && !IsKeptByPin(t)).ToList())
+        foreach (var other in Tabs.Where(t => t != tab && !t.IsPinned).ToList())
             if (!await TryCloseTabAsync(other))
                 return;
     }
@@ -505,7 +502,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     [RelayCommand]
     private async Task CloseAllTabs()
     {
-        foreach (var tab in Tabs.Where(t => !IsKeptByPin(t)).ToList())
+        foreach (var tab in Tabs.Where(t => !t.IsPinned).ToList())
             if (!await TryCloseTabAsync(tab))
                 return;
     }
@@ -662,8 +659,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             }
         }
 
-        // With tabs turned off only the active tab and tabs with unsaved changes come back.
-        foreach (var tab in restored.Where(t => ShowTabs || t == active || t.IsDirty))
+        // With tabs turned off only the active tab comes back. Through the UI a Tabs-off session holds just that one
+        // tab: turning tabs off closes the others first, asking to save any unsaved ones.
+        foreach (var tab in restored.Where(t => ShowTabs || t == active))
             Tabs.Add(tab);
 
         if (active is null)
