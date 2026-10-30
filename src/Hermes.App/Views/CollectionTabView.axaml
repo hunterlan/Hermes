@@ -5,18 +5,7 @@
              x:Class="Hermes.App.Views.CollectionTabView"
              x:DataType="vm:CollectionTabViewModel">
   <Grid RowDefinitions="Auto,*" Margin="20,14,20,0">
-    <Grid ColumnDefinitions="*,Auto">
-      <StackPanel Orientation="Horizontal" Spacing="10">
-        <PathIcon Data="{StaticResource IconCollections}" Width="18" Height="18" Foreground="{DynamicResource TextSecondaryBrush}" />
-        <TextBox Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" MinWidth="260" BorderThickness="0" Background="Transparent" Padding="4,2" />
-      </StackPanel>
-      <Button Grid.Column="1" Classes="ghost" Command="{Binding SaveCommand}" ToolTip.Tip="Save (Ctrl+S)">
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <PathIcon Width="14" Height="14" Data="{StaticResource IconSave}" />
-          <TextBlock Text="Save" />
-        </StackPanel>
-      </Button>
-    </Grid>
+    <v:ContainerTabHeader Icon="{StaticResource IconCollections}" Title="{Binding Name}" SaveCommand="{Binding SaveCommand}" />
 
     <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedSection}" Margin="0,8,0,0">
       <TabItem Header="Overview">
@@ -30,11 +19,7 @@
         </StackPanel>
       </TabItem>
       <TabItem Header="Authorization">
-        <StackPanel Spacing="12" Margin="0,10,0,0">
-          <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
-                     Text="This authorization method will be used for every request in this collection that inherits auth from its parent." />
-          <v:AuthEditorView DataContext="{Binding Auth}" />
-        </StackPanel>
+        <v:ContainerAuthorizationSection ContainerNoun="collection" DataContext="{Binding Auth}" />
       </TabItem>
       <TabItem Header="Variables">
         <ScrollViewer>

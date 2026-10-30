@@ -53,24 +53,13 @@
     </Style>
   </UserControl.Styles>
   <Grid RowDefinitions="Auto,Auto,*" Margin="20,14,20,0">
-    <Grid ColumnDefinitions="*,Auto">
-      <StackPanel Orientation="Horizontal" Spacing="10">
-        <PathIcon Data="{StaticResource IconEnvironment}" Width="18" Height="18" Foreground="{DynamicResource TextSecondaryBrush}" />
-        <TextBox Text="{Binding Name}" IsVisible="{Binding CanRename}" FontSize="16" FontWeight="SemiBold" MinWidth="260"
-                 BorderThickness="0" Background="Transparent" Padding="4,2" />
-        <TextBlock Classes="h1" Text="Globals" IsVisible="{Binding IsGlobals}" VerticalAlignment="Center" />
-      </StackPanel>
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+    <v:ContainerTabHeader Icon="{StaticResource IconEnvironment}" Title="{Binding Name}" IsTitleEditable="{Binding CanRename}"
+                          ReadOnlyTitle="Globals" SaveCommand="{Binding SaveCommand}">
+      <v:ContainerTabHeader.Actions>
         <Button Classes="ghost" Content="Set active" Command="{Binding SetActiveCommand}" IsVisible="{Binding CanRename}"
                 IsEnabled="{Binding !IsActiveEnvironment}" />
-        <Button Classes="ghost" Command="{Binding SaveCommand}" ToolTip.Tip="Save (Ctrl+S)">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <PathIcon Width="14" Height="14" Data="{StaticResource IconSave}" />
-            <TextBlock Text="Save" />
-          </StackPanel>
-        </Button>
-      </StackPanel>
-    </Grid>
+      </v:ContainerTabHeader.Actions>
+    </v:ContainerTabHeader>
     <StackPanel Grid.Row="1" Spacing="10" Margin="0,8,0,14">
       <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
                  Text="Use variables as {{name}} in URLs, headers, bodies and auth. Environment variables override collection variables, which override globals." />

@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:v="using:Hermes.App.Views"
+             x:Class="Hermes.App.Views.ContainerAuthorizationSection"
+             x:Name="Section"
+             x:DataType="vm:AuthEditorViewModel">
+  <StackPanel Spacing="12" Margin="0,10,0,0">
+    <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
+               Text="{Binding #Section.ContainerNoun, StringFormat='This authorization method will be used for every request in this {0} that inherits auth from its parent.'}" />
+    <v:AuthEditorView />
+  </StackPanel>
+</UserControl>
