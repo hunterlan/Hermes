@@ -37,7 +37,7 @@
         <Grid Classes="setting" ColumnDefinitions="*,Auto">
           <StackPanel>
             <TextBlock Classes="title" Text="Tabs" />
-            <TextBlock Classes="hint" Text="When off, only the current tab and tabs with unsaved changes stay open. Turning it off closes the others, pinned tabs included." />
+            <TextBlock Classes="hint" Text="When off, only one tab is open. Opening another item replaces it, and asks to save unsaved changes first." />
           </StackPanel>
           <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowTabs}" OnContent="" OffContent="" />
         </Grid>

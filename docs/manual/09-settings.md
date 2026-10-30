@@ -8,7 +8,7 @@ Open Settings with `Ctrl+,`.
 | --- | --- |
 | Theme | Dark, Light or Sync with OS |
 | Layout | Response below or beside the request |
-| Tabs | When off, only the current tab and tabs with unsaved changes stay open. See [Turning tabs off](02-collections-and-tabs.md#turning-tabs-off) |
+| Tabs | When off, only one tab is open and opening another item replaces it. See [Turning tabs off](02-collections-and-tabs.md#turning-tabs-off) |
 
 ## Requests
 
