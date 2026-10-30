@@ -17,7 +17,7 @@ public static class AuthInheritance
         AuthEditorViewModel.BaseTypes.FirstOrDefault(t => t.Value == type)?.Label ?? type.ToString();
 
     /// <summary>Levels from the outermost (collection) to <paramref name="self"/>; the nearest level that sets auth is the source.</summary>
-    public static List<AuthChainNode> Chain(IReadOnlyList<(string Kind, string Name, AuthConfig Auth)> outerLevels, (string Kind, string Name, AuthConfig Auth) self)
+    public static List<InheritanceChainNode> Chain(IReadOnlyList<(string Kind, string Name, AuthConfig Auth)> outerLevels, (string Kind, string Name, AuthConfig Auth) self)
     {
         var levels = outerLevels.Append(self).ToList();
         var source = levels.FindLastIndex(l => l.Auth.Type != AuthType.Inherit);
@@ -27,7 +27,8 @@ public static class AuthInheritance
             var status = i == source ? (i == levels.Count - 1 ? "Defined here" : "Source")
                 : defines ? "Overridden"
                 : "Inherits";
-            return new AuthChainNode(l.Kind, l.Name, status, defines ? Label(l.Auth.Type) : null, i == source, i == levels.Count - 1);
+            IReadOnlyList<InheritanceChainDetail> details = defines ? [new InheritanceChainDetail(Label(l.Auth.Type))] : [];
+            return new InheritanceChainNode($"{l.Kind} · {l.Name}", status, i == source, i == levels.Count - 1, details);
         }).ToList();
     }
 

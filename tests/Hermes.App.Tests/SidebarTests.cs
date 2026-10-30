@@ -190,7 +190,7 @@ public class SidebarTests
         Assert.Contains(tab.HiddenHeaders, h => h.Key == "Authorization" && h.Value == "Bearer secret-123");
         Assert.Contains("Bearer Token", tab.Auth.InheritedDescription);
 
-        Assert.Equal(["Collection", "Request"], tab.Auth.Chain.Select(n => n.Kind));
+        Assert.Equal(["Collection · " + collection.Model.Name, "Request · " + tab.Name], tab.Auth.Chain.Select(n => n.Title));
         Assert.True(tab.Auth.Chain[0].IsSource);
         Assert.Equal("Inherits", tab.Auth.Chain[1].Status);
 

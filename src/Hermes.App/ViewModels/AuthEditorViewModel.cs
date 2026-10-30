@@ -76,7 +76,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     /// <summary>For collections and folders: the items whose auth this one supplies.</summary>
     public Func<IEnumerable<CollectionNode>>? ContainedItemsProvider { get; set; }
 
-    public IReadOnlyList<AuthChainNode> Chain =>
+    public IReadOnlyList<InheritanceChainNode> Chain =>
         ChainProvider?.Invoke() is var (outer, kind, name) ? AuthInheritance.Chain(outer, (kind, name, ToModel())) : [];
 
     public IReadOnlyList<AuthOverride> Overrides =>
