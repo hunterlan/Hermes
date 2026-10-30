@@ -100,7 +100,7 @@ public class WorkflowTests
         try
         {
             var dialog = new SettingsDialogViewModel(settings, App.Services.GetRequiredService<DialogService>(),
-                App.Services.GetRequiredService<HttpClientProvider>(), Workspace.DataDirectory, vm.ConfirmTurningTabsOffAsync);
+                App.Services.GetRequiredService<HttpClientProvider>(), Workspace.DataDirectory, vm.CloseTabsForTurningTabsOffAsync);
             dialog.SelectedLayout = dialog.Layouts.Single(l => l.Value == ResponseLayout.Horizontal);
             dialog.SelectedTheme = dialog.Themes.Single(t => t.Value == ThemePreference.Light);
             dialog.TimeoutText = "1500";

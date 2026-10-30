@@ -297,7 +297,7 @@ public class TabTests
     /// <summary>A settings dialog with Tabs switched off, about to be saved.</summary>
     private static SettingsDialogViewModel SettingsTurningTabsOff(MainWindowViewModel vm) =>
         new(Settings, App.Services.GetRequiredService<DialogService>(), App.Services.GetRequiredService<HttpClientProvider>(),
-            Workspace.DataDirectory, vm.ConfirmTurningTabsOffAsync)
+            Workspace.DataDirectory, vm.CloseTabsForTurningTabsOffAsync)
         { ShowTabs = false };
 
     private static string MessageOf(Avalonia.Controls.Window window)
@@ -411,21 +411,81 @@ public class TabTests
     });
 
     [AvaloniaFact]
-    public void Turning_tabs_off_keeps_unsaved_tabs_without_asking() => WithShowTabs(true, (window, vm) =>
+    public void Turning_tabs_off_asks_to_save_each_unsaved_tab_and_stops_on_cancel() => WithShowTabs(true, (window, vm) =>
     {
-        var (_, first, second) = CreateRequests("Turn off dirty");
+        var (collection, first, second) = CreateRequests("Turn off dirty");
         FinishesAtOnce(vm.OpenRequestAsync(first));
-        var dirty = EditActiveRequest(vm);
+        var firstTab = EditActiveRequest(vm);
         FinishesAtOnce(vm.OpenRequestAsync(second));
+        var secondTab = EditActiveRequest(vm);
+        FinishesAtOnce(vm.OpenCollectionAsync(collection));
         var active = vm.ActiveTab!;
+        var dialog = SettingsTurningTabsOff(vm);
+        var dialogClosed = false;
+        dialog.CloseRequested += _ => dialogClosed = true;
+
+        // Confirm, don't save the first, then cancel at the second: Tabs stays on and the first stays closed.
+        var saving = dialog.SaveCommand.ExecuteAsync(null);
+        Assert.Contains("2 tabs will be closed", MessageOf(window));
+        Answer(window, "confirm");
+        Assert.Contains($"\"{firstTab.Title}\" has unsaved changes", MessageOf(window));
+        Answer(window, "discard");
+        Assert.Contains($"\"{secondTab.Title}\" has unsaved changes", MessageOf(window));
+        Answer(window, "cancel");
+
+        Assert.True(saving.IsCompleted);
+        Assert.True(Settings.Current.ShowTabs);
+        Assert.True(dialog.ShowTabs);
+        Assert.False(dialogClosed);
+        Assert.Equal([secondTab, active], vm.Tabs);
+
+        // Again, saving the second: the setting is saved and only the active tab is left.
+        dialog.ShowTabs = false;
+        saving = dialog.SaveCommand.ExecuteAsync(null);
+        Assert.Contains("1 tab will be closed", MessageOf(window));
+        Answer(window, "confirm");
+        var savedUrl = secondTab.Url;
+        Answer(window, "save");
+
+        Assert.True(saving.IsCompleted);
+        Assert.False(Settings.Current.ShowTabs);
+        Assert.True(dialogClosed);
+        Assert.Same(active, Assert.Single(vm.Tabs));
+        Assert.Equal(savedUrl, StoredUrl(second.Id));
+        Assert.Equal(first.Url, StoredUrl(first.Id));
+    });
+
+    [AvaloniaFact]
+    public void Turning_tabs_off_keeps_the_active_tab_even_when_unsaved() => WithShowTabs(true, (window, vm) =>
+    {
+        var (_, first, second) = CreateRequests("Turn off active dirty");
+        FinishesAtOnce(vm.OpenRequestAsync(first));
+        FinishesAtOnce(vm.OpenRequestAsync(second));
+        var active = EditActiveRequest(vm);
 
         var saving = SettingsTurningTabsOff(vm).SaveCommand.ExecuteAsync(null);
-        UiTestHelpers.Pump();
+        Answer(window, "confirm");
 
         Assert.Empty(window.OwnedWindows);
         Assert.True(saving.IsCompleted);
         Assert.False(Settings.Current.ShowTabs);
-        Assert.Equal([dirty, active], vm.Tabs);
+        Assert.Same(active, Assert.Single(vm.Tabs));
+        Assert.True(active.IsDirty);
+    });
+
+    [AvaloniaFact]
+    public void Turning_tabs_off_with_one_tab_does_not_ask() => WithShowTabs(true, (window, vm) =>
+    {
+        var (_, first, _) = CreateRequests("Turn off single");
+        FinishesAtOnce(vm.OpenRequestAsync(first));
+        var only = EditActiveRequest(vm);
+
+        FinishesAtOnce(SettingsTurningTabsOff(vm).SaveCommand.ExecuteAsync(null));
+        UiTestHelpers.Pump();
+
+        Assert.Empty(window.OwnedWindows);
+        Assert.False(Settings.Current.ShowTabs);
+        Assert.Same(only, Assert.Single(vm.Tabs));
     });
 
     [AvaloniaFact]

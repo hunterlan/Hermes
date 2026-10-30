@@ -49,7 +49,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         {
             foreach (var tab in Tabs)
                 tab.OnSettingsChanged();
-            CloseTabsNotKeptInSingleTabMode();
             Collections.OnShowTabsChanged();
             History.OnShowTabsChanged();
             OnPropertyChanged(nameof(ShowTabs));
@@ -387,28 +386,30 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     /// <summary>Pinned tabs are only kept apart while tabs are on; in single-tab mode they're like any other tab.</summary>
     private bool IsKeptByPin(TabViewModelBase tab) => ShowTabs && tab.IsPinned;
 
-    /// <summary>Tabs single-tab mode doesn't keep: clean ones other than the active tab, pinned or not.</summary>
-    private IEnumerable<TabViewModelBase> TabsNotKeptInSingleTabMode => Tabs.Where(t => t != ActiveTab && !t.IsDirty);
+    /// <summary>Tabs single-tab mode doesn't keep: every tab but the active one, pinned or not.</summary>
+    private IEnumerable<TabViewModelBase> TabsNotKeptInSingleTabMode => Tabs.Where(t => t != ActiveTab);
 
-    /// <summary>With tabs turned off only the active tab and tabs with unsaved changes stay open.</summary>
-    private void CloseTabsNotKeptInSingleTabMode()
+    /// <summary>
+    /// Run before Tabs is turned off: once the user confirms, closes every tab but the active one, asking to save
+    /// each with unsaved changes. False when the user cancelled; tabs closed by then stay closed.
+    /// </summary>
+    public async Task<bool> CloseTabsForTurningTabsOffAsync()
     {
-        if (ShowTabs)
-            return;
-        foreach (var tab in TabsNotKeptInSingleTabMode.ToList())
-            RemoveTab(tab);
-    }
-
-    /// <summary>Asks whether to close the tabs that turning Tabs off would close. True when there are none or the user confirmed.</summary>
-    public async Task<bool> ConfirmTurningTabsOffAsync()
-    {
-        var closingCount = TabsNotKeptInSingleTabMode.Count();
-        if (closingCount == 0)
+        var closing = TabsNotKeptInSingleTabMode.ToList();
+        if (closing.Count == 0)
             return true;
-        return await Dialogs.ConfirmAsync("Turn off tabs?",
-            $"{closingCount} {(closingCount == 1 ? "tab" : "tabs")} will be closed: every tab except the current one and " +
-            "those with unsaved changes, including pinned tabs.",
+        var confirmed = await Dialogs.ConfirmAsync("Turn off tabs?",
+            $"{closing.Count} {(closing.Count == 1 ? "tab" : "tabs")} will be closed: every tab except the current one, " +
+            "including pinned tabs. You'll be asked to save any with unsaved changes.",
             "Close tabs");
+        if (!confirmed)
+            return false;
+        foreach (var tab in closing)
+        {
+            if (!await TryCloseTabAsync(tab))
+                return false;
+        }
+        return true;
     }
 
     private void OnTabPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -601,7 +602,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     [RelayCommand]
     private async Task OpenSettings()
     {
-        var vm = new SettingsDialogViewModel(_services.Settings, Dialogs, _services.Http, Workspace.DataDirectory, ConfirmTurningTabsOffAsync);
+        var vm = new SettingsDialogViewModel(_services.Settings, Dialogs, _services.Http, Workspace.DataDirectory, CloseTabsForTurningTabsOffAsync);
         await Dialogs.ShowDialogAsync<bool>(new Views.Dialogs.SettingsDialog { DataContext = vm });
         if (vm.ManualRequested)
             await OpenManualAsync();
