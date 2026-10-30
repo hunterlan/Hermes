@@ -49,14 +49,14 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public void Open(EnvironmentItemViewModel? item)
+    private async Task Open(EnvironmentItemViewModel? item)
     {
         if (item is not null)
-            _host.OpenEnvironment(item.Model);
+            await _host.OpenEnvironmentAsync(item.Model);
     }
 
     [RelayCommand]
-    private void OpenMatrix() => _host.OpenEnvironmentMatrix();
+    private Task OpenMatrix() => _host.OpenEnvironmentMatrixAsync();
 
     [RelayCommand]
     private void NewEnvironment()

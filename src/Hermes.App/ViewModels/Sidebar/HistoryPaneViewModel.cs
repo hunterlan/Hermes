@@ -60,14 +60,14 @@ public sealed partial class HistoryPaneViewModel : ObservableObject
     public void OnShowTabsChanged() => OnPropertyChanged(nameof(IsOpenInTabAvailable));
 
     [RelayCommand]
-    public void Open(HistoryItemViewModel? item)
+    private async Task Open(HistoryItemViewModel? item)
     {
         if (item is null)
             return;
         var copy = ModelCloner.Clone(item.Entry.Request);
         copy.Id = Guid.NewGuid();
         copy.Name = string.IsNullOrWhiteSpace(copy.Url) ? "Untitled Request" : copy.Url;
-        _host.OpenDraft(copy);
+        await _host.OpenHistoryDraftAsync(copy);
     }
 
     [RelayCommand]

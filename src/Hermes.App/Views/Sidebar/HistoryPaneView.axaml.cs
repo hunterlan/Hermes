@@ -15,7 +15,7 @@ public partial class HistoryPaneView : UserControl
     private void OnItemTapped(object? sender, TappedEventArgs e)
     {
         if (sender is Control { DataContext: HistoryItemViewModel item })
-            ViewModel?.Open(item);
+            ViewModel?.OpenCommand.Execute(item);
     }
 
     private void OnDeleteClick(object? sender, RoutedEventArgs e)
@@ -36,7 +36,7 @@ public partial class HistoryPaneView : UserControl
     internal static ContextMenu CreateMenu(HistoryPaneViewModel vm, HistoryItemViewModel item)
     {
         var open = new MenuItem { Header = "Open in new tab" };
-        open.Click += (_, _) => vm.Open(item);
+        open.Click += (_, _) => vm.OpenCommand.Execute(item);
         // Hidden while Settings → Tabs is off; the binding follows the setting as it changes.
         open.Bind(IsVisibleProperty, new Binding(nameof(HistoryPaneViewModel.IsOpenInTabAvailable)) { Source = vm });
         var delete = new MenuItem { Header = "Delete" };

@@ -84,9 +84,9 @@ public partial class CollectionsPaneView : UserControl
         {
             // A double click keeps the request open in its own tab.
             if (_lastPressArgs?.ClickCount >= 2 && node.IsRequest)
-                ViewModel?.Open(node);
+                ViewModel?.OpenCommand.Execute(node);
             else
-                ViewModel?.Activate(node);
+                ViewModel?.ActivateCommand.Execute(node);
         }
         _pressedNode = null;
         _lastPressArgs = null;
@@ -234,11 +234,11 @@ public partial class CollectionsPaneView : UserControl
             items.Add(new Separator());
         }
         if (!node.IsRequest)
-            items.Add(Item(node.IsCollection ? "Edit collection" : "Edit folder", () => vm.Open(node)));
+            items.Add(Item(node.IsCollection ? "Edit collection" : "Edit folder", () => vm.OpenCommand.Execute(node)));
         else
         {
             // Hidden while Settings → Tabs is off; the binding follows the setting as it changes.
-            var openInTab = Item("Open in tab", () => vm.Open(node));
+            var openInTab = Item("Open in tab", () => vm.OpenCommand.Execute(node));
             openInTab.Bind(IsVisibleProperty, new Binding(nameof(CollectionsPaneViewModel.IsOpenInTabAvailable)) { Source = vm });
             items.Add(openInTab);
         }
@@ -268,7 +268,7 @@ public partial class CollectionsPaneView : UserControl
                 e.Handled = true;
                 break;
             case Key.Enter:
-                vm.Open(node);
+                vm.OpenCommand.Execute(node);
                 e.Handled = true;
                 break;
         }

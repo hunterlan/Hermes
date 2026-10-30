@@ -7,6 +7,7 @@ using Hermes.App.ViewModels;
 using Hermes.App.ViewModels.Sidebar;
 using Hermes.App.Views.Dialogs;
 using Hermes.Core.Http;
+using Hermes.Core.Import;
 using Hermes.Core.Models;
 using Hermes.Core.Serialization;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,14 +39,14 @@ public class TabTests
     }
 
     [AvaloniaFact]
-    public void Request_settings_keep_an_override_that_matches_the_app_setting()
+    public async Task Request_settings_keep_an_override_that_matches_the_app_setting()
     {
         var (window, vm) = ShowEmptyWindow();
         var (_, first, _) = CreateRequests("Settings");
         var appVerifies = App.Services.GetRequiredService<SettingsService>().Current.VerifySsl;
         first.Settings.VerifySsl = appVerifies;
 
-        vm.OpenRequest(first);
+        await vm.OpenRequestAsync(first);
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         tab.Name += " edited";
 
@@ -75,13 +76,13 @@ public class TabTests
     }
 
     [AvaloniaFact]
-    public void Cancel_in_an_unsaved_changes_prompt_stops_close_all()
+    public async Task Cancel_in_an_unsaved_changes_prompt_stops_close_all()
     {
         var (window, vm) = ShowEmptyWindow();
         var (_, first, second) = CreateRequests("Cancel");
         foreach (var request in new[] { first, second })
         {
-            vm.OpenRequest(request);
+            await vm.OpenRequestAsync(request);
             ((RequestTabViewModel)vm.ActiveTab!).Name += " edited";
         }
 
@@ -159,17 +160,17 @@ public class TabTests
     }
 
     [AvaloniaFact]
-    public void Single_click_replaces_the_preview_tab_until_it_is_edited()
+    public async Task Single_click_replaces_the_preview_tab_until_it_is_edited()
     {
         var (window, vm) = ShowEmptyWindow();
         var (_, first, second) = CreateRequests("Preview");
         var before = vm.Tabs.Count;
 
-        vm.PreviewRequest(first);
+        await vm.PreviewRequestAsync(first);
         var preview = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         Assert.True(preview.IsPreview);
 
-        vm.PreviewRequest(second);
+        await vm.PreviewRequestAsync(second);
         Assert.Equal(before + 1, vm.Tabs.Count);
         Assert.DoesNotContain(preview, vm.Tabs);
         var edited = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
@@ -178,7 +179,7 @@ public class TabTests
         edited.Url = "https://example.com/changed";
         Assert.False(edited.IsPreview);
 
-        vm.PreviewRequest(first);
+        await vm.PreviewRequestAsync(first);
         Assert.Equal(before + 2, vm.Tabs.Count);
         Assert.Contains(edited, vm.Tabs);
         window.Close();
@@ -208,18 +209,18 @@ public class TabTests
     }
 
     [AvaloniaFact]
-    public void Same_named_tabs_show_their_collection()
+    public async Task Same_named_tabs_show_their_collection()
     {
         var (window, vm) = ShowEmptyWindow();
         var shared = "Same " + Guid.NewGuid();
         var (a, firstA, _) = CreateRequests("Alpha", shared);
         var (b, firstB, _) = CreateRequests("Beta", shared);
 
-        vm.OpenRequest(firstA);
+        await vm.OpenRequestAsync(firstA);
         var tabA = vm.ActiveTab!;
         Assert.Null(tabA.TitlePrefix);
 
-        vm.OpenRequest(firstB);
+        await vm.OpenRequestAsync(firstB);
         Assert.Equal(a.Name, tabA.TitlePrefix);
         Assert.Equal(b.Name, vm.ActiveTab!.TitlePrefix);
 
@@ -229,13 +230,13 @@ public class TabTests
     }
 
     [AvaloniaFact]
-    public void Pinned_tabs_survive_close_all_and_move_to_the_start()
+    public async Task Pinned_tabs_survive_close_all_and_move_to_the_start()
     {
         var (window, vm) = ShowEmptyWindow();
         var (_, first, second) = CreateRequests("Pin");
 
-        vm.OpenRequest(second);
-        vm.OpenRequest(first);
+        await vm.OpenRequestAsync(second);
+        await vm.OpenRequestAsync(first);
         var pinned = vm.ActiveTab!;
         vm.TogglePinCommand.Execute(pinned);
         Assert.True(pinned.IsPinned);
@@ -279,6 +280,12 @@ public class TabTests
 
     private static void WithTabsOff(Action<Views.MainWindow, MainWindowViewModel> test) => WithShowTabs(false, test);
 
+    /// <summary>
+    /// Single-tab tests stay synchronous (settings are shared while they run), so they check that an open which
+    /// needs no prompt finished at once instead of awaiting it.
+    /// </summary>
+    private static void FinishesAtOnce(Task opening) => Assert.True(opening.IsCompletedSuccessfully);
+
     private static RequestTabViewModel EditActiveRequest(MainWindowViewModel vm)
     {
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
@@ -320,7 +327,6 @@ public class TabTests
         Assert.Equal([first.Id, environments[1].Id], restored.Tabs.Select(t => t.EntityId));
         Assert.Equal(environments[1].Id, restored.ActiveTab?.EntityId);
         Assert.True(restored.Tabs[0].IsDirty);
-        Assert.True(restored.IsTabStripVisible);
         foreach (var env in environments)
             Workspace.DeleteEnvironment(env);
     });
@@ -358,9 +364,9 @@ public class TabTests
     public void Turning_tabs_off_closes_clean_tabs_only_once_confirmed() => WithShowTabs(true, (window, vm) =>
     {
         var (collection, first, second) = CreateRequests("Turn off");
-        vm.OpenRequest(first);
-        vm.OpenCollection(collection);
-        vm.OpenRequest(second);
+        FinishesAtOnce(vm.OpenRequestAsync(first));
+        FinishesAtOnce(vm.OpenCollectionAsync(collection));
+        FinishesAtOnce(vm.OpenRequestAsync(second));
         var active = vm.ActiveTab!;
         var dialog = SettingsTurningTabsOff(vm);
         var dialogClosed = false;
@@ -391,9 +397,9 @@ public class TabTests
     public void Turning_tabs_off_closes_pinned_tabs_too() => WithShowTabs(true, (window, vm) =>
     {
         var (_, first, second) = CreateRequests("Turn off pinned");
-        vm.OpenRequest(first);
+        FinishesAtOnce(vm.OpenRequestAsync(first));
         vm.TogglePinCommand.Execute(vm.ActiveTab);
-        vm.OpenRequest(second);
+        FinishesAtOnce(vm.OpenRequestAsync(second));
         var active = vm.ActiveTab!;
 
         var saving = SettingsTurningTabsOff(vm).SaveCommand.ExecuteAsync(null);
@@ -408,9 +414,9 @@ public class TabTests
     public void Turning_tabs_off_keeps_unsaved_tabs_without_asking() => WithShowTabs(true, (window, vm) =>
     {
         var (_, first, second) = CreateRequests("Turn off dirty");
-        vm.OpenRequest(first);
+        FinishesAtOnce(vm.OpenRequestAsync(first));
         var dirty = EditActiveRequest(vm);
-        vm.OpenRequest(second);
+        FinishesAtOnce(vm.OpenRequestAsync(second));
         var active = vm.ActiveTab!;
 
         var saving = SettingsTurningTabsOff(vm).SaveCommand.ExecuteAsync(null);
@@ -420,33 +426,27 @@ public class TabTests
         Assert.True(saving.IsCompleted);
         Assert.False(Settings.Current.ShowTabs);
         Assert.Equal([dirty, active], vm.Tabs);
-        Assert.True(vm.IsTabStripVisible);
     });
 
     [AvaloniaFact]
-    public void Without_tabs_opening_an_item_replaces_a_clean_tab_and_opens_beside_a_dirty_one() => WithTabsOff((_, vm) =>
+    public void Without_tabs_opening_an_item_replaces_a_clean_tab_and_the_strip_stays_hidden() => WithTabsOff((_, vm) =>
     {
-        var (collection, first, second) = CreateRequests("Single");
+        var (collection, first, _) = CreateRequests("Single");
         var folder = new FolderModel { Name = "Folder " + Guid.NewGuid() };
         Workspace.AddNode(collection, null, folder);
         var environment = Workspace.CreateEnvironment("Single " + Guid.NewGuid());
 
-        vm.OpenRequest(first);
-        Assert.False(vm.IsTabStripVisible);
-        foreach (var open in new Action[] { () => vm.OpenFolder(folder), () => vm.OpenCollection(collection), () => vm.OpenEnvironment(environment) })
+        Func<Task>[] opens =
+        [
+            () => vm.OpenRequestAsync(first), () => vm.OpenFolderAsync(folder), () => vm.OpenCollectionAsync(collection),
+            () => vm.OpenEnvironmentAsync(environment), () => vm.NewRequestCommand.ExecuteAsync(null),
+        ];
+        foreach (var open in opens)
         {
-            open();
+            FinishesAtOnce(open());
             Assert.Single(vm.Tabs);
             Assert.False(vm.IsTabStripVisible);
         }
-        Assert.Equal(environment.Id, vm.ActiveTab!.EntityId);
-
-        vm.OpenRequest(first);
-        var dirty = EditActiveRequest(vm);
-        vm.OpenRequest(second);
-        Assert.Equal([dirty.RequestId, second.Id], vm.Tabs.Select(t => t.EntityId));
-        Assert.Equal(second.Id, vm.ActiveTab!.EntityId);
-        Assert.True(vm.IsTabStripVisible);
         Workspace.DeleteEnvironment(environment);
     });
 
@@ -455,43 +455,130 @@ public class TabTests
     {
         var (_, first, second) = CreateRequests("Pinned");
 
-        vm.OpenRequest(first);
+        FinishesAtOnce(vm.OpenRequestAsync(first));
         vm.TogglePinCommand.Execute(vm.ActiveTab);
-        vm.OpenRequest(second);
+        FinishesAtOnce(vm.OpenRequestAsync(second));
 
         Assert.Equal(second.Id, Assert.Single(vm.Tabs).EntityId);
     });
 
+    private static string StoredUrl(Guid requestId) => ((HttpRequestModel)Workspace.Find(requestId)!.Node).Url;
+
     [AvaloniaFact]
-    public void Without_tabs_saving_the_other_dirty_tab_hides_the_strip() => WithTabsOff((_, vm) =>
+    public void Without_tabs_opening_while_the_tab_is_unsaved_asks_to_save_it_first() => WithTabsOff((window, vm) =>
     {
-        var (_, first, second) = CreateRequests("Save");
-        vm.OpenRequest(first);
-        var dirty = EditActiveRequest(vm);
-        vm.OpenRequest(second);
-        var current = vm.ActiveTab!;
-        Assert.True(vm.IsTabStripVisible);
-        var stripChanges = 0;
-        vm.PropertyChanged += (_, e) => stripChanges += e.PropertyName == nameof(MainWindowViewModel.IsTabStripVisible) ? 1 : 0;
+        var (_, first, second) = CreateRequests("Prompt");
+        FinishesAtOnce(vm.OpenRequestAsync(first));
+        var firstTab = EditActiveRequest(vm);
 
-        dirty.SaveCommand.Execute(null);
+        // Cancel: nothing changes and the new request isn't opened.
+        var opening = vm.NewRequestCommand.ExecuteAsync(null);
+        Assert.Contains($"\"{firstTab.Title}\" has unsaved changes", MessageOf(window));
+        Answer(window, "cancel");
+        Assert.True(opening.IsCompleted);
+        Assert.Same(firstTab, Assert.Single(vm.Tabs));
+        Assert.True(firstTab.IsDirty);
 
-        Assert.Same(current, Assert.Single(vm.Tabs));
+        // Don't save: the edits are dropped and the item replaces the tab.
+        opening = vm.OpenRequestAsync(second);
+        Answer(window, "discard");
+        Assert.True(opening.IsCompleted);
+        Assert.Equal(second.Id, Assert.Single(vm.Tabs).EntityId);
+        Assert.Equal(first.Url, StoredUrl(first.Id));
+
+        // Save: the edits are saved, then the item (here from History) replaces the tab.
+        var editedUrl = EditActiveRequest(vm).Url;
+        opening = vm.History.OpenCommand.ExecuteAsync(new HistoryItemViewModel(new HistoryEntry { Request = first }));
+        Answer(window, "save");
+        Assert.True(opening.IsCompleted);
+        Assert.Equal(editedUrl, StoredUrl(second.Id));
+        Assert.False(Assert.IsType<RequestTabViewModel>(Assert.Single(vm.Tabs)).IsPersisted);
         Assert.False(vm.IsTabStripVisible);
-        Assert.True(stripChanges > 0);
     });
 
     [AvaloniaFact]
-    public void Without_tabs_switching_to_a_dirty_tab_closes_the_clean_one() => WithTabsOff((_, vm) =>
+    public void Without_tabs_a_save_that_does_not_happen_keeps_the_tab() => WithTabsOff((window, vm) =>
     {
-        var (_, first, second) = CreateRequests("Switch");
-        vm.OpenRequest(first);
+        var (_, first, _) = CreateRequests("Failed save");
+        FinishesAtOnce(vm.NewRequestCommand.ExecuteAsync(null));
+        var neverSaved = EditActiveRequest(vm);
+
+        // Saving a new request asks where to put it; closing that dialog means nothing was saved.
+        var opening = vm.OpenRequestAsync(first);
+        Answer(window, "save");
+        Assert.IsType<SaveRequestDialog>(Assert.Single(window.OwnedWindows)).Close();
+        UiTestHelpers.Pump();
+
+        Assert.True(opening.IsCompleted);
+        Assert.Same(neverSaved, Assert.Single(vm.Tabs));
+        Assert.True(neverSaved.IsDirty);
+    });
+
+    private static HistoryItemViewModel HistoryItem(string url) =>
+        new(new HistoryEntry { Request = new HttpRequestModel { Url = url } });
+
+    [AvaloniaFact]
+    public void Without_tabs_browsing_history_asks_only_once_a_draft_is_edited() => WithTabsOff((window, vm) =>
+    {
+        var historyA = HistoryItem("https://example.com/history-a");
+        var historyB = HistoryItem("https://example.com/history-b");
+
+        // A History draft shows as modified from the start, yet the next entry replaces it without asking.
+        FinishesAtOnce(vm.History.OpenCommand.ExecuteAsync(historyA));
+        Assert.True(vm.ActiveTab!.IsDirty);
+        FinishesAtOnce(vm.History.OpenCommand.ExecuteAsync(historyB));
+        UiTestHelpers.Pump();
+        Assert.Empty(window.OwnedWindows);
+        Assert.Equal(historyB.Entry.Request.Url, Assert.IsType<RequestTabViewModel>(Assert.Single(vm.Tabs)).Url);
+
+        var edited = EditActiveRequest(vm);
+        var opening = vm.History.OpenCommand.ExecuteAsync(historyA);
+        Answer(window, "cancel");
+        Assert.True(opening.IsCompleted);
+        Assert.Same(edited, Assert.Single(vm.Tabs));
+    });
+
+    [AvaloniaFact]
+    public void Without_tabs_an_imported_curl_draft_still_asks() => WithTabsOff((window, vm) =>
+    {
+        var import = new ImportResult();
+        ImportService.ImportText("curl https://example.com/imported", import);
+        FinishesAtOnce(vm.ApplyImportAsync(import));
+        var draft = Assert.Single(vm.Tabs);
+
+        var opening = vm.NewRequestCommand.ExecuteAsync(null);
+        Answer(window, "cancel");
+
+        Assert.True(opening.IsCompleted);
+        Assert.Same(draft, Assert.Single(vm.Tabs));
+    });
+
+    [AvaloniaFact]
+    public void Without_tabs_opening_the_current_item_does_not_ask() => WithTabsOff((window, vm) =>
+    {
+        var (_, first, _) = CreateRequests("Current");
+        FinishesAtOnce(vm.OpenRequestAsync(first));
+        var tab = EditActiveRequest(vm);
+
+        FinishesAtOnce(vm.OpenRequestAsync(first));
+        UiTestHelpers.Pump();
+
+        Assert.Empty(window.OwnedWindows);
+        Assert.Same(tab, Assert.Single(vm.Tabs));
+    });
+
+    [AvaloniaFact]
+    public void With_tabs_an_item_opens_beside_an_unsaved_tab_without_asking() => WithShowTabs(true, (window, vm) =>
+    {
+        var (_, first, second) = CreateRequests("Tabs on");
+        FinishesAtOnce(vm.OpenRequestAsync(first));
         var dirty = EditActiveRequest(vm);
-        vm.OpenRequest(second);
 
-        vm.SelectTabCommand.Execute(dirty);
+        FinishesAtOnce(vm.OpenRequestAsync(second));
+        UiTestHelpers.Pump();
 
-        Assert.Same(dirty, Assert.Single(vm.Tabs));
-        Assert.False(vm.IsTabStripVisible);
+        Assert.Empty(window.OwnedWindows);
+        Assert.Equal([dirty.RequestId, second.Id], vm.Tabs.Select(t => t.EntityId));
+        Assert.True(vm.IsTabStripVisible);
     });
 }

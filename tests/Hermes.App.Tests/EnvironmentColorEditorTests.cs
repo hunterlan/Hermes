@@ -25,7 +25,7 @@ public class EnvironmentColorEditorTests
         var env = Workspace.CreateEnvironment("Color " + Guid.NewGuid());
         try
         {
-            vm.OpenEnvironment(env);
+            await vm.OpenEnvironmentAsync(env);
             var tab = Assert.IsType<EnvironmentTabViewModel>(vm.ActiveTab);
             Assert.Equal(EnvironmentColor.None, tab.Color);
             Assert.False(tab.IsDirty);
@@ -60,7 +60,7 @@ public class EnvironmentColorEditorTests
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         try
         {
-            vm.OpenEnvironment(Workspace.Globals);
+            await vm.OpenEnvironmentAsync(Workspace.Globals);
             var tab = Assert.IsType<EnvironmentTabViewModel>(vm.ActiveTab);
             UiTestHelpers.Pump();
             Assert.False(ColorSwatches(window).IsEffectivelyVisible);
@@ -76,13 +76,13 @@ public class EnvironmentColorEditorTests
     }
 
     [AvaloniaFact]
-    public void Swatches_are_one_named_radio_group_driven_by_the_keyboard()
+    public async Task Swatches_are_one_named_radio_group_driven_by_the_keyboard()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var env = Workspace.CreateEnvironment("Color " + Guid.NewGuid());
         try
         {
-            vm.OpenEnvironment(env);
+            await vm.OpenEnvironmentAsync(env);
             var tab = Assert.IsType<EnvironmentTabViewModel>(vm.ActiveTab);
             UiTestHelpers.Pump();
             var swatches = ColorSwatches(window);

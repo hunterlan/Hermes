@@ -99,27 +99,28 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     public void OnShowTabsChanged() => OnPropertyChanged(nameof(IsOpenInTabAvailable));
 
     /// <summary>Single click: requests open in the preview tab; folders and collections only expand or collapse.</summary>
-    public void Activate(TreeNodeViewModel? node)
+    [RelayCommand]
+    private async Task Activate(TreeNodeViewModel? node)
     {
         if (node is RequestNodeViewModel r)
-            _host.PreviewRequest(r.Model);
+            await _host.PreviewRequestAsync(r.Model);
         else if (node is not null)
             node.IsExpanded = !node.IsExpanded;
     }
 
     [RelayCommand]
-    public void Open(TreeNodeViewModel? node)
+    private async Task Open(TreeNodeViewModel? node)
     {
         switch (node)
         {
             case RequestNodeViewModel r:
-                _host.OpenRequest(r.Model);
+                await _host.OpenRequestAsync(r.Model);
                 break;
             case FolderNodeViewModel f:
-                _host.OpenFolder(f.Model);
+                await _host.OpenFolderAsync(f.Model);
                 break;
             case CollectionNodeViewModel c:
-                _host.OpenCollection(c.Model);
+                await _host.OpenCollectionAsync(c.Model);
                 break;
         }
     }
@@ -134,7 +135,7 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void AddRequest(TreeNodeViewModel? node)
+    private async Task AddRequest(TreeNodeViewModel? node)
     {
         if (ContainerOf(node) is not var (collection, folder))
             return;
@@ -146,7 +147,7 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
             created.Parent!.IsExpanded = true;
             SelectedNode = created;
         }
-        _host.OpenRequest(request);
+        await _host.OpenRequestAsync(request);
     }
 
     [RelayCommand]

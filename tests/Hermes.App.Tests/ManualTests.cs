@@ -50,11 +50,11 @@ public partial class ManualTests
     }
 
     [AvaloniaFact]
-    public void Manual_tab_shows_a_page_and_follows_links_between_pages()
+    public async Task Manual_tab_shows_a_page_and_follows_links_between_pages()
     {
         var (window, vm) = ShowEmptyWindow();
 
-        vm.OpenManual();
+        await vm.OpenManualAsync();
         var help = Assert.IsType<HelpTabViewModel>(vm.ActiveTab);
         help.OpenLinkCommand.Execute("09-settings.md");
 
