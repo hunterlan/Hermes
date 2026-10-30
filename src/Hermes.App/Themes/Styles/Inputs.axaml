@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Hermes.App.Controls">
 
   <!-- Inputs -->
   <Style Selector="TextBox">
@@ -29,5 +30,15 @@
   <Style Selector="TextBox.cell:focus /template/ Border#PART_BorderElement">
     <Setter Property="Background" Value="{DynamicResource BgInputBrush}" />
     <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <!-- Bordered variable input for forms, where the box stands on its own instead of in a table cell -->
+  <Style Selector="c|VariableTextBox.bordered">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Background" Value="{DynamicResource BgInputBrush}" />
   </Style>
 </Styles>

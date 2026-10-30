@@ -29,14 +29,6 @@
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
-    <Style Selector="Border.input">
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="4" />
-      <Setter Property="Padding" Value="8,0" />
-      <Setter Property="MinHeight" Value="30" />
-      <Setter Property="Background" Value="{DynamicResource BgInputBrush}" />
-    </Style>
   </UserControl.Styles>
 
   <Grid ColumnDefinitions="300,*">
@@ -85,7 +77,7 @@
         <!-- basic -->
         <Grid Classes="form" IsVisible="{Binding IsBasic}" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto">
           <TextBlock Classes="label" Text="Username" />
-          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding BasicUsername}" PlaceholderText="Username" /></Border>
+          <c:VariableTextBox Grid.Column="1" Classes="bordered" Text="{Binding BasicUsername}" PlaceholderText="Username" />
           <TextBlock Grid.Row="1" Classes="label" Text="Password" />
           <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding BasicPassword}" PasswordChar="•" RevealPassword="False" PlaceholderText="Password" Classes="revealPasswordButton" />
         </Grid>
@@ -93,15 +85,15 @@
         <!-- bearer -->
         <Grid Classes="form" IsVisible="{Binding IsBearer}" ColumnDefinitions="140,*">
           <TextBlock Classes="label" Text="Token" />
-          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding BearerToken}" PlaceholderText="Token" /></Border>
+          <c:VariableTextBox Grid.Column="1" Classes="bordered" Text="{Binding BearerToken}" PlaceholderText="Token" />
         </Grid>
 
         <!-- api key -->
         <Grid Classes="form" IsVisible="{Binding IsApiKey}" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto">
           <TextBlock Classes="label" Text="Key" />
-          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding ApiKeyKey}" PlaceholderText="Key" /></Border>
+          <c:VariableTextBox Grid.Column="1" Classes="bordered" Text="{Binding ApiKeyKey}" PlaceholderText="Key" />
           <TextBlock Grid.Row="1" Classes="label" Text="Value" />
-          <Border Grid.Row="1" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding ApiKeyValue}" PlaceholderText="Value" /></Border>
+          <c:VariableTextBox Grid.Row="1" Grid.Column="1" Classes="bordered" Text="{Binding ApiKeyValue}" PlaceholderText="Value" />
           <TextBlock Grid.Row="2" Classes="label" Text="Add to" />
           <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding ApiKeyLocations}" SelectedItem="{Binding SelectedApiKeyLocation}" HorizontalAlignment="Stretch" />
         </Grid>
@@ -114,7 +106,7 @@
               <Grid Classes="form" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto">
                 <TextBlock Classes="label" Text="Access Token" />
                 <Grid Grid.Column="1" ColumnDefinitions="*,Auto">
-                  <Border Classes="input"><c:VariableTextBox Text="{Binding OAuthAccessToken}" PlaceholderText="Token" /></Border>
+                  <c:VariableTextBox Classes="bordered" Text="{Binding OAuthAccessToken}" PlaceholderText="Token" />
                   <Button Grid.Column="1" Classes="ghost" Content="Clear" Margin="6,0,0,0" Command="{Binding ClearTokenCommand}" />
                 </Grid>
                 <TextBlock Grid.Row="1" Classes="label" Text="Header Prefix" />
@@ -134,13 +126,13 @@
                          ToolTip.Tip="Must be a loopback URL (http://localhost:PORT/...) so Hermes can receive the code." />
 
                 <TextBlock Grid.Row="2" Classes="label" Text="Auth URL" IsVisible="{Binding IsAuthCodeGrant}" />
-                <Border Grid.Row="2" Grid.Column="1" Classes="input" IsVisible="{Binding IsAuthCodeGrant}"><c:VariableTextBox Text="{Binding OAuthAuthUrl}" PlaceholderText="https://example.com/oauth/authorize" /></Border>
+                <c:VariableTextBox Grid.Row="2" Grid.Column="1" IsVisible="{Binding IsAuthCodeGrant}" Classes="bordered" Text="{Binding OAuthAuthUrl}" PlaceholderText="https://example.com/oauth/authorize" />
 
                 <TextBlock Grid.Row="3" Classes="label" Text="Access Token URL" />
-                <Border Grid.Row="3" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding OAuthTokenUrl}" PlaceholderText="https://example.com/oauth/token" /></Border>
+                <c:VariableTextBox Grid.Row="3" Grid.Column="1" Classes="bordered" Text="{Binding OAuthTokenUrl}" PlaceholderText="https://example.com/oauth/token" />
 
                 <TextBlock Grid.Row="4" Classes="label" Text="Client ID" />
-                <Border Grid.Row="4" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding OAuthClientId}" PlaceholderText="Client ID" /></Border>
+                <c:VariableTextBox Grid.Row="4" Grid.Column="1" Classes="bordered" Text="{Binding OAuthClientId}" PlaceholderText="Client ID" />
 
                 <TextBlock Grid.Row="5" Classes="label" Text="Client Secret" />
                 <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding OAuthClientSecret}" PasswordChar="•" Classes="revealPasswordButton" PlaceholderText="Client Secret" />
