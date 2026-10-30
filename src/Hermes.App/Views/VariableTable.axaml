@@ -8,17 +8,17 @@
     <StackPanel>
       <Border Classes="tableHeader">
         <Grid ColumnDefinitions="34,*,110,*,*,34">
-          <TextBlock Grid.Column="1" Classes="section" Text="Variable" VerticalAlignment="Center" Margin="8,0" />
+          <TextBlock Grid.Column="1" Classes="section" Text="Variable" />
           <Border Grid.Column="2" Classes="cellSep">
-            <TextBlock Classes="section" Text="Type" VerticalAlignment="Center" Margin="8,0" />
+            <TextBlock Classes="section" Text="Type" />
           </Border>
           <Border Grid.Column="3" Classes="cellSep">
-            <TextBlock Classes="section" Text="Initial value" VerticalAlignment="Center" Margin="8,0"
+            <TextBlock Classes="section" Text="Initial value"
                        ToolTip.Tip="Shared value. This is what gets exported." />
           </Border>
           <Border Grid.Column="4" Grid.ColumnSpan="2" Classes="cellSep">
             <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Classes="section" Text="Current value" VerticalAlignment="Center" Margin="8,0"
+              <TextBlock Classes="section" Text="Current value"
                          ToolTip.Tip="Local value used when sending requests. Never exported." />
               <Button Grid.Column="1" Classes="link" FontSize="12" Content="Reset all" Margin="8,0"
                       Command="{Binding ResetCurrentValuesCommand}" ToolTip.Tip="Reset all current values to their initial values" />

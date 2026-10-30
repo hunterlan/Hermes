@@ -22,6 +22,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
     private bool _loading;
     private bool _syncingUrl;
     private CancellationTokenSource? _sendCts;
+    private const string AutomaticHeaderTag = "added automatically";
 
     // Preserved, not editable in the UI.
     private string? _description;
@@ -144,7 +145,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
 
     public string? ActiveEnvironmentName => Services.Workspace.ActiveEnvironment?.Name;
 
-    public List<KeyValueItem> HiddenHeaders { get; private set; } = [];
+    public List<HeaderRowViewModel> HiddenHeaders { get; private set; } = [];
 
     public string HeadersSummary => (Headers.ActiveCount, HiddenHeaders.Count) switch
     {
@@ -442,7 +443,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
                 hidden.Add(new KeyValueItem("Content-Type", "multipart/form-data; boundary=<calculated when request is sent>"));
             if (model.Body.Mode != BodyMode.None)
                 hidden.Add(new KeyValueItem("Content-Length", "<calculated when request is sent>"));
-            HiddenHeaders = hidden;
+            HiddenHeaders = hidden.Select(header => new HeaderRowViewModel(header.Key, header.Value, AutomaticHeaderTag)).ToList();
         }
         catch (Exception)
         {
