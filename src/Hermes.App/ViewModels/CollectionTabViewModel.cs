@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.Core.Models;
 using Hermes.Core.Serialization;
+using Hermes.Core.Variables;
 
 namespace Hermes.App.ViewModels;
 
@@ -17,13 +18,14 @@ public sealed partial class CollectionTabViewModel : TabViewModelBase
     {
         _collection = collection;
         Auth = services.CreateAuthEditor(allowInherit: false);
-        Auth.ScopeProvider = () => services.Workspace.CreateContextForContainer(_collection, null).BuildScope();
+        Auth.ScopeProvider = BuildScope;
         Auth.ChainProvider = () => ([], "Collection", Name);
         Auth.ContainedItemsProvider = () => _collection.Items;
         Auth.Changed += UpdateDirty;
         Variables.Changed += UpdateDirty;
         Load();
         _snapshot = Snapshot();
+        Scope = BuildScope();
     }
 
     public override SessionTabKind Kind => SessionTabKind.Collection;
@@ -32,6 +34,9 @@ public sealed partial class CollectionTabViewModel : TabViewModelBase
 
     public AuthEditorViewModel Auth { get; }
     public VariableListViewModel Variables { get; } = new();
+
+    /// <summary>The variables in scope for this collection (globals, its own and the active environment's), shown by the editors in the tab.</summary>
+    [ObservableProperty] public partial VariableScope Scope { get; set; } = VariableScope.Empty;
 
     [ObservableProperty] public partial string Name { get; set; } = "";
     [ObservableProperty] public partial string Description { get; set; } = "";
@@ -42,6 +47,8 @@ public sealed partial class CollectionTabViewModel : TabViewModelBase
 
     private static int Count(IEnumerable<CollectionNode> items, Func<CollectionNode, bool> predicate) =>
         items.Sum(i => (predicate(i) ? 1 : 0) + (i is FolderModel f ? Count(f.Items, predicate) : 0));
+
+    private VariableScope BuildScope() => Services.Workspace.CreateContextForContainer(_collection, null).BuildScope();
 
     private void Load()
     {
@@ -93,8 +100,11 @@ public sealed partial class CollectionTabViewModel : TabViewModelBase
     [RelayCommand]
     private Task Save() => SaveAsync();
 
+    public override void OnVariablesChanged() => Scope = BuildScope();
+
     public override void OnWorkspaceChanged()
     {
+        Scope = BuildScope();
         OnPropertyChanged(nameof(RequestCount));
         OnPropertyChanged(nameof(FolderCount));
         // Renamed from the sidebar while the tab was clean: follow it.
