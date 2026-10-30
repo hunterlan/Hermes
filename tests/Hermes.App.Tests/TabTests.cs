@@ -308,27 +308,34 @@ public class TabTests
     }
 
     [AvaloniaFact]
-    public void Without_tabs_a_session_restores_only_the_active_and_unsaved_tabs() => WithTabsOff((_, _) =>
+    public void Without_tabs_a_session_restores_only_the_active_tab() => WithTabsOff((_, _) =>
     {
         var (_, first, second) = CreateRequests("Restore");
-        var environments = Enumerable.Range(0, 2).Select(i => Workspace.CreateEnvironment($"Restore {i} {Guid.NewGuid()}")).ToList();
+        var environment = Workspace.CreateEnvironment("Restore " + Guid.NewGuid());
         var draft = ModelCloner.Clone(first);
         draft.Url = "https://example.com/draft";
-        SessionTab EnvTab(EnvironmentModel env) => new() { Kind = SessionTabKind.Environment, EntityId = env.Id, IsPinned = true };
         Workspace.SaveSession(new SessionState
         {
-            Tabs = [EnvTab(environments[0]), new SessionTab { Kind = SessionTabKind.Request, EntityId = first.Id, RequestDraft = draft },
-                EnvTab(environments[1]), new SessionTab { Kind = SessionTabKind.Request, EntityId = second.Id }],
+            // The deleted request comes back as nothing, so the saved index 2 must still mean the draft.
+            Tabs =
+            [
+                new SessionTab { Kind = SessionTabKind.Environment, EntityId = environment.Id, IsPinned = true },
+                new SessionTab { Kind = SessionTabKind.Request, EntityId = Guid.NewGuid() },
+                new SessionTab { Kind = SessionTabKind.Request, EntityId = first.Id, RequestDraft = draft },
+                new SessionTab { Kind = SessionTabKind.Request, EntityId = second.Id },
+            ],
             ActiveTabIndex = 2,
         });
 
         var restored = new MainWindowViewModel(App.Services.GetRequiredService<TabServices>());
 
-        Assert.Equal([first.Id, environments[1].Id], restored.Tabs.Select(t => t.EntityId));
-        Assert.Equal(environments[1].Id, restored.ActiveTab?.EntityId);
-        Assert.True(restored.Tabs[0].IsDirty);
-        foreach (var env in environments)
-            Workspace.DeleteEnvironment(env);
+        var only = Assert.IsType<RequestTabViewModel>(Assert.Single(restored.Tabs));
+        Assert.Same(only, restored.ActiveTab);
+        Assert.Equal(first.Id, only.RequestId);
+        Assert.Equal(draft.Url, only.Url);
+        Assert.True(only.IsDirty);
+        Assert.False(restored.IsTabStripVisible);
+        Workspace.DeleteEnvironment(environment);
     });
 
     private static MenuItem MenuItemNamed(ContextMenu menu, string header) =>
