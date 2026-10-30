@@ -15,6 +15,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     private readonly TabServices _services;
     private bool _syncingEnvironment;
 
+    /// <summary>The last History draft opened and its content then; with tabs off an untouched one is replaced without asking.</summary>
+    private (RequestTabViewModel Tab, string OpenedContent)? _historyDraft;
+
     public MainWindowViewModel(TabServices services)
     {
         _services = services;
@@ -74,11 +77,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     private IEnumerable<PaletteItem> PaletteItems()
     {
         foreach (var (request, path) in CommandPaletteViewModel.Requests(Workspace.Collections))
-            yield return new PaletteItem(request.Name, $"{path} · {request.Url}", request.Method, null, () => OpenRequest(request));
+            yield return new PaletteItem(request.Name, $"{path} · {request.Url}", request.Method, null, () => OpenRequestCommand.Execute(request));
 
-        yield return new PaletteItem("New request", null, null, "Ctrl T", NewRequest);
+        yield return new PaletteItem("New request", null, null, "Ctrl T", () => NewRequestCommand.Execute(null));
         yield return new PaletteItem("Import…", "Postman collection or environment, cURL", null, "Ctrl O", () => _ = OpenImport());
-        yield return new PaletteItem("Open environments matrix", null, null, null, OpenEnvironmentMatrix);
+        yield return new PaletteItem("Open environments matrix", null, null, null, () => OpenEnvironmentMatrixCommand.Execute(null));
         foreach (var option in EnvironmentOptions)
             yield return new PaletteItem($"Use environment: {option.Name}", null, null, null, () => SelectedEnvironment = option);
         yield return new PaletteItem("Toggle sidebar", null, null, "Ctrl \\", () => IsSidebarVisible = !IsSidebarVisible);
@@ -88,7 +91,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         yield return new PaletteItem("Toggle light / dark theme", null, null, null, () => _services.Settings.ToggleTheme());
         yield return new PaletteItem("Manage cookies", null, null, null, () => _ = OpenCookies());
         yield return new PaletteItem("Settings", null, null, "Ctrl ,", () => _ = OpenSettings());
-        yield return new PaletteItem("Open manual", null, null, "F1", () => OpenManual());
+        yield return new PaletteItem("Open manual", null, null, "F1", () => OpenManualCommand.Execute(null));
     }
 
     private WorkspaceService Workspace => _services.Workspace;
@@ -206,43 +209,58 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     }
 
     [RelayCommand]
-    private void EditActiveEnvironment()
+    private async Task EditActiveEnvironment()
     {
         if (Workspace.ActiveEnvironment is { } env)
-            OpenEnvironment(env);
+            await OpenEnvironmentAsync(env);
     }
 
     [RelayCommand]
-    private void EditGlobals() => OpenEnvironment(Workspace.Globals);
+    private Task EditGlobals() => OpenEnvironmentAsync(Workspace.Globals);
 
     // ---- ITabHost ----
 
-    void ITabHost.OpenRequest(HttpRequestModel model) => OpenRequest(model);
+    public Task OpenCollectionAsync(CollectionModel collection) =>
+        OpenOrFocusAsync(collection.Id, () => new CollectionTabViewModel(_services, collection));
 
-    public void OpenCollection(CollectionModel collection) =>
-        OpenOrFocus(collection.Id, () => new CollectionTabViewModel(_services, collection));
-
-    public void OpenFolder(FolderModel folder) =>
-        OpenOrFocus(folder.Id, () => new FolderTabViewModel(_services, folder));
+    public Task OpenFolderAsync(FolderModel folder) =>
+        OpenOrFocusAsync(folder.Id, () => new FolderTabViewModel(_services, folder));
 
     [RelayCommand]
-    public void OpenEnvironmentMatrix() =>
-        OpenOrFocus(EnvironmentMatrixTabViewModel.MatrixId, () => new EnvironmentMatrixTabViewModel(_services));
+    public Task OpenEnvironmentMatrixAsync() =>
+        OpenOrFocusAsync(EnvironmentMatrixTabViewModel.MatrixId, () => new EnvironmentMatrixTabViewModel(_services));
 
     /// <summary>Opens the manual, at <paramref name="fileName"/> when given.</summary>
     [RelayCommand]
-    public void OpenManual(string? fileName = null)
+    public async Task OpenManualAsync(string? fileName = null)
     {
-        OpenOrFocus(HelpTabViewModel.HelpId, () => new HelpTabViewModel(_services));
-        if (fileName is not null && ActiveTab is HelpTabViewModel help)
+        if (await OpenOrFocusAsync(HelpTabViewModel.HelpId, () => new HelpTabViewModel(_services))
+            && fileName is not null && ActiveTab is HelpTabViewModel help)
             help.Navigate(fileName);
     }
 
-    public void OpenEnvironment(EnvironmentModel environment) =>
-        OpenOrFocus(environment.Id, () => new EnvironmentTabViewModel(_services, environment));
+    public Task OpenEnvironmentAsync(EnvironmentModel environment) =>
+        OpenOrFocusAsync(environment.Id, () => new EnvironmentTabViewModel(_services, environment));
 
-    public void OpenDraft(HttpRequestModel model) =>
-        AddTab(new RequestTabViewModel(_services, model, ModelCloner.Serialize(HttpRequestModel.CreateNew())));
+    public async Task OpenHistoryDraftAsync(HttpRequestModel model)
+    {
+        RequestTabViewModel? draft = null;
+        if (await OpenNewTabAsync(() => draft = DraftTab(model)) && draft is not null)
+            _historyDraft = (draft, ContentOf(draft));
+    }
+
+    /// <summary>A tab for an unsaved request, compared against a blank one so it shows as modified.</summary>
+    private RequestTabViewModel DraftTab(HttpRequestModel model) =>
+        new(_services, model, ModelCloner.Serialize(HttpRequestModel.CreateNew()));
+
+    private static string ContentOf(RequestTabViewModel tab) => ModelCloner.Serialize(tab.BuildModel());
+
+    /// <summary>
+    /// A History draft the user hasn't edited shows as modified but holds nothing to lose (History still has it),
+    /// so single-tab mode replaces it without asking.
+    /// </summary>
+    private bool IsUntouchedHistoryDraft(TabViewModelBase tab) =>
+        _historyDraft is { } history && history.Tab == tab && ContentOf(history.Tab) == history.OpenedContent;
 
     public void CloseTabsFor(IEnumerable<Guid> entityIds)
     {
@@ -267,64 +285,83 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             if (newValue is not EnvironmentTabViewModel)
                 Collections.Reveal(newValue.EntityId);
         }
-        CloseTabsNotKeptInSingleTabMode();
-        OnPropertyChanged(nameof(IsTabStripVisible));
     }
 
     // ---- tabs ----
 
     [RelayCommand]
-    public void NewRequest() => AddTab(new RequestTabViewModel(_services, HttpRequestModel.CreateNew()));
+    public Task NewRequest() => OpenNewTabAsync(() => new RequestTabViewModel(_services, HttpRequestModel.CreateNew()));
 
-    public void AddTab(TabViewModelBase tab)
+    /// <summary>
+    /// Opens a tab next to the active one. With tabs off it replaces the active tab instead, pinned or not, once
+    /// the user has saved or discarded its changes. False when the user cancelled or the save didn't happen.
+    /// </summary>
+    /// <param name="create">Called only once the tab will open, so nothing is built for a cancelled open.</param>
+    private async Task<bool> OpenNewTabAsync(Func<TabViewModelBase> create)
     {
-        // Single-tab mode: the new tab takes the place of a clean current one, pinned or not.
-        if (!ShowTabs && ActiveTab is { IsDirty: false } replaced)
+        if (ShowTabs || ActiveTab is not { } current)
         {
-            Tabs[Tabs.IndexOf(replaced)] = tab;
-            ActiveTab = tab;
-            return;
+            InsertTab(create());
+            return true;
         }
+        if (!IsUntouchedHistoryDraft(current) && !await ConfirmDiscardAsync(current))
+            return false;
+        var tab = create();
+        var index = Tabs.IndexOf(current);
+        if (index < 0)
+        {
+            // The tab went away while the prompt was up (e.g. its entity was deleted).
+            InsertTab(tab);
+            return true;
+        }
+        Tabs[index] = tab;
+        ActiveTab = tab;
+        return true;
+    }
+
+    private void InsertTab(TabViewModelBase tab)
+    {
         var index = ActiveTab is null ? Tabs.Count : Tabs.IndexOf(ActiveTab) + 1;
         Tabs.Insert(index, tab);
         ActiveTab = tab;
     }
 
-    /// <summary>Focuses an open tab for the entity, or opens a new one.</summary>
-    public void OpenOrFocus(Guid entityId, Func<TabViewModelBase> create)
+    /// <summary>Focuses an open tab for the entity, or opens a new one. False when the user cancelled.</summary>
+    private async Task<bool> OpenOrFocusAsync(Guid entityId, Func<TabViewModelBase> create)
     {
-        ActiveTab = Tabs.FirstOrDefault(t => t.EntityId == entityId) ?? Add(create());
-
-        TabViewModelBase Add(TabViewModelBase tab)
+        if (Tabs.FirstOrDefault(t => t.EntityId == entityId) is { } open)
         {
-            AddTab(tab);
-            return tab;
+            ActiveTab = open;
+            return true;
         }
+        return await OpenNewTabAsync(create);
     }
 
-    public void OpenRequest(HttpRequestModel model)
+    [RelayCommand]
+    public async Task OpenRequestAsync(HttpRequestModel model)
     {
-        OpenOrFocus(model.Id, () => new RequestTabViewModel(_services, ModelCloner.Clone(model)));
-        if (ActiveTab is not null)
+        var opened = await OpenOrFocusAsync(model.Id, () => new RequestTabViewModel(_services, ModelCloner.Clone(model)));
+        if (opened && ActiveTab is not null)
             ActiveTab.IsPreview = false;
     }
 
-    public void PreviewRequest(HttpRequestModel model)
+    public async Task PreviewRequestAsync(HttpRequestModel model)
     {
         if (Tabs.FirstOrDefault(t => t.EntityId == model.Id) is { } open)
         {
             ActiveTab = open;
             return;
         }
-        var tab = new RequestTabViewModel(_services, ModelCloner.Clone(model)) { IsPreview = true };
+        RequestTabViewModel CreatePreview() => new(_services, ModelCloner.Clone(model)) { IsPreview = true };
         if (Tabs.FirstOrDefault(t => t is { IsPreview: true, IsDirty: false }) is { } previous)
         {
+            var tab = CreatePreview();
             Tabs[Tabs.IndexOf(previous)] = tab;
             ActiveTab = tab;
         }
         else
         {
-            AddTab(tab);
+            await OpenNewTabAsync(CreatePreview);
         }
     }
 
@@ -344,8 +381,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
 
     public bool ShowTabs => _services.Settings.Current.ShowTabs;
 
-    /// <summary>With tabs turned off the strip only appears while another tab has unsaved changes.</summary>
-    public bool IsTabStripVisible => ShowTabs || Tabs.Any(t => t.IsDirty && t != ActiveTab);
+    /// <summary>With tabs turned off there's only ever one tab, so the strip is hidden.</summary>
+    public bool IsTabStripVisible => ShowTabs;
 
     /// <summary>Pinned tabs are only kept apart while tabs are on; in single-tab mode they're like any other tab.</summary>
     private bool IsKeptByPin(TabViewModelBase tab) => ShowTabs && tab.IsPinned;
@@ -377,21 +414,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     private void OnTabPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(TabViewModelBase.Title))
-        {
             UpdateTitlePrefixes();
-        }
-        else if (e.PropertyName == nameof(TabViewModelBase.IsDirty))
-        {
-            // A background tab that was saved isn't kept in single-tab mode.
-            CloseTabsNotKeptInSingleTabMode();
-            OnPropertyChanged(nameof(IsTabStripVisible));
-        }
     }
 
     private void OnTabsChanged()
     {
         OnPropertyChanged(nameof(HasTabs));
-        OnPropertyChanged(nameof(IsTabStripVisible));
         UpdateTitlePrefixes();
     }
 
@@ -482,14 +510,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     }
 
     [RelayCommand]
-    private void DuplicateTab(TabViewModelBase tab)
+    private async Task DuplicateTab(TabViewModelBase tab)
     {
         if (tab is not RequestTabViewModel request)
             return;
         var copy = request.BuildModel();
         copy.Id = Guid.NewGuid();
         copy.Name += " Copy";
-        AddTab(new RequestTabViewModel(_services, copy, ModelCloner.Serialize(HttpRequestModel.CreateNew())));
+        await OpenNewTabAsync(() => DraftTab(copy));
     }
 
     [RelayCommand]
@@ -544,7 +572,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         foreach (var environment in result.Environments)
             Workspace.AddEnvironment(environment);
         foreach (var request in result.Requests)
-            OpenDraft(request);
+        {
+            // With tabs off each draft replaces the last; cancelling a save prompt stops opening the rest.
+            if (!await OpenNewTabAsync(() => DraftTab(request)))
+                break;
+        }
 
         if (result.Collections.Count > 0)
         {
@@ -572,7 +604,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         var vm = new SettingsDialogViewModel(_services.Settings, Dialogs, _services.Http, Workspace.DataDirectory, ConfirmTurningTabsOffAsync);
         await Dialogs.ShowDialogAsync<bool>(new Views.Dialogs.SettingsDialog { DataContext = vm });
         if (vm.ManualRequested)
-            OpenManual();
+            await OpenManualAsync();
         foreach (var tab in Tabs)
             tab.OnVariablesChanged();
     }
@@ -634,7 +666,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             Tabs.Add(tab);
 
         if (active is null)
-            NewRequest();
+            InsertTab(new RequestTabViewModel(_services, HttpRequestModel.CreateNew()));
         else
             ActiveTab = active;
         OnPropertyChanged(nameof(HasTabs));

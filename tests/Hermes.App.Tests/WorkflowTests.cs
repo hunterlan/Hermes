@@ -46,7 +46,7 @@ public class WorkflowTests
 
         // Open the imported POST request: body and collection variables come along.
         var create = (HttpRequestModel)((FolderModel)collection.Items[0]).Items[1];
-        vm.OpenRequest(create);
+        await vm.OpenRequestAsync(create);
         var createTab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         Assert.True(createTab.IsBodyRaw);
         Assert.Equal("{\"name\":\"Ada\"}", createTab.RawBody);
@@ -58,20 +58,20 @@ public class WorkflowTests
     }
 
     [AvaloniaFact]
-    public void Session_restores_tabs_and_unsaved_drafts()
+    public async Task Session_restores_tabs_and_unsaved_drafts()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var collection = Workspace.CreateCollection("Session " + Guid.NewGuid());
         var request = new HttpRequestModel { Name = "Persisted", Url = "https://example.com/a" };
         Workspace.AddNode(collection, null, request);
 
-        vm.OpenRequest(request);
+        await vm.OpenRequestAsync(request);
         var persistedTab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         persistedTab.Url = "https://example.com/changed";
         vm.NewRequestCommand.Execute(null);
         var draftTab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         draftTab.Url = "https://example.com/draft";
-        vm.OpenCollection(collection);
+        await vm.OpenCollectionAsync(collection);
 
         vm.SaveSession();
         window.Close();

@@ -58,14 +58,14 @@ public class EnvironmentColorDisplayTests
             Assert.False(DotFor(pane, "Globals").IsVisible);
 
             // Matrix: one dot per environment column header, none for Globals.
-            vm.OpenEnvironmentMatrix();
+            await vm.OpenEnvironmentMatrixAsync();
             UiTestHelpers.Pump();
             var matrix = window.GetVisualDescendants().OfType<EnvironmentMatrixView>().Single();
             Assert.Equal(EnvironmentColor.Red, DotFor(matrix, env.Name).Color);
             Assert.False(DotFor(matrix, "Globals").IsVisible);
 
             // Recolouring in the editor updates every place once saved.
-            vm.OpenEnvironment(env);
+            await vm.OpenEnvironmentAsync(env);
             var tab = Assert.IsType<EnvironmentTabViewModel>(vm.ActiveTab);
             tab.Color = EnvironmentColor.Green;
             await tab.SaveAsync();
