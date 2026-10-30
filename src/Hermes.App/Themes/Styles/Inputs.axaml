@@ -1,0 +1,33 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Inputs -->
+  <Style Selector="TextBox">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="8,5" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ComboBox">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="8,4" />
+  </Style>
+
+  <!-- Borderless cell editor used in key/value tables -->
+  <Style Selector="TextBox.cell">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Padding" Value="8,4" />
+  </Style>
+  <Style Selector="TextBox.cell:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource BgHoverBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="TextBox.cell:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource BgInputBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+</Styles>
