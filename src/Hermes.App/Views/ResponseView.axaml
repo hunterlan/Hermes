@@ -179,8 +179,8 @@
               <StackPanel>
                 <Border Classes="tableHeader">
                   <Grid ColumnDefinitions="*,2*">
-                    <TextBlock Classes="section" Text="Key" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Classes="section" Text="Value" Margin="8,0" VerticalAlignment="Center" />
+                    <TextBlock Classes="section" Text="Key" />
+                    <TextBlock Grid.Column="1" Classes="section" Text="Value" />
                   </Grid>
                 </Border>
                 <ItemsControl ItemsSource="{Binding Headers}">
@@ -209,13 +209,13 @@
               <StackPanel>
                 <Border Classes="tableHeader">
                   <Grid ColumnDefinitions="2*,3*,2*,*,2*,Auto,Auto">
-                    <TextBlock Classes="section" Text="Name" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Classes="section" Text="Value" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="2" Classes="section" Text="Domain" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="3" Classes="section" Text="Path" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="4" Classes="section" Text="Expires" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="5" Classes="section" Text="HttpOnly" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="6" Classes="section" Text="Secure" Margin="8,0" VerticalAlignment="Center" />
+                    <TextBlock Classes="section" Text="Name" />
+                    <TextBlock Grid.Column="1" Classes="section" Text="Value" />
+                    <TextBlock Grid.Column="2" Classes="section" Text="Domain" />
+                    <TextBlock Grid.Column="3" Classes="section" Text="Path" />
+                    <TextBlock Grid.Column="4" Classes="section" Text="Expires" />
+                    <TextBlock Grid.Column="5" Classes="section" Text="HttpOnly" />
+                    <TextBlock Grid.Column="6" Classes="section" Text="Secure" />
                   </Grid>
                 </Border>
                 <ItemsControl ItemsSource="{Binding Cookies}">

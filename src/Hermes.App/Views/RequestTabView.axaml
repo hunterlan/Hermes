@@ -219,18 +219,7 @@
               </ToggleButton>
               <StackPanel Spacing="8" Margin="0,0,0,12" IsVisible="{Binding HeadersExpanded}">
                 <v:KeyValueTable DataContext="{Binding Headers}" Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
-                <ItemsControl ItemsSource="{Binding HiddenHeaders}" IsVisible="{Binding HiddenHeaders.Count}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="core:KeyValueItem">
-                      <Grid ColumnDefinitions="200,*,Auto" MinHeight="28" Margin="8,0">
-                        <TextBlock Classes="mono tertiary" Text="{Binding Key}" FontSize="12.5" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1" Classes="mono tertiary" Text="{Binding Value}" FontSize="12.5" VerticalAlignment="Center"
-                                   TextWrapping="Wrap" Margin="8,4" />
-                        <Border Grid.Column="2" Classes="tag"><TextBlock Text="added automatically" /></Border>
-                      </Grid>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <v:HeaderListView Rows="{Binding HiddenHeaders}" IsVisible="{Binding HiddenHeaders.Count}" />
               </StackPanel>
             </StackPanel>
           </Border>

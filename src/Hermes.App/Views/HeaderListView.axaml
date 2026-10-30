@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:v="using:Hermes.App.Views"
+             x:Class="Hermes.App.Views.HeaderListView">
+  <!-- read-only rows: key, value, then a tag saying where the header comes from -->
+  <ItemsControl ItemsSource="{Binding $parent[v:HeaderListView].Rows}">
+    <ItemsControl.ItemTemplate>
+      <DataTemplate x:DataType="vm:HeaderRowViewModel">
+        <Grid ColumnDefinitions="200,*,Auto" MinHeight="28" Margin="8,0">
+          <TextBlock Classes="mono tertiary" Text="{Binding Key}" FontSize="12.5" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1" Classes="mono tertiary" Text="{Binding Value}" FontSize="12.5" VerticalAlignment="Center"
+                     TextWrapping="Wrap" Margin="8,4" />
+          <Border Grid.Column="2" Classes="tag"><TextBlock Text="{Binding TagText}" /></Border>
+        </Grid>
+      </DataTemplate>
+    </ItemsControl.ItemTemplate>
+  </ItemsControl>
+</UserControl>

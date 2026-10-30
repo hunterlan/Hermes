@@ -11,13 +11,13 @@
         <!-- header -->
         <Border Classes="tableHeader">
           <Grid ColumnDefinitions="34,*,*,*,34">
-            <TextBlock Grid.Column="1" Classes="section" Text="Key" VerticalAlignment="Center" Margin="8,0" />
+            <TextBlock Grid.Column="1" Classes="section" Text="Key" />
             <Border Grid.Column="2" Classes="cellSep">
-              <TextBlock Classes="section" Text="Value" VerticalAlignment="Center" Margin="8,0" />
+              <TextBlock Classes="section" Text="Value" />
             </Border>
             <Border Grid.Column="3" Grid.ColumnSpan="2" Classes="cellSep">
               <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Classes="section" Text="Description" VerticalAlignment="Center" Margin="8,0" />
+                <TextBlock Classes="section" Text="Description" />
                 <Button Grid.Column="1" Classes="link" Content="Bulk Edit" FontSize="12" Margin="8,0"
                         Command="{Binding ToggleBulkEditCommand}" IsVisible="{Binding !KeysReadOnly}" />
               </Grid>

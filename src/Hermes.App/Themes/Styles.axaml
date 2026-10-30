@@ -355,6 +355,10 @@
     <Setter Property="BorderThickness" Value="0,0,0,1" />
     <Setter Property="MinHeight" Value="30" />
   </Style>
+  <Style Selector="Border.tableHeader TextBlock">
+    <Setter Property="Margin" Value="8,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
   <Style Selector="Border.tableRow">
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
