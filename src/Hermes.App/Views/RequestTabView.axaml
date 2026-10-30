@@ -5,7 +5,8 @@
              xmlns:v="using:Hermes.App.Views"
              xmlns:core="using:Hermes.Core.Models"
              x:Class="Hermes.App.Views.RequestTabView"
-             x:DataType="vm:RequestTabViewModel">
+             x:DataType="vm:RequestTabViewModel"
+             c:VariableScopeProperties.Variables="{Binding Variables}">
   <UserControl.Styles>
     <!-- Collapsible section header: chevron, title, quiet summary -->
     <Style Selector="ToggleButton.sectionHeader">
@@ -103,7 +104,7 @@
           </ComboBox.ItemTemplate>
         </ComboBox>
         <Border Grid.Column="1" Background="{DynamicResource BorderBrush}" Margin="0,9" />
-        <c:VariableTextBox Grid.Column="2" Name="UrlBox" Margin="12,0" Text="{Binding Url}" Variables="{Binding Variables}"
+        <c:VariableTextBox Grid.Column="2" Name="UrlBox" Margin="12,0" Text="{Binding Url}"
                            PlaceholderText="Enter URL or paste cURL" SubmitCommand="{Binding SendButtonCommand}" AllowMultilineInput="True" />
         <Button Grid.Column="3" Classes="send" Height="32" MinWidth="0" Padding="14,0" VerticalAlignment="Center"
                 Command="{Binding SendButtonCommand}" ToolTip.Tip="Send (Ctrl+Enter)">
@@ -144,10 +145,10 @@
                 </StackPanel>
               </ToggleButton>
               <StackPanel Spacing="8" Margin="0,0,0,12" IsVisible="{Binding ParamsExpanded}">
-                <v:KeyValueTable DataContext="{Binding Params}" Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+                <v:KeyValueTable DataContext="{Binding Params}" />
                 <StackPanel Spacing="8" IsVisible="{Binding HasPathVariables}" Margin="0,4,0,0">
                   <TextBlock Classes="section" Text="Path variables" />
-                  <v:KeyValueTable DataContext="{Binding PathVariables}" Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+                  <v:KeyValueTable DataContext="{Binding PathVariables}" />
                 </StackPanel>
               </StackPanel>
             </StackPanel>
@@ -191,10 +192,8 @@
                     <TextBlock Classes="tertiary" FontSize="12" IsVisible="{Binding HasUnsupportedBody}" TextWrapping="Wrap"
                                Text="The imported body uses a mode Hermes doesn't support (e.g. GraphQL); it is kept for export." />
                   </StackPanel>
-                  <v:KeyValueTable DataContext="{Binding FormData}" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).IsBodyFormData}"
-                                   Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
-                  <v:KeyValueTable DataContext="{Binding UrlEncoded}" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).IsBodyUrlEncoded}"
-                                   Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+                  <v:KeyValueTable DataContext="{Binding FormData}" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).IsBodyFormData}" />
+                  <v:KeyValueTable DataContext="{Binding UrlEncoded}" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).IsBodyUrlEncoded}" />
                   <Border Classes="table" IsVisible="{Binding IsBodyRaw}" Background="{DynamicResource BgCodeBrush}" Height="260">
                     <c:CodeEditor Text="{Binding RawBody}" Language="{Binding RawEditorLanguage}" />
                   </Border>
@@ -218,7 +217,7 @@
                 </StackPanel>
               </ToggleButton>
               <StackPanel Spacing="8" Margin="0,0,0,12" IsVisible="{Binding HeadersExpanded}">
-                <v:KeyValueTable DataContext="{Binding Headers}" Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+                <v:KeyValueTable DataContext="{Binding Headers}" />
                 <v:HeaderListView Rows="{Binding HiddenHeaders}" IsVisible="{Binding HiddenHeaders.Count}" />
               </StackPanel>
             </StackPanel>
@@ -234,8 +233,7 @@
                   <TextBlock Classes="summary" Text="{Binding Auth.Summary}" Foreground="{DynamicResource TextSecondaryBrush}" />
                 </StackPanel>
               </ToggleButton>
-              <v:AuthEditorView DataContext="{Binding Auth}" Margin="0,0,0,12" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).AuthExpanded}"
-                                Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+              <v:AuthEditorView DataContext="{Binding Auth}" Margin="0,0,0,12" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).AuthExpanded}" />
             </StackPanel>
           </Border>
 

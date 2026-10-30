@@ -44,8 +44,7 @@
                   </Grid>
                   <Border Grid.Column="2" Classes="cellSep">
                     <Panel>
-                      <c:VariableTextBox Text="{Binding Value}" PlaceholderText="Value" Margin="8,0" IsVisible="{Binding !IsFile}"
-                                         Variables="{Binding $parent[v:KeyValueTable].Variables}" />
+                      <c:VariableTextBox Text="{Binding Value}" PlaceholderText="Value" Margin="8,0" IsVisible="{Binding !IsFile}" />
                       <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding IsFile}" Margin="4,0">
                         <Button Classes="ghost" Content="Select file" Command="{Binding PickFileCommand}" FontSize="12" />
                         <TextBlock Grid.Column="1" Text="{Binding Value}" VerticalAlignment="Center" Margin="6,0"
