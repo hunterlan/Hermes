@@ -1,9 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:c="using:Hermes.App.Controls"
              xmlns:v="using:Hermes.App.Views"
              x:Class="Hermes.App.Views.CollectionTabView"
-             x:DataType="vm:CollectionTabViewModel">
+             x:DataType="vm:CollectionTabViewModel"
+             c:VariableScopeProperties.Variables="{Binding Scope}">
   <Grid RowDefinitions="Auto,*" Margin="20,14,20,0">
     <v:ContainerTabHeader Icon="{StaticResource IconCollections}" Title="{Binding Name}" SaveCommand="{Binding SaveCommand}" />
 
