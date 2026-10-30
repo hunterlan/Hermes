@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version to stamp on the packages (e.g. 0.1.0)
+        description: Version to stamp on the packages (e.g. 0.3.0)
         required: true
-        default: 0.1.0
+        default: 0.3.0
 
 permissions:
   contents: read
