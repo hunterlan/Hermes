@@ -13,17 +13,19 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
     private readonly DialogService _dialogs;
     private readonly HttpClientProvider _http;
     private readonly string _currentDataDirectory;
-    private readonly Func<Task<bool>> _confirmTurningTabsOff;
+    private readonly Func<Task<bool>> _closeTabsForTurningTabsOff;
 
-    /// <param name="confirmTurningTabsOff">Asked before saving with Tabs turned off; false keeps Tabs on and the dialog open.</param>
+    /// <param name="closeTabsForTurningTabsOff">
+    /// Run before saving with Tabs turned off, to close the other tabs; false (the user cancelled) keeps Tabs on and the dialog open.
+    /// </param>
     public SettingsDialogViewModel(SettingsService settings, DialogService dialogs, HttpClientProvider http, string currentDataDirectory,
-        Func<Task<bool>> confirmTurningTabsOff)
+        Func<Task<bool>> closeTabsForTurningTabsOff)
     {
         _settings = settings;
         _dialogs = dialogs;
         _http = http;
         _currentDataDirectory = currentDataDirectory;
-        _confirmTurningTabsOff = confirmTurningTabsOff;
+        _closeTabsForTurningTabsOff = closeTabsForTurningTabsOff;
 
         var s = settings.Current;
         SelectedTheme = Themes.First(t => t.Value == s.Theme);
@@ -82,8 +84,8 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
     {
         static int Parse(string text, int fallback, int min) => int.TryParse(text, out var v) && v >= min ? v : fallback;
 
-        // Turning tabs off closes tabs, so it's confirmed first.
-        if (_settings.Current.ShowTabs && !ShowTabs && !await _confirmTurningTabsOff())
+        // Turning tabs off first closes the other tabs, which the user can cancel; nothing is saved then.
+        if (_settings.Current.ShowTabs && !ShowTabs && !await _closeTabsForTurningTabsOff())
         {
             ShowTabs = true;
             return;
