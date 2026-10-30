@@ -27,8 +27,9 @@ public sealed class VariableTextBox : UserControl
     public static readonly StyledProperty<string?> TextProperty =
         AvaloniaProperty.Register<VariableTextBox, string?>(nameof(Text), defaultBindingMode: BindingMode.TwoWay);
 
+    /// <summary>Inherited from the nearest ancestor that sets <see cref="VariableScopeProperties.VariablesProperty"/>.</summary>
     public static readonly StyledProperty<VariableScope?> VariablesProperty =
-        AvaloniaProperty.Register<VariableTextBox, VariableScope?>(nameof(Variables));
+        VariableScopeProperties.VariablesProperty.AddOwner<VariableTextBox>();
 
     public static readonly StyledProperty<string?> PlaceholderTextProperty =
         AvaloniaProperty.Register<VariableTextBox, string?>(nameof(PlaceholderText));
