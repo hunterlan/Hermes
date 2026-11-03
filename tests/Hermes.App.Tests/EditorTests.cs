@@ -42,6 +42,60 @@ public class EditorTests
     }
 
     [AvaloniaFact]
+    public void Preview_text_is_only_filled_in_preview_mode()
+    {
+        var response = new ResponseViewModel(App.Services.GetRequiredService<DialogService>(), App.Services.GetRequiredService<SettingsService>());
+        response.SetResponse(new ResponseModel
+        {
+            StatusCode = 200,
+            ReasonPhrase = "OK",
+            ContentType = "text/html",
+            Body = "<p>hello</p>"u8.ToArray(),
+            Headers = [new KeyValueItem("Content-Type", "text/html")],
+        });
+        var changed = new List<string?>();
+        response.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        response.ViewMode = ResponseViewMode.Pretty;
+        Assert.Equal("", response.PreviewText);
+
+        response.ViewMode = ResponseViewMode.Preview;
+        Assert.Equal("<p>hello</p>", response.PreviewText);
+        Assert.Contains(nameof(ResponseViewModel.PreviewText), changed);
+
+        response.ViewMode = ResponseViewMode.Raw;
+        Assert.Equal("", response.PreviewText);
+    }
+
+    [AvaloniaFact]
+    public void Text_preview_uses_a_wrapping_read_only_editor()
+    {
+        var response = new ResponseViewModel(App.Services.GetRequiredService<DialogService>(), App.Services.GetRequiredService<SettingsService>());
+        response.SetResponse(new ResponseModel
+        {
+            StatusCode = 200,
+            ReasonPhrase = "OK",
+            ContentType = "text/html",
+            Body = "<p>hello</p>"u8.ToArray(),
+            Headers = [new KeyValueItem("Content-Type", "text/html")],
+        });
+        var view = new Hermes.App.Views.ResponseView { DataContext = response };
+        var window = new Window { Content = view, Width = 800, Height = 600 };
+        window.Show();
+
+        response.ViewMode = ResponseViewMode.Preview;
+        UiTestHelpers.Pump();
+
+        var preview = view.FindControl<CodeEditor>("PreviewTextEditor")!;
+        Assert.True(preview.IsEffectivelyVisible);
+        Assert.Equal("<p>hello</p>", preview.Text);
+        var inner = Assert.IsType<TextEditor>(preview.Content);
+        Assert.True(inner.WordWrap);
+        Assert.True(inner.IsReadOnly);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void Clearing_a_response_frees_its_preview_image()
     {
         var response = new ResponseViewModel(App.Services.GetRequiredService<DialogService>(), App.Services.GetRequiredService<SettingsService>());

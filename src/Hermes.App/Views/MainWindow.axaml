@@ -241,9 +241,9 @@
           </Grid>
         </Border>
 
-        <!-- active tab -->
-        <ContentControl Grid.Row="1" Content="{Binding ActiveTab}">
-          <ContentControl.DataTemplates>
+        <!-- active tab, in a pool of views: recently used tabs stay alive, hidden, so switching back is instant -->
+        <c:TabViewHost Name="TabViews" Grid.Row="1" ActiveTab="{Binding ActiveTab}" Tabs="{Binding Tabs}" MaxLiveViews="{Binding TabViewPoolSize}">
+          <c:TabViewHost.DataTemplates>
             <DataTemplate DataType="vm:RequestTabViewModel">
               <v:RequestTabView />
             </DataTemplate>
@@ -262,8 +262,8 @@
             <DataTemplate DataType="vm:HelpTabViewModel">
               <v:HelpView />
             </DataTemplate>
-          </ContentControl.DataTemplates>
-        </ContentControl>
+          </c:TabViewHost.DataTemplates>
+        </c:TabViewHost>
 
         <!-- no tabs -->
         <ScrollViewer Grid.Row="1" Grid.RowSpan="1" IsVisible="{Binding !HasTabs}">

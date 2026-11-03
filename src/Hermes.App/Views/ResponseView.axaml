@@ -163,9 +163,9 @@
                 <ScrollViewer IsVisible="{Binding HasPreviewImage}" HorizontalScrollBarVisibility="Auto">
                   <Image Source="{Binding PreviewImage}" Stretch="None" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Top" />
                 </ScrollViewer>
-                <ScrollViewer IsVisible="{Binding !HasPreviewImage}">
-                  <SelectableTextBlock Text="{Binding RawText}" TextWrapping="Wrap" Margin="12" />
-                </ScrollViewer>
+                <!-- An editor, not a SelectableTextBlock: it lays out only the visible lines, so a large body stays fast -->
+                <c:CodeEditor Name="PreviewTextEditor" IsVisible="{Binding !HasPreviewImage}" Text="{Binding PreviewText, Mode=OneWay}"
+                              Language="text" IsReadOnly="True" WordWrap="True" ShowLineNumbers="False" Margin="8,4" />
               </Panel>
             </Border>
           </Grid>

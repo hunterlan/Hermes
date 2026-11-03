@@ -53,6 +53,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             History.OnShowTabsChanged();
             OnPropertyChanged(nameof(ShowTabs));
             OnPropertyChanged(nameof(IsTabStripVisible));
+            OnPropertyChanged(nameof(TabViewPoolSize));
         };
         Workspace.CollectionChanged += _ => NotifyWorkspaceChanged();
         Workspace.Secrets.ProtectionLost += () => Dispatcher.UIThread.Post(() =>
@@ -379,6 +380,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     // ---- tab strip ----
 
     public bool ShowTabs => _services.Settings.Current.ShowTabs;
+
+    /// <summary>How many tab views stay alive for instant switching; clamped in case the settings file was edited by hand.</summary>
+    public int TabViewPoolSize => Math.Clamp(_services.Settings.Current.TabViewPoolSize, 1, SettingsDialogViewModel.MaxTabViewPoolSize);
 
     /// <summary>With tabs turned off there's only ever one tab, so the strip is hidden.</summary>
     public bool IsTabStripVisible => ShowTabs;
