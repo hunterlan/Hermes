@@ -116,6 +116,12 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     /// <summary>Text shown in the body editor for the current view mode.</summary>
     public string DisplayText => ViewMode == ResponseViewMode.Pretty && !IsTooLargeForPretty ? PrettyText : RawText;
 
+    /// <summary>
+    /// Text for the Preview pane when there is no image. Empty in the other modes, so a tab switch doesn't load a large
+    /// body into the preview editor that nobody is looking at.
+    /// </summary>
+    public string PreviewText => IsPreview && !HasPreviewImage ? RawText : "";
+
     /// <summary>Syntax highlighting for the current view mode; Raw is plain text like in Postman.</summary>
     public string DisplayLanguage => ViewMode == ResponseViewMode.Pretty && !IsTooLargeForPretty ? Language : "text";
 
@@ -131,12 +137,17 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
                 OnPropertyChanged(nameof(IsTextView));
                 OnPropertyChanged(nameof(DisplayText));
                 OnPropertyChanged(nameof(DisplayLanguage));
+                OnPropertyChanged(nameof(PreviewText));
+                break;
+            case nameof(RawText):
+                OnPropertyChanged(nameof(PreviewText));
                 break;
             case nameof(HasResponse) or nameof(IsLoading) or nameof(Error):
                 OnPropertyChanged(nameof(IsEmpty));
                 break;
             case nameof(PreviewImage):
                 OnPropertyChanged(nameof(HasPreviewImage));
+                OnPropertyChanged(nameof(PreviewText));
                 break;
             case nameof(WaitMs) or nameof(DownloadMs):
                 OnPropertyChanged(nameof(WaitText));

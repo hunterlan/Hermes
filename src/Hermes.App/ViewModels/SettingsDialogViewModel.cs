@@ -12,6 +12,9 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
     /// <summary>About 100 years; far beyond any real need, and keeps the day arithmetic in range.</summary>
     public const int MaxHistoryRetentionDays = 36500;
 
+    /// <summary>A tab view with a large response can take tens of megabytes, so a few are plenty.</summary>
+    public const int MaxTabViewPoolSize = 10;
+
     private readonly SettingsService _settings;
     private readonly DialogService _dialogs;
     private readonly HttpClientProvider _http;
@@ -39,6 +42,7 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
         MaxPrettySizeText = s.MaxPrettyResponseSizeMb.ToString();
         HistoryRetentionText = s.HistoryRetentionDays.ToString();
         ShowTabs = s.ShowTabs;
+        TabViewPoolSizeText = s.TabViewPoolSize.ToString();
         DataDirectory = string.IsNullOrWhiteSpace(s.DataDirectory) ? AppPaths.DefaultDataDirectory : s.DataDirectory;
     }
 
@@ -60,6 +64,10 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
     public partial string HistoryRetentionText { get; set; }
     [ObservableProperty] public partial string DataDirectory { get; set; }
     [ObservableProperty] public partial bool ShowTabs { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TabViewPoolSizeError))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    public partial string TabViewPoolSizeText { get; set; }
 
     /// <summary>Set when the dialog was closed to open the manual, so the caller can open it.</summary>
     public bool ManualRequested { get; private set; }
@@ -67,6 +75,9 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
 
     /// <summary>Why <see cref="HistoryRetentionText"/> can't be saved, or null when it can.</summary>
     public string? HistoryRetentionError => ValidateHistoryRetention(HistoryRetentionText, out _);
+
+    /// <summary>Why <see cref="TabViewPoolSizeText"/> can't be saved, or null when it can.</summary>
+    public string? TabViewPoolSizeError => ValidateTabViewPoolSize(TabViewPoolSizeText, out _);
 
     public bool DataDirectoryChanged => !string.Equals(Path.GetFullPath(DataDirectory), Path.GetFullPath(_currentDataDirectory), StringComparison.Ordinal);
 
@@ -88,7 +99,15 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
         CookieStatus = "All cookies cleared.";
     }
 
-    private bool CanSave() => HistoryRetentionError is null;
+    private bool CanSave() => HistoryRetentionError is null && TabViewPoolSizeError is null;
+
+    private static string? ValidateTabViewPoolSize(string text, out int tabs)
+    {
+        tabs = 0;
+        if (!int.TryParse(text, out tabs) || tabs < 1 || tabs > MaxTabViewPoolSize)
+            return $"Enter a whole number from 1 to {MaxTabViewPoolSize}.";
+        return null;
+    }
 
     private static string? ValidateHistoryRetention(string text, out int days)
     {
@@ -107,7 +126,8 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
     {
         static int Parse(string text, int fallback, int min) => int.TryParse(text, out var v) && v >= min ? v : fallback;
 
-        if (ValidateHistoryRetention(HistoryRetentionText, out var historyRetentionDays) is not null)
+        if (ValidateHistoryRetention(HistoryRetentionText, out var historyRetentionDays) is not null
+            || ValidateTabViewPoolSize(TabViewPoolSizeText, out var tabViewPoolSize) is not null)
             return;
 
         // Turning tabs off first closes the other tabs, which the user can cancel; nothing is saved then.
@@ -128,6 +148,7 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
             MaxPrettyResponseSizeMb = Parse(MaxPrettySizeText, current.MaxPrettyResponseSizeMb, 1),
             HistoryRetentionDays = historyRetentionDays,
             ShowTabs = ShowTabs,
+            TabViewPoolSize = tabViewPoolSize,
             DataDirectory = DataDirectory == AppPaths.DefaultDataDirectory ? null : DataDirectory,
         });
         CloseRequested?.Invoke(true);

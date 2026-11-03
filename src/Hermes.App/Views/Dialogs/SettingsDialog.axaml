@@ -41,6 +41,15 @@
           </StackPanel>
           <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowTabs}" OnContent="" OffContent="" />
         </Grid>
+        <Grid Classes="setting" ColumnDefinitions="*,Auto">
+          <StackPanel>
+            <TextBlock Classes="title" Text="Tabs kept ready" />
+            <TextBlock Classes="hint" Text="The most recently used tabs, the open one included, switch back instantly. Each one keeps its view in memory: a few MB, or about 60 MB with a 1 MB response. Other tabs take a moment to reload." />
+            <TextBlock Classes="hint" Text="{Binding TabViewPoolSizeError}" Foreground="{DynamicResource ErrorBrush}"
+                       IsVisible="{Binding TabViewPoolSizeError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+          <TextBox Grid.Column="1" Width="140" VerticalAlignment="Top" Text="{Binding TabViewPoolSizeText}" />
+        </Grid>
 
         <TextBlock Classes="section" Text="REQUESTS" Margin="0,8,0,10" />
         <Grid Classes="setting" ColumnDefinitions="*,Auto">

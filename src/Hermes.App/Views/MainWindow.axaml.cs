@@ -325,7 +325,8 @@ public partial class MainWindow : Window
                 EnvironmentButton.Flyout?.ShowAt(EnvironmentButton);
                 break;
             case Key.L:
-                this.GetVisualDescendants().OfType<RequestTabView>().FirstOrDefault()?.FocusUrl();
+                // Hidden views of other tabs stay alive, so pick the one on screen.
+                this.GetVisualDescendants().OfType<RequestTabView>().FirstOrDefault(view => view.IsEffectivelyVisible)?.FocusUrl();
                 break;
             case Key.Tab:
                 Run(shift ? vm.PreviousTabCommand : vm.NextTabCommand);

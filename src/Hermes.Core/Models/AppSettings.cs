@@ -20,4 +20,10 @@ public sealed class AppSettings
 
     /// <summary>When off, only one tab is open and the strip is hidden; opening an item replaces it after asking to save changes.</summary>
     public bool ShowTabs { get; set; } = true;
+
+    /// <summary>
+    /// How many tabs stay ready for instant switching, the open one included. Each keeps its view in memory; the
+    /// others share those views and cost a short reload when opened.
+    /// </summary>
+    public int TabViewPoolSize { get; set; } = 3;
 }
