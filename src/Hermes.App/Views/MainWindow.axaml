@@ -33,6 +33,13 @@
       <Setter Property="Width" Value="18" />
       <Setter Property="Height" Value="18" />
     </Style>
+    <!-- header density, set from the window width in MainWindow.axaml.cs: below 1060px the environment name trims harder -->
+    <Style Selector="TextBlock#EnvironmentNameText">
+      <Setter Property="MaxWidth" Value="200" />
+    </Style>
+    <Style Selector="Window.tight TextBlock#EnvironmentNameText">
+      <Setter Property="MaxWidth" Value="120" />
+    </Style>
     <Style Selector="Border.statusBar TextBlock">
       <Setter Property="FontSize" Value="12" />
       <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
@@ -50,31 +57,40 @@
   <Grid RowDefinitions="44,*,26">
     <!-- header: app, sidebar toggle, active environment (always visible), settings. OS window decorations stay. -->
     <Border Background="{DynamicResource BgPrimaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-      <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="14,0,10,0">
-        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-          <PathIcon Data="{StaticResource IconLogo}" Foreground="{DynamicResource AccentBrush}" Width="18" Height="18" />
-          <TextBlock Text="Hermes" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" />
+      <!--
+        Three equal columns: the search box takes the middle third (max 420px) and stays centred in the window.
+        Side groups do not clip or shrink, so each side group must stay within its third (HeaderGrid column
+        width). If a side group grows (longer labels, wider environment button), add a breakpoint in
+        MainWindow.axaml.cs that shrinks it, or it overlaps the search box again.
+        Margin 16,0,20,0 offsets the header's 14/10 margins so the search box is centred in the window.
+      -->
+      <Grid Name="HeaderGrid" ColumnDefinitions="*,*,*" Margin="14,0,10,0">
+        <StackPanel Name="HeaderLeadingGroup" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <PathIcon Data="{StaticResource IconLogo}" Foreground="{DynamicResource AccentBrush}" Width="18" Height="18" />
+            <TextBlock Text="Hermes" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="4" Margin="12,0,0,0" VerticalAlignment="Center">
+            <Border Width="1" Height="18" Background="{DynamicResource BorderBrush}" Margin="0,0,8,0" />
+            <Button Classes="icon" Width="28" Height="28" Command="{Binding ToggleSidebarCommand}" ToolTip.Tip="Toggle sidebar (Ctrl+\)">
+              <PathIcon Data="{StaticResource IconSidebar}" />
+            </Button>
+            <Button Classes="ghost" Command="{Binding NewRequestCommand}" ToolTip.Tip="New request (Ctrl+T)" AutomationProperties.Name="New">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Width="14" Height="14" Data="{StaticResource IconPlus}" />
+                <TextBlock Text="New" />
+              </StackPanel>
+            </Button>
+            <Button Name="ImportButton" Classes="ghost" Command="{Binding OpenImportCommand}" CommandParameter="{x:Null}" ToolTip.Tip="Import (Ctrl+O)" AutomationProperties.Name="Import">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Width="14" Height="14" Data="{StaticResource IconImport}" />
+                <TextBlock Text="Import" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
         </StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" Margin="12,0,0,0" VerticalAlignment="Center">
-          <Border Width="1" Height="18" Background="{DynamicResource BorderBrush}" Margin="0,0,8,0" />
-          <Button Classes="icon" Width="28" Height="28" Command="{Binding ToggleSidebarCommand}" ToolTip.Tip="Toggle sidebar (Ctrl+\)">
-            <PathIcon Data="{StaticResource IconSidebar}" />
-          </Button>
-          <Button Classes="ghost" Command="{Binding NewRequestCommand}" ToolTip.Tip="New request (Ctrl+T)">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Width="14" Height="14" Data="{StaticResource IconPlus}" />
-              <TextBlock Text="New" />
-            </StackPanel>
-          </Button>
-          <Button Classes="ghost" Command="{Binding OpenImportCommand}" CommandParameter="{x:Null}" ToolTip.Tip="Import (Ctrl+O)">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Width="14" Height="14" Data="{StaticResource IconImport}" />
-              <TextBlock Text="Import" />
-            </StackPanel>
-          </Button>
-        </StackPanel>
-        <Button Grid.Column="2" Classes="outline" Width="420" MaxWidth="420" HorizontalAlignment="Center" HorizontalContentAlignment="Stretch"
-                Background="{DynamicResource BgTertiaryBrush}" BorderThickness="0" Margin="16,0" Command="{Binding OpenCommandPaletteCommand}"
+        <Button Name="SearchButton" Grid.Column="1" Classes="outline" MaxWidth="420" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                Background="{DynamicResource BgTertiaryBrush}" BorderThickness="0" Margin="16,0,20,0" Command="{Binding OpenCommandPaletteCommand}"
                 ToolTip.Tip="Search requests or run a command (Ctrl+K)">
           <Grid ColumnDefinitions="Auto,*,Auto">
             <PathIcon Data="{StaticResource IconSearch}" Width="14" Height="14" Foreground="{DynamicResource TextTertiaryBrush}" />
@@ -83,15 +99,15 @@
             <Border Grid.Column="2" Classes="kbd"><TextBlock Text="Ctrl K" /></Border>
           </Grid>
         </Button>
-        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <StackPanel Name="HeaderTrailingGroup" Grid.Column="2" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right" VerticalAlignment="Center">
           <!-- active environment: name always on screen; the flyout switches and previews values -->
           <Button Name="EnvironmentButton" Classes="outline" ToolTip.Tip="Active environment (Ctrl+E)"
                   AutomationProperties.Name="{Binding EnvironmentButtonText, StringFormat='Active environment: {0}. Change environment'}">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <c:EnvironmentColorDot Name="EnvironmentButtonDot" Color="{Binding ActiveEnvironmentColor}" />
               <TextBlock Text="ENV" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
-              <TextBlock Text="{Binding EnvironmentButtonText}" FontWeight="SemiBold" VerticalAlignment="Center"
-                         MaxWidth="200" TextTrimming="CharacterEllipsis" />
+              <TextBlock Name="EnvironmentNameText" Text="{Binding EnvironmentButtonText}" FontWeight="SemiBold" VerticalAlignment="Center"
+                         TextTrimming="CharacterEllipsis" />
               <PathIcon Data="{StaticResource IconLock}" Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}"
                         IsVisible="{Binding ActiveEnvironmentConfirms}" ToolTip.Tip="Asks before sending" />
               <PathIcon Name="EnvironmentChevron" Data="{StaticResource IconChevronDown}" Width="12" Height="12" />

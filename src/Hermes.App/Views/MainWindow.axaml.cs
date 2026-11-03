@@ -22,6 +22,12 @@ public partial class MainWindow : Window
     private bool _quitConfirmed;
     private bool _confirmingQuit;
 
+    // Header density breakpoint (window width). The trailing group (environment button with a 200px name)
+    // needs ~343px, and each side group must fit its third of the header grid ((width - 24) / 3), so the
+    // environment name trims below 1060px. Labels and the search placeholder fit at the 900px minimum.
+    // Checked by MainWindowHeaderLayoutTests; re-measure there if these groups change.
+    private const double TightHeaderWidth = 1060;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -41,6 +47,15 @@ public partial class MainWindow : Window
     }
 
     private ColumnDefinition SidebarColumn => BodyGrid.ColumnDefinitions[0];
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == BoundsProperty)
+            UpdateHeaderDensity(Bounds.Width);
+    }
+
+    private void UpdateHeaderDensity(double windowWidth) => Classes.Set("tight", windowWidth < TightHeaderWidth);
 
     protected override void OnDataContextChanged(EventArgs e)
     {
