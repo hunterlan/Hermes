@@ -203,9 +203,10 @@
         <!-- tab strip -->
         <Border Background="{DynamicResource BgSecondaryBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
                 Padding="8,6,8,0" IsVisible="{Binding IsTabStripVisible}">
-          <Grid ColumnDefinitions="Auto,Auto,*">
-            <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
-              <ItemsControl ItemsSource="{Binding Tabs}">
+          <!-- The tabs scroll once they outgrow the strip; their width is capped in code so + stays right after the last tab or at the edge. -->
+          <Grid Name="TabStripGrid" ColumnDefinitions="Auto,Auto">
+            <ScrollViewer Name="TabScroller" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+              <ItemsControl Name="TabItems" ItemsSource="{Binding Tabs}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
                     <StackPanel Orientation="Horizontal" Spacing="2" />
@@ -218,7 +219,7 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
             </ScrollViewer>
-            <Button Grid.Column="1" Classes="icon" Margin="4,0,0,2" VerticalAlignment="Center" Command="{Binding NewRequestCommand}" ToolTip.Tip="New tab (Ctrl+T)">
+            <Button Name="NewTabButton" Grid.Column="1" Classes="icon" Margin="4,0,0,2" VerticalAlignment="Center" Command="{Binding NewRequestCommand}" ToolTip.Tip="New tab (Ctrl+T)">
               <PathIcon Data="{StaticResource IconPlus}" />
             </Button>
           </Grid>

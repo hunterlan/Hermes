@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows.Input;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -15,6 +16,7 @@ namespace Hermes.App.Views;
 
 public partial class MainWindow : Window
 {
+    private const double TabStripWheelStepPixels = 60;
     private readonly DispatcherTimer _sessionTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private MainWindowViewModel? _viewModel;
     private bool _quitConfirmed;
@@ -27,6 +29,10 @@ public partial class MainWindow : Window
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
         // Tunnel: a bubbling KeyDown handler on the list never sees Enter.
         EnvironmentList.AddHandler(KeyDownEvent, OnEnvironmentListKeyDown, RoutingStrategies.Tunnel);
+        // Tunnel: handled before the scroll viewer sees the wheel, so a horizontal swipe isn't scrolled twice.
+        TabScroller.AddHandler(PointerWheelChangedEvent, OnTabStripPointerWheelChanged, RoutingStrategies.Tunnel);
+        TabStripGrid.SizeChanged += (_, _) => UpdateTabScrollerMaxWidth();
+        NewTabButton.SizeChanged += (_, _) => UpdateTabScrollerMaxWidth();
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
         _sessionTimer.Tick += (_, _) => _viewModel?.SaveSession();
@@ -52,6 +58,37 @@ public partial class MainWindow : Window
             SidebarColumn.Width = new GridLength(_viewModel.SidebarWidth);
         }
     }
+
+    // ---- tab strip ----
+
+    // The tabs may take only the space left beside the + button, so + follows the last tab until they overflow.
+    private void UpdateTabScrollerMaxWidth()
+    {
+        var buttonSpace = NewTabButton.Bounds.Width + NewTabButton.Margin.Left + NewTabButton.Margin.Right;
+        TabScroller.MaxWidth = Math.Max(0, TabStripGrid.Bounds.Width - buttonSpace);
+    }
+
+    // The strip scrolls sideways: a vertical wheel (or Shift+wheel, or a horizontal touchpad swipe) moves it.
+    private void OnTabStripPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        var delta = Math.Abs(e.Delta.X) > Math.Abs(e.Delta.Y) ? e.Delta.X : e.Delta.Y;
+        if (delta == 0)
+            return;
+        var maxOffsetX = Math.Max(0, TabScroller.Extent.Width - TabScroller.Viewport.Width);
+        var offsetX = Math.Clamp(TabScroller.Offset.X - delta * TabStripWheelStepPixels, 0, maxOffsetX);
+        TabScroller.Offset = new Vector(offsetX, TabScroller.Offset.Y);
+        e.Handled = true;
+    }
+
+    // A tab that was just added has no container or bounds until the strip is laid out, so lay it out first.
+    private void ScrollActiveTabIntoView() => Dispatcher.UIThread.Post(() =>
+    {
+        if (_viewModel?.ActiveTab is not { } activeTab)
+            return;
+        var index = _viewModel.Tabs.IndexOf(activeTab);
+        TabScroller.UpdateLayout();
+        TabItems.ContainerFromIndex(index)?.BringIntoView();
+    }, DispatcherPriority.Loaded);
 
     // ---- command palette ----
 
@@ -97,6 +134,11 @@ public partial class MainWindow : Window
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(MainWindowViewModel.ActiveTab))
+        {
+            ScrollActiveTabIntoView();
+            return;
+        }
         if (e.PropertyName != nameof(MainWindowViewModel.IsSidebarVisible) || _viewModel is null)
             return;
         // The splitter sets a pixel width on the column, so hiding the pane must collapse the column too.
