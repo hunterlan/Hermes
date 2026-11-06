@@ -119,8 +119,8 @@
     </Border>
 
     <!-- the exact target after variable resolution, with the environment it came from -->
-    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="2,8,0,4"
-                IsVisible="{Binding ResolvedUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+    <StackPanel Name="ResolvedUrlLine" Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="2,8,0,4"
+                IsVisible="{Binding HasUrlSubstitutions}">
       <PathIcon Data="{StaticResource IconArrowRight}" Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}" />
       <TextBlock Classes="secondary" Text="Sends to" FontSize="12" VerticalAlignment="Center" />
       <SelectableTextBlock Classes="mono" Text="{Binding ResolvedUrl}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
