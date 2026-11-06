@@ -93,7 +93,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
 
     [ObservableProperty] public partial string Name { get; set; } = "";
     [ObservableProperty] public partial string SelectedMethod { get; set; } = "GET";
-    [ObservableProperty] public partial string Url { get; set; } = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUrlSubstitutions))]
+    public partial string Url { get; set; } = "";
     [ObservableProperty] public partial Option<BodyMode> SelectedBodyMode { get; set; } = BodyModes[0];
     [ObservableProperty] public partial Option<RawLanguage> SelectedRawLanguage { get; set; } = RawLanguages[2];
     [ObservableProperty] public partial string RawBody { get; set; } = "";
@@ -156,6 +158,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
     };
     public string ParamsSummary => Params.ActiveCount is var n and > 0 ? $"{n} active" : "";
     public string BodySummary => SelectedBodyMode.Value == BodyMode.Raw ? SelectedRawLanguage.Label : SelectedBodyMode.Label;
+    /// <summary>Whether the URL has <c>{{variables}}</c> (including dynamic ones) or <c>:path</c> variables, i.e. whether "Sends to" adds information.</summary>
+    public bool HasUrlSubstitutions =>
+        VariableResolver.FindVariables(Url).Any() || UrlUtilities.ParsePathVariables(Url).Count > 0;
     public bool HasPathVariables => PathVariables.Rows.Count > 0;
     public bool HasBody => SelectedBodyMode.Value != BodyMode.None;
     public bool IsBodyNone => SelectedBodyMode.Value == BodyMode.None;

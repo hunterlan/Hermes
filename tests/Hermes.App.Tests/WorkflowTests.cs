@@ -1,4 +1,6 @@
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.VisualTree;
 using Hermes.App.Services;
 using Hermes.App.ViewModels;
 using Hermes.Core.Http;
@@ -154,6 +156,64 @@ public class WorkflowTests
             tab.Url = "https://example.com/items/{{$guid}}";
 
             Assert.Equal("https://example.com/items/{{$guid}}", tab.ResolvedUrl);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaTheory]
+    [InlineData("https://example.com/users", false)]
+    [InlineData("http://localhost:8080/users", false)]
+    [InlineData("https://httpbin.org/redirect-to?url=https://example.com&status_code=302", false)]
+    [InlineData("{{baseUrl}}/x", true)]
+    [InlineData("{{undefinedVar}}/users", true)]
+    [InlineData("https://example.com/users/:id", true)]
+    [InlineData("https://example.com/items/{{$guid}}", true)]
+    public void Sends_to_line_is_visible_only_when_url_has_substitutions(string url, bool expectedVisible)
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        try
+        {
+            vm.NewRequestCommand.Execute(null);
+            var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+            tab.Url = url;
+
+            Assert.Equal(expectedVisible, tab.HasUrlSubstitutions);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Editing_url_updates_sends_to_visibility_and_raises_property_changed()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        try
+        {
+            vm.NewRequestCommand.Execute(null);
+            var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+            tab.Url = "https://example.com/users";
+            var raised = new List<string?>();
+            tab.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+            tab.Url = "https://example.com/{{segment}}";
+            UiTestHelpers.Pump();
+            var resolvedUrlLine = window.GetVisualDescendants().OfType<StackPanel>()
+                .First(panel => panel.Name == "ResolvedUrlLine" && ReferenceEquals(panel.DataContext, tab));
+            Assert.True(tab.HasUrlSubstitutions);
+            Assert.True(resolvedUrlLine.IsVisible);
+            Assert.Contains(nameof(RequestTabViewModel.HasUrlSubstitutions), raised);
+
+            raised.Clear();
+            tab.Url = "https://example.com/users";
+            UiTestHelpers.Pump();
+            Assert.False(tab.HasUrlSubstitutions);
+            Assert.False(resolvedUrlLine.IsVisible);
+            Assert.Contains(nameof(RequestTabViewModel.HasUrlSubstitutions), raised);
         }
         finally
         {
