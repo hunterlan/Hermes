@@ -53,12 +53,8 @@
             <TextBox Grid.Column="1" Text="{Binding Name, Mode=OneWay}" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1"
                      KeyDown="OnRenameKeyDown" LostFocus="OnRenameLostFocus" PropertyChanged="OnRenameBoxPropertyChanged" />
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="6,0">
-              <Border Classes="tag err" IsVisible="{Binding ConfirmBeforeSend}" ToolTip.Tip="Asks before sending">
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                  <PathIcon Data="{StaticResource IconLock}" Width="10" Height="10" />
-                  <TextBlock Text="Confirm" />
-                </StackPanel>
-              </Border>
+              <c:IconTag Kind="Err" Icon="{StaticResource IconLock}" Text="Confirm" IsVisible="{Binding ConfirmBeforeSend}"
+                         ToolTip.Tip="Asks before sending" />
               <Border Classes="tag warn" IsVisible="{Binding IsActive}" ToolTip.Tip="Active environment">
                 <TextBlock Text="Active" />
               </Border>

@@ -15,6 +15,7 @@
   <StyleInclude Source="avares://Hermes/Themes/Styles/Typography.axaml" />
   <StyleInclude Source="avares://Hermes/Themes/Styles/Buttons.axaml" />
   <StyleInclude Source="avares://Hermes/Themes/Styles/Tags.axaml" />
+  <StyleInclude Source="avares://Hermes/Themes/Styles/IconTag.axaml" />
   <StyleInclude Source="avares://Hermes/Themes/Styles/Picker.axaml" />
   <StyleInclude Source="avares://Hermes/Themes/Styles/Segmented.axaml" />
   <StyleInclude Source="avares://Hermes/Themes/Styles/ButtonsSubtle.axaml" />
