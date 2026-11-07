@@ -4,7 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace Hermes.App.ViewModels.Sidebar;
 
 /// <summary>A node in the collections tree (collection, folder or request).</summary>
-public abstract partial class TreeNodeViewModel : ObservableObject
+public abstract partial class TreeNodeViewModel : ObservableObject, IRenamable
 {
     protected TreeNodeViewModel(TreeNodeViewModel? parent) => Parent = parent;
 
@@ -27,6 +27,9 @@ public abstract partial class TreeNodeViewModel : ObservableObject
     public bool CanContainChildren => IsCollection || IsFolder;
 
     public CollectionNodeViewModel Root => this as CollectionNodeViewModel ?? Parent!.Root;
+
+    /// <summary>Hands the edit to the tree's owner (through the root), which renames the model and saves.</summary>
+    public void CommitRename(string? newName) => Root.RenameCommitter?.Invoke(this, newName);
 
     /// <summary>Applies a search filter; returns whether this node (or a descendant) matches.</summary>
     public bool ApplyFilter(string filter)

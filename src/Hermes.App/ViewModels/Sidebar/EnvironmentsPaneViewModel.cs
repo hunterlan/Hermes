@@ -35,9 +35,9 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
     {
         var selected = SelectedItem?.Model.Id;
         Items.Clear();
-        Items.Add(new EnvironmentItemViewModel(_workspace.Globals, isGlobals: true, isActive: false));
+        Items.Add(new EnvironmentItemViewModel(_workspace.Globals, isGlobals: true, isActive: false, CommitRename));
         foreach (var env in _workspace.Environments)
-            Items.Add(new EnvironmentItemViewModel(env, isGlobals: false, isActive: env == _workspace.ActiveEnvironment));
+            Items.Add(new EnvironmentItemViewModel(env, isGlobals: false, isActive: env == _workspace.ActiveEnvironment, CommitRename));
         ApplyFilter();
         SelectedItem = Items.FirstOrDefault(i => i.Model.Id == selected);
     }

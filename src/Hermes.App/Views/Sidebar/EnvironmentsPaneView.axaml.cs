@@ -65,34 +65,4 @@ public partial class EnvironmentsPaneView : UserControl
         }
         new ContextMenu { ItemsSource = items }.Open(anchor);
     }
-
-    private void OnRenameBoxPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
-    {
-        if (e.Property == IsVisibleProperty && sender is TextBox { IsVisible: true } box)
-        {
-            box.Text = (box.DataContext as EnvironmentItemViewModel)?.Name;
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                box.Focus();
-                box.SelectAll();
-            });
-        }
-    }
-
-    private void OnRenameKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (sender is not TextBox { DataContext: EnvironmentItemViewModel item } box || ViewModel is not { } vm)
-            return;
-        if (e.Key is Key.Enter or Key.Escape)
-        {
-            vm.CommitRename(item, e.Key == Key.Enter ? box.Text : null);
-            e.Handled = true;
-        }
-    }
-
-    private void OnRenameLostFocus(object? sender, RoutedEventArgs e)
-    {
-        if (sender is TextBox { DataContext: EnvironmentItemViewModel { IsRenaming: true } item } box)
-            ViewModel?.CommitRename(item, box.Text);
-    }
 }
