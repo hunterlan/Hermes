@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Hermes.Core.Headers;
 using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
 using Hermes.Core.Web;
@@ -25,7 +26,7 @@ public static class PostmanCollectionExporter
                 ["description"] = collection.Description,
                 ["schema"] = SchemaUrl,
             },
-            ["item"] = WriteItems(collection.Items),
+            ["item"] = WriteItems(collection.Items, collection, []),
         };
         if (WriteAuth(collection.Auth) is { } auth)
             root["auth"] = auth;
@@ -38,7 +39,9 @@ public static class PostmanCollectionExporter
         return root.ToJsonString(WriteOptions);
     }
 
-    private static JsonArray WriteItems(IEnumerable<CollectionNode> items)
+    /// <param name="ancestors">Folders containing <paramref name="items"/>, outermost first.</param>
+    private static JsonArray WriteItems(IEnumerable<CollectionNode> items, CollectionModel collection,
+        IReadOnlyList<FolderModel> ancestors)
     {
         var array = new JsonArray();
         foreach (var node in items)
@@ -50,7 +53,7 @@ public static class PostmanCollectionExporter
                     {
                         ["name"] = folder.Name,
                         ["description"] = folder.Description,
-                        ["item"] = WriteItems(folder.Items),
+                        ["item"] = WriteItems(folder.Items, collection, [.. ancestors, folder]),
                     };
                     if (WriteAuth(folder.Auth) is { } folderAuth)
                         f["auth"] = folderAuth;
@@ -60,19 +63,24 @@ public static class PostmanCollectionExporter
                     break;
 
                 case HttpRequestModel request:
-                    array.Add(WriteRequestItem(request));
+                    array.Add(WriteRequestItem(request, HeaderResolver.Resolve(request, ancestors, collection)));
                     break;
             }
         }
         return array;
     }
 
-    private static JsonObject WriteRequestItem(HttpRequestModel r)
+    /// <param name="headers">
+    /// The request's headers merged with its folders' and collection's. Postman has no folder or collection headers, so
+    /// the inherited ones that are sent are copied into the request, after its own rows (unticked ones included, as
+    /// disabled). Variables are kept as written.
+    /// </param>
+    private static JsonObject WriteRequestItem(HttpRequestModel r, EffectiveHeaders headers)
     {
         var request = new JsonObject
         {
             ["method"] = r.Method,
-            ["header"] = WriteKeyValues(r.Headers),
+            ["header"] = WriteKeyValues(r.Headers.Concat(headers.InheritedToSend)),
         };
         if (WriteAuth(r.Auth) is { } auth)
             request["auth"] = auth;
