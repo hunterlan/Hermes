@@ -29,4 +29,10 @@
   <Style Selector="TextBox.mono">
     <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
   </Style>
+  <!-- Form field caption -->
+  <Style Selector="TextBlock.label">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0,0,16,0" />
+  </Style>
 </Styles>
