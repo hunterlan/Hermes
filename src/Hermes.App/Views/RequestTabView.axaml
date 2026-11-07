@@ -155,13 +155,13 @@
 
           <!-- Headers: yours, then the ones Hermes adds, so nothing sent is invisible -->
           <Border Classes="section">
-            <c:CollapsibleSection Header="Headers" Summary="{Binding HeadersSummary}" IsExpanded="{Binding HeadersExpanded}">
+            <c:CollapsibleSection Header="Headers" Summary="{Binding HeadersEditor.Summary}" IsExpanded="{Binding HeadersExpanded}">
               <StackPanel Spacing="8" Margin="0,0,0,12">
-                <v:KeyValueTable DataContext="{Binding Headers}" />
+                <v:KeyValueTable DataContext="{Binding HeadersEditor.Headers}" />
                 <v:HeaderListView Heading="Inherited" Hint="untick to skip one for this request only"
-                                  Rows="{Binding InheritedHeaders}" IsVisible="{Binding HasInheritedHeaders}" />
-                <v:HeaderListView Heading="Added automatically" Rows="{Binding AutomaticHeaders}"
-                                  IsVisible="{Binding HasAutomaticHeaders}" />
+                                  Rows="{Binding HeadersEditor.InheritedRows}" IsVisible="{Binding HeadersEditor.HasInheritedRows}" />
+                <v:HeaderListView Heading="Added automatically" Rows="{Binding HeadersEditor.AutomaticRows}"
+                                  IsVisible="{Binding HeadersEditor.HasAutomaticRows}" />
               </StackPanel>
             </c:CollapsibleSection>
           </Border>

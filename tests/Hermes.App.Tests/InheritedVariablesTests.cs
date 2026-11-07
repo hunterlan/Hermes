@@ -96,7 +96,7 @@ public class InheritedVariablesTests
             vm.SelectedEnvironment = vm.EnvironmentOptions.Single(o => o.Model == environment);
             var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
             tab.Params.Load([new KeyValueItem("page", "1")]);
-            tab.Headers.Load([new KeyValueItem("Accept", "application/json")]);
+            tab.HeadersEditor.Headers.Load([new KeyValueItem("Accept", "application/json")]);
             SelectBearer(tab.Auth);
             tab.AuthExpanded = true;
             UiTestHelpers.Pump();
