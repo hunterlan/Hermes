@@ -1,6 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Hermes.App.Services;
 using Hermes.Core.Headers;
 using Hermes.Core.Models;
 
@@ -41,10 +40,8 @@ public sealed partial class ContainerHeadersViewModel : ObservableObject
 
     public bool HasInheritedRows => InheritedRows.Count > 0;
 
+    /// <summary>The levels from the collection down to this container, each with the headers it adds.</summary>
     public IReadOnlyList<InheritanceChainNode> Chain { get; private set; } = [];
-
-    /// <summary>The request the chain is drawn for, e.g. "For the first request inside: Get users".</summary>
-    public string ChainSubject { get; private set; } = "";
 
     /// <summary>"Applies to N requests in M subfolders. K requests override X." Empty without headers defined here.</summary>
     public string UsageText { get; private set; } = "";
@@ -84,7 +81,6 @@ public sealed partial class ContainerHeadersViewModel : ObservableObject
             Headers.SetRowTags([]);
             InheritedRows = [];
             Chain = [];
-            ChainSubject = "";
             UsageText = "";
             OverridingRequests = [];
         }
@@ -92,7 +88,6 @@ public sealed partial class ContainerHeadersViewModel : ObservableObject
         OnPropertyChanged(nameof(InheritedRows));
         OnPropertyChanged(nameof(HasInheritedRows));
         OnPropertyChanged(nameof(Chain));
-        OnPropertyChanged(nameof(ChainSubject));
         OnPropertyChanged(nameof(UsageText));
         OnPropertyChanged(nameof(HasUsage));
         OnPropertyChanged(nameof(OverridingRequests));
@@ -110,9 +105,8 @@ public sealed partial class ContainerHeadersViewModel : ObservableObject
         ShowOwnTags(ownRows, effective);
         InheritedRows = effective.Inherited.Select(CreateInheritedRow).ToList();
         // Usage and chain see the rows as edited, not as saved.
-        var edited = WithEditedHeaders(location, ownRows);
-        ShowUsage(edited, effective.Own.Count);
-        ShowChain(edited, effective);
+        ShowUsage(WithEditedHeaders(location, ownRows), effective.Own.Count);
+        ShowChain(location, effective);
     }
 
     /// <summary>
@@ -129,17 +123,6 @@ public sealed partial class ContainerHeadersViewModel : ObservableObject
         var collection = location.Collection;
         var collectionStandIn = new CollectionModel { Id = collection.Id, Name = collection.Name, Items = collection.Items, Headers = editedRows };
         return location with { Collection = collectionStandIn };
-    }
-
-    /// <summary>A request's collection and ancestor folders, with the edited container swapped in for the saved one.</summary>
-    private (CollectionModel Collection, IReadOnlyList<FolderModel> Ancestors) EditedPath(
-        ContainerLocation edited, NodeLocation requestLocation)
-    {
-        var collection = edited.Folder is null ? edited.Collection : requestLocation.Collection;
-        var ancestors = requestLocation.Ancestors
-            .Select(folder => edited.Folder is { } standIn && folder.Id == standIn.Id ? standIn : folder)
-            .ToList();
-        return (collection, ancestors);
     }
 
     private ContainerLocation? Locate()
@@ -203,37 +186,16 @@ public sealed partial class ContainerHeadersViewModel : ObservableObject
         UsageText = text;
     }
 
-    /// <summary>The chain of the first request inside, or ends at this container when it has none.</summary>
-    private void ShowChain(ContainerLocation location, EffectiveHeaders containerEffective)
+    /// <summary>
+    /// The chain from the collection down to this container, as the auth chain on the same tab. What happens further
+    /// in is told by the usage line and "Show which".
+    /// </summary>
+    private void ShowChain(ContainerLocation location, EffectiveHeaders effective)
     {
-        var items = location.Folder?.Items ?? location.Collection.Items;
-        if (FirstRequest(items) is { } request && _services.Workspace.Find(request.Id) is { } requestLocation)
-        {
-            var (pathCollection, pathFolders) = EditedPath(location, requestLocation);
-            var effective = HeaderResolver.Resolve(request, pathFolders, pathCollection);
-            Chain = HeaderInheritance.Chain(effective, pathCollection, pathFolders,
-                new HeaderSource(HeaderSourceKind.Request, request.Id, request.Name), _containerId);
-            ChainSubject = $"Shown for {request.Method} {request.Name}, the first request inside.";
-            return;
-        }
-
-        var leaf = location.Folder is { } folder
+        var container = location.Folder is { } folder
             ? new HeaderSource(HeaderSourceKind.Folder, folder.Id, folder.Name)
             : new HeaderSource(HeaderSourceKind.Collection, location.Collection.Id, location.Collection.Name);
-        Chain = HeaderInheritance.Chain(containerEffective, location.OuterCollection, location.Outer, leaf, _containerId);
-        ChainSubject = "No requests inside yet.";
-    }
-
-    private static HttpRequestModel? FirstRequest(IEnumerable<CollectionNode> items)
-    {
-        foreach (var node in items)
-        {
-            if (node is HttpRequestModel request)
-                return request;
-            if (node is FolderModel folder && FirstRequest(folder.Items) is { } nested)
-                return nested;
-        }
-        return null;
+        Chain = HeaderInheritance.Chain(effective, location.OuterCollection, location.Outer, container);
     }
 
     private static string Plural(int count, string noun) => count == 1 ? $"1 {noun}" : $"{count} {noun}s";
