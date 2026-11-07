@@ -8,7 +8,7 @@ using Hermes.Core.Variables;
 
 namespace Hermes.App.ViewModels;
 
-/// <summary>Folder settings: overview and authorization.</summary>
+/// <summary>Folder settings: overview, authorization and headers.</summary>
 public sealed partial class FolderTabViewModel : TabViewModelBase
 {
     private readonly FolderModel _folder;
@@ -24,9 +24,12 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         Auth.InheritedAuthProvider = () => CreateContext()?.ResolveAuth(AuthConfig.Inherit()) ?? new Core.Auth.EffectiveAuth(AuthConfig.NoAuth(), null);
         Auth.ChainProvider = () => (AuthInheritance.OuterLevels(CreateContext()), "Folder", Name);
         Auth.ContainedItemsProvider = () => _folder.Items;
+        HeadersEditor = new ContainerHeadersViewModel(services, folder.Id, isFolder: true);
+        HeadersEditor.Headers.Changed += UpdateDirty;
         Load();
         _snapshot = Snapshot();
         Scope = BuildScope();
+        HeadersEditor.Refresh();
     }
 
     public override SessionTabKind Kind => SessionTabKind.Folder;
@@ -34,6 +37,9 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
     public override string KindLabel => "DIR";
 
     public AuthEditorViewModel Auth { get; }
+
+    /// <summary>The Headers tab: the folder's own headers and what it inherits.</summary>
+    public ContainerHeadersViewModel HeadersEditor { get; }
 
     /// <summary>The variables in scope for this folder (globals, its collection's and the active environment's), shown by the editors in the tab.</summary>
     [ObservableProperty] public partial VariableScope Scope { get; set; } = VariableScope.Empty;
@@ -60,6 +66,7 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         Title = _folder.Name;
         Description = _folder.Description ?? "";
         Auth.Load(_folder.Auth);
+        HeadersEditor.Headers.Load(_folder.Headers);
         _loading = false;
     }
 
@@ -69,6 +76,7 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         Name = Name,
         Description = Description,
         Auth = Auth.ToModel(),
+        Headers = HeadersEditor.Headers.ToModels(),
     }, HermesJsonContext.Default.FolderModel);
 
     private void UpdateDirty()
@@ -92,10 +100,12 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         _folder.Name = string.IsNullOrWhiteSpace(Name) ? "New Folder" : Name.Trim();
         _folder.Description = string.IsNullOrWhiteSpace(Description) ? null : Description;
         _folder.Auth = Auth.ToModel();
+        _folder.Headers = HeadersEditor.Headers.ToModels();
         Services.Workspace.SaveCollection(location.Collection);
         Name = _folder.Name;
         _snapshot = Snapshot();
         UpdateDirty();
+        HeadersEditor.Refresh();
         return Task.FromResult(true);
     }
 
@@ -107,6 +117,7 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         OnPropertyChanged(nameof(Breadcrumb));
         Scope = BuildScope();
         Auth.RefreshInherited();
+        HeadersEditor.Refresh();
         if (!IsDirty && Name != _folder.Name)
         {
             Load();
@@ -118,5 +129,6 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
     {
         Scope = BuildScope();
         Auth.RefreshInherited();
+        HeadersEditor.Refresh();
     }
 }

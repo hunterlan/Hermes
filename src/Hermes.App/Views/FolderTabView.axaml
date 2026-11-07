@@ -21,6 +21,9 @@
       <TabItem Header="Authorization">
         <v:ContainerAuthorizationSection ContainerNoun="folder" DataContext="{Binding Auth}" />
       </TabItem>
+      <TabItem Header="{Binding HeadersEditor.TabTitle}">
+        <v:ContainerHeadersSection DataContext="{Binding HeadersEditor}" />
+      </TabItem>
     </TabControl>
   </Grid>
 </UserControl>
