@@ -15,6 +15,12 @@
     <Setter Property="Padding" Value="8,4" />
   </Style>
 
+  <!-- Switches carry no on/off text; the setting's title says what they do -->
+  <Style Selector="ToggleSwitch">
+    <Setter Property="OnContent" Value="" />
+    <Setter Property="OffContent" Value="" />
+  </Style>
+
   <!-- Compact filter box with a search icon on the left (sidebar panes) -->
   <Style Selector="TextBox.search">
     <Setter Property="MinHeight" Value="28" />

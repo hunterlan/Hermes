@@ -91,15 +91,13 @@
             <TextBlock Classes="tertiary" FontSize="12" TextWrapping="Wrap" Text="Shown next to the name everywhere this environment appears." />
           </StackPanel>
           <Border Height="1" Background="{DynamicResource BorderBrush}" />
-          <Grid ColumnDefinitions="Auto,*,Auto">
-            <PathIcon Data="{StaticResource IconLock}" Width="16" Height="16" Foreground="{DynamicResource ErrorBrush}" Margin="0,0,12,0" />
-            <StackPanel Grid.Column="1" Spacing="2">
-              <TextBlock Text="Ask before sending" FontWeight="SemiBold" />
-              <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
-                         Text="While this environment is active, every send shows the target and waits for confirmation. Use it for Production." />
-            </StackPanel>
-            <ToggleSwitch Grid.Column="2" IsChecked="{Binding ConfirmBeforeSend}" OnContent="" OffContent="" Margin="12,0,0,0" />
-          </Grid>
+          <c:SettingRow Title="Ask before sending"
+                        Hint="While this environment is active, every send shows the target and waits for confirmation. Use it for Production.">
+            <c:SettingRow.Leading>
+              <PathIcon Data="{StaticResource IconLock}" Width="16" Height="16" Foreground="{DynamicResource ErrorBrush}" />
+            </c:SettingRow.Leading>
+            <ToggleSwitch IsChecked="{Binding ConfirmBeforeSend}" />
+          </c:SettingRow>
         </StackPanel>
       </Border>
     </StackPanel>

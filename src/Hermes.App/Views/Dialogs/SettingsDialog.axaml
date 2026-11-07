@@ -1,21 +1,14 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Hermes.App.ViewModels"
+        xmlns:c="using:Hermes.App.Controls"
         x:Class="Hermes.App.Views.Dialogs.SettingsDialog"
         x:DataType="vm:SettingsDialogViewModel"
         Title="Settings" Width="640" Height="640"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
   <Window.Styles>
-    <Style Selector="Grid.setting">
+    <Style Selector="c|SettingRow">
       <Setter Property="Margin" Value="0,0,0,16" />
-    </Style>
-    <Style Selector="Grid.setting TextBlock.title">
-      <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-    <Style Selector="Grid.setting TextBlock.hint">
-      <Setter Property="FontSize" Value="12" />
-      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-      <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
   </Window.Styles>
   <Grid RowDefinitions="Auto,*,Auto" Margin="20">
@@ -23,97 +16,61 @@
     <ScrollViewer Grid.Row="1">
       <StackPanel Margin="0,0,12,0">
         <TextBlock Classes="section" Text="APPEARANCE" Margin="0,0,0,10" />
-        <Grid Classes="setting" ColumnDefinitions="*,220">
-          <StackPanel><TextBlock Classes="title" Text="Theme" /></StackPanel>
-          <ComboBox Grid.Column="1" ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" HorizontalAlignment="Stretch" />
-        </Grid>
-        <Grid Classes="setting" ColumnDefinitions="*,220">
-          <StackPanel>
-            <TextBlock Classes="title" Text="Layout" />
-            <TextBlock Classes="hint" Text="Where the response pane is shown." />
-          </StackPanel>
-          <ComboBox Grid.Column="1" ItemsSource="{Binding Layouts}" SelectedItem="{Binding SelectedLayout}" HorizontalAlignment="Stretch" />
-        </Grid>
-        <Grid Classes="setting" ColumnDefinitions="*,Auto">
-          <StackPanel>
-            <TextBlock Classes="title" Text="Tabs" />
-            <TextBlock Classes="hint" Text="When off, only one tab is open. Opening another item replaces it, and asks to save unsaved changes first." />
-          </StackPanel>
-          <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowTabs}" OnContent="" OffContent="" />
-        </Grid>
-        <Grid Classes="setting" ColumnDefinitions="*,Auto">
-          <StackPanel>
-            <TextBlock Classes="title" Text="Tabs kept ready" />
-            <TextBlock Classes="hint" Text="The most recently used tabs, the open one included, switch back instantly. Each one keeps its view in memory: a few MB, or about 60 MB with a 1 MB response. Other tabs take a moment to reload." />
-            <TextBlock Classes="hint" Text="{Binding TabViewPoolSizeError}" Foreground="{DynamicResource ErrorBrush}"
+        <c:SettingRow Title="Theme">
+          <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" Width="220" />
+        </c:SettingRow>
+        <c:SettingRow Title="Layout" Hint="Where the response pane is shown.">
+          <ComboBox ItemsSource="{Binding Layouts}" SelectedItem="{Binding SelectedLayout}" Width="220" />
+        </c:SettingRow>
+        <c:SettingRow Title="Tabs" Hint="When off, only one tab is open. Opening another item replaces it, and asks to save unsaved changes first.">
+          <ToggleSwitch IsChecked="{Binding ShowTabs}" />
+        </c:SettingRow>
+        <c:SettingRow Title="Tabs kept ready"
+                      Hint="The most recently used tabs, the open one included, switch back instantly. Each one keeps its view in memory: a few MB, or about 60 MB with a 1 MB response. Other tabs take a moment to reload.">
+          <c:SettingRow.Details>
+            <TextBlock Text="{Binding TabViewPoolSizeError}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource ErrorBrush}"
                        IsVisible="{Binding TabViewPoolSizeError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          </StackPanel>
-          <TextBox Grid.Column="1" Width="140" VerticalAlignment="Top" Text="{Binding TabViewPoolSizeText}" />
-        </Grid>
+          </c:SettingRow.Details>
+          <TextBox Width="140" VerticalAlignment="Top" Text="{Binding TabViewPoolSizeText}" />
+        </c:SettingRow>
 
         <TextBlock Classes="section" Text="REQUESTS" Margin="0,8,0,10" />
-        <Grid Classes="setting" ColumnDefinitions="*,Auto">
-          <StackPanel>
-            <TextBlock Classes="title" Text="Request timeout (ms)" />
-            <TextBlock Classes="hint" Text="How long to wait for a response. 0 means wait forever." />
-          </StackPanel>
-          <TextBox Grid.Column="1" Width="140" Text="{Binding TimeoutText}" />
-        </Grid>
-        <Grid Classes="setting" ColumnDefinitions="*,Auto">
-          <StackPanel>
-            <TextBlock Classes="title" Text="SSL certificate verification" />
-            <TextBlock Classes="hint" Text="Verify server certificates. Individual requests can override this." />
-          </StackPanel>
-          <ToggleSwitch Grid.Column="1" IsChecked="{Binding VerifySsl}" OnContent="" OffContent="" />
-        </Grid>
-        <Grid Classes="setting" ColumnDefinitions="*,Auto">
-          <StackPanel>
-            <TextBlock Classes="title" Text="Automatically follow redirects" />
-            <TextBlock Classes="hint" Text="Individual requests can override this." />
-          </StackPanel>
-          <ToggleSwitch Grid.Column="1" IsChecked="{Binding FollowRedirects}" OnContent="" OffContent="" />
-        </Grid>
-        <Grid Classes="setting" ColumnDefinitions="*,Auto">
-          <StackPanel>
-            <TextBlock Classes="title" Text="Max response size for pretty view (MB)" />
-            <TextBlock Classes="hint" Text="Larger responses are shown as raw text without highlighting to stay responsive." />
-          </StackPanel>
-          <TextBox Grid.Column="1" Width="140" Text="{Binding MaxPrettySizeText}" />
-        </Grid>
-        <Grid Classes="setting" ColumnDefinitions="*,Auto">
-          <StackPanel>
-            <TextBlock Classes="title" Text="Cookies" />
-            <TextBlock Classes="hint" Text="{Binding CookieStatus}" IsVisible="{Binding CookieStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          </StackPanel>
-          <Button Grid.Column="1" Content="Clear all cookies" Command="{Binding ClearCookiesCommand}" />
-        </Grid>
+        <c:SettingRow Title="Request timeout (ms)" Hint="How long to wait for a response. 0 means wait forever.">
+          <TextBox Width="140" Text="{Binding TimeoutText}" />
+        </c:SettingRow>
+        <c:SettingRow Title="SSL certificate verification" Hint="Verify server certificates. Individual requests can override this.">
+          <ToggleSwitch IsChecked="{Binding VerifySsl}" />
+        </c:SettingRow>
+        <c:SettingRow Title="Automatically follow redirects" Hint="Individual requests can override this.">
+          <ToggleSwitch IsChecked="{Binding FollowRedirects}" />
+        </c:SettingRow>
+        <c:SettingRow Title="Max response size for pretty view (MB)"
+                      Hint="Larger responses are shown as raw text without highlighting to stay responsive.">
+          <TextBox Width="140" Text="{Binding MaxPrettySizeText}" />
+        </c:SettingRow>
+        <c:SettingRow Title="Cookies" Hint="{Binding CookieStatus}">
+          <Button Content="Clear all cookies" Command="{Binding ClearCookiesCommand}" />
+        </c:SettingRow>
 
         <TextBlock Classes="section" Text="DATA" Margin="0,8,0,10" />
-        <Grid Classes="setting" ColumnDefinitions="*,Auto">
-          <StackPanel>
-            <TextBlock Classes="title" Text="History retention (days)" />
-            <TextBlock Classes="hint" Text="Number of days to keep, counting today. 0 keeps history forever." />
-            <TextBlock Classes="hint" Text="{Binding HistoryRetentionError}" Foreground="{DynamicResource ErrorBrush}"
+        <c:SettingRow Title="History retention (days)"
+                      Hint="Number of days to keep, counting today. 0 keeps history forever.">
+          <c:SettingRow.Details>
+            <TextBlock Text="{Binding HistoryRetentionError}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource ErrorBrush}"
                        IsVisible="{Binding HistoryRetentionError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          </StackPanel>
-          <TextBox Grid.Column="1" Width="140" VerticalAlignment="Top" Text="{Binding HistoryRetentionText}" />
-        </Grid>
-        <Grid Classes="setting" RowDefinitions="Auto,Auto,Auto">
-          <TextBlock Classes="title" Text="Data folder" />
-          <TextBlock Grid.Row="1" Classes="hint" Text="Collections, environments, history and session are stored here as JSON files." Margin="0,0,0,6" />
-          <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+          </c:SettingRow.Details>
+          <TextBox Width="140" VerticalAlignment="Top" Text="{Binding HistoryRetentionText}" />
+        </c:SettingRow>
+        <c:SettingRow Title="Data folder" Hint="Collections, environments, history and session are stored here as JSON files." IsStacked="True">
+          <Grid ColumnDefinitions="*,Auto">
             <TextBox Text="{Binding DataDirectory}" />
             <Button Grid.Column="1" Content="Browse…" Margin="8,0,0,0" Command="{Binding BrowseDataDirectoryCommand}" />
           </Grid>
-        </Grid>
+        </c:SettingRow>
         <TextBlock Classes="section" Text="HELP" Margin="0,8,0,10" />
-        <Grid Classes="setting" ColumnDefinitions="*,Auto">
-          <StackPanel>
-            <TextBlock Classes="title" Text="User manual" />
-            <TextBlock Classes="hint" Text="Works offline. Closes this dialog without saving changes." />
-          </StackPanel>
-          <Button Grid.Column="1" Content="Open manual" Command="{Binding OpenManualCommand}" />
-        </Grid>
+        <c:SettingRow Title="User manual" Hint="Works offline. Closes this dialog without saving changes.">
+          <Button Content="Open manual" Command="{Binding OpenManualCommand}" />
+        </c:SettingRow>
         <TextBlock Text="Restart Hermes to use the new data folder." Foreground="{DynamicResource AccentBrush}" FontSize="12"
                    IsVisible="{Binding DataDirectoryChanged}" Margin="0,-8,0,8" />
       </StackPanel>
