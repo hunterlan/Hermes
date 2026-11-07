@@ -9,6 +9,10 @@ public sealed class CollectionModel
     public string? Description { get; set; }
     public List<CollectionNode> Items { get; set; } = [];
     public AuthConfig Auth { get; set; } = AuthConfig.NoAuth();
+
+    /// <summary>Sent with every request in the collection, unless a folder or the request sets the same header.</summary>
+    public List<KeyValueItem> Headers { get; set; } = [];
+
     public List<Variable> Variables { get; set; } = [];
     public string? EventsJson { get; set; }
 
