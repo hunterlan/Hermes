@@ -92,7 +92,7 @@
         <Grid Classes="setting" ColumnDefinitions="*,Auto">
           <StackPanel>
             <TextBlock Classes="title" Text="History retention (days)" />
-            <TextBlock Classes="hint" Text="How many days of history to keep, today included: 1 keeps only today, 7 keeps today and the 6 days before it. 0 keeps history forever." />
+            <TextBlock Classes="hint" Text="Number of days to keep, counting today. 0 keeps history forever." />
             <TextBlock Classes="hint" Text="{Binding HistoryRetentionError}" Foreground="{DynamicResource ErrorBrush}"
                        IsVisible="{Binding HistoryRetentionError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>
