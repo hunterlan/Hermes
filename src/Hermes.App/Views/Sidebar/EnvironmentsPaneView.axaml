@@ -40,8 +40,7 @@
             </Panel>
             <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                        IsVisible="{Binding !IsRenaming}" FontWeight="{Binding IsGlobals, Converter={x:Static sbv:EnvironmentsPaneView.BoldIf}}" />
-            <TextBox Grid.Column="1" Text="{Binding Name, Mode=OneWay}" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1"
-                     KeyDown="OnRenameKeyDown" LostFocus="OnRenameLostFocus" PropertyChanged="OnRenameBoxPropertyChanged" />
+            <c:InlineRenameBox Grid.Column="1" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1" />
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="6,0">
               <c:IconTag Kind="Err" Icon="{StaticResource IconLock}" Text="Confirm" IsVisible="{Binding ConfirmBeforeSend}"
                          ToolTip.Tip="Asks before sending" />

@@ -51,8 +51,7 @@
               </Panel>
               <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,5"
                          IsVisible="{Binding !IsRenaming}" />
-              <TextBox Grid.Column="1" Text="{Binding Name, Mode=OneWay}" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1"
-                       KeyDown="OnRenameKeyDown" LostFocus="OnRenameLostFocus" PropertyChanged="OnRenameBoxPropertyChanged" />
+              <c:InlineRenameBox Grid.Column="1" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1" />
               <Button Grid.Column="2" Classes="icon rowMenu" Width="22" Height="22" Padding="3" Click="OnRowMenuClick" ToolTip.Tip="More actions">
                 <PathIcon Data="{StaticResource IconMore}" Width="13" Height="13" />
               </Button>

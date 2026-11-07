@@ -152,43 +152,6 @@ public partial class CollectionsPaneView : UserControl
             node.IsDropTarget = true;
     }
 
-    // ---- inline rename ----
-
-    private void OnRenameBoxPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
-    {
-        if (e.Property == IsVisibleProperty && sender is TextBox { IsVisible: true } box)
-        {
-            box.Text = (box.DataContext as TreeNodeViewModel)?.Name;
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                box.Focus();
-                box.SelectAll();
-            });
-        }
-    }
-
-    private void OnRenameKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (sender is not TextBox { DataContext: TreeNodeViewModel node } box || ViewModel is not { } vm)
-            return;
-        if (e.Key == Key.Enter)
-        {
-            vm.CommitRename(node, box.Text);
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Escape)
-        {
-            vm.CommitRename(node, null);
-            e.Handled = true;
-        }
-    }
-
-    private void OnRenameLostFocus(object? sender, RoutedEventArgs e)
-    {
-        if (sender is TextBox { DataContext: TreeNodeViewModel { IsRenaming: true } node } box)
-            ViewModel?.CommitRename(node, box.Text);
-    }
-
     // ---- context menu ----
 
     private void OnRowContextRequested(object? sender, ContextRequestedEventArgs e)

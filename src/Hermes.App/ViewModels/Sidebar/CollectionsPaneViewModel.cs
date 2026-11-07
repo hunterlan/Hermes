@@ -51,7 +51,7 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         Collections.Clear();
         foreach (var collection in _workspace.Collections)
         {
-            var node = new CollectionNodeViewModel(collection);
+            var node = new CollectionNodeViewModel(collection) { RenameCommitter = CommitRename };
             foreach (var n in node.SelfAndDescendants())
                 n.IsExpanded = expanded.Contains(n.Id);
             Collections.Add(node);
