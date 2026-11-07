@@ -15,6 +15,22 @@ public sealed partial class KeyValueRowViewModel(KeyValueListViewModel owner) : 
     /// <summary>The always-present empty row at the bottom; typing into it creates a real row.</summary>
     [ObservableProperty] public partial bool IsPlaceholder { get; set; }
 
+    /// <summary>
+    /// A note shown after the key (for example "Overrides Acme"); empty for none, and then it takes no space. It is
+    /// set from outside and isn't part of the row's data, so it never marks the table as changed.
+    /// </summary>
+    [ObservableProperty] public partial string TagText { get; set; } = "";
+
+    /// <summary>A second note, shown as a warning with an icon.</summary>
+    [ObservableProperty] public partial string WarningTagText { get; set; } = "";
+
+    public bool HasTag => TagText.Length > 0;
+    public bool HasWarningTag => WarningTagText.Length > 0;
+
+    partial void OnTagTextChanged(string value) => OnPropertyChanged(nameof(HasTag));
+
+    partial void OnWarningTagTextChanged(string value) => OnPropertyChanged(nameof(HasWarningTag));
+
     public KeyValueListViewModel Owner => owner;
 
     public bool CanRemove => !IsPlaceholder && !owner.KeysReadOnly;

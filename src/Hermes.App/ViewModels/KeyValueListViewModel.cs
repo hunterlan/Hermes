@@ -56,6 +56,21 @@ public sealed partial class KeyValueListViewModel : ObservableObject
         RaiseCounts();
     }
 
+    /// <summary>
+    /// Sets the notes after the keys. <paramref name="tags"/> has one entry per row of <see cref="ToModels"/>, in
+    /// order; the placeholder row has none.
+    /// </summary>
+    public void SetRowTags(IReadOnlyList<(string Tag, string Warning)> tags)
+    {
+        var rows = Rows.Where(r => !r.IsPlaceholder).ToList();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var (tag, warning) = i < tags.Count ? tags[i] : ("", "");
+            rows[i].TagText = tag;
+            rows[i].WarningTagText = warning;
+        }
+    }
+
     public List<KeyValueItem> ToModels() => Rows.Where(r => !r.IsPlaceholder).Select(r => r.ToModel()).ToList();
 
     internal void OnRowChanged(KeyValueRowViewModel row)

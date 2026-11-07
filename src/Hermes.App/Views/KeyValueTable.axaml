@@ -31,9 +31,19 @@
                 <Grid ColumnDefinitions="34,*,*,*,34" MinHeight="31">
                   <CheckBox IsChecked="{Binding Enabled}" IsVisible="{Binding ShowCheckBox}"
                             HorizontalAlignment="Center" MinWidth="0" Padding="0" />
-                  <Grid Grid.Column="1" ColumnDefinitions="*,Auto">
+                  <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto">
                     <TextBox Classes="cell" Text="{Binding Key}" PlaceholderText="Key"
                              IsReadOnly="{Binding Owner.KeysReadOnly}" />
+                    <!-- trailing notes (headers only); empty ones take no space -->
+                    <Border Grid.Column="2" Classes="tag info" IsVisible="{Binding HasTag}" Margin="0,0,4,0">
+                      <TextBlock Text="{Binding TagText}" MaxWidth="200" TextTrimming="CharacterEllipsis" />
+                    </Border>
+                    <Border Grid.Column="3" Classes="tag warn" IsVisible="{Binding HasWarningTag}" Margin="0,0,4,0">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <PathIcon Width="11" Height="11" Data="{StaticResource IconAlert}" />
+                        <TextBlock Text="{Binding WarningTagText}" />
+                      </StackPanel>
+                    </Border>
                     <ComboBox Grid.Column="1" IsVisible="{Binding Owner.AllowFiles}" MinHeight="24" FontSize="11"
                               Padding="6,0" Margin="2,0,4,0" VerticalAlignment="Center" BorderThickness="0"
                               Background="Transparent"
