@@ -18,6 +18,12 @@ Set the authorization on a request, folder or collection. Auth fields accept [va
 A request set to **Inherit** uses the authorization of its folder, then its collection. Choose another type on the
 request, or on a folder, to override what is above it.
 
+A header in a request, folder or collection with the name the effective authorization would add (`Authorization`, or
+the key of an API key sent as a header) is sent instead of the header from the authorization, and the row is tagged
+**Replaces auth header**. Authorization types that add no header, such as an API key sent in the query, are not
+affected. See
+[Collections and folders](02-collections-and-tabs.md#collections-and-folders) for how headers are inherited.
+
 ## OAuth 2.0 grants
 
 - **Authorization code**
