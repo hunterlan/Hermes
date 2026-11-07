@@ -45,6 +45,23 @@ public static class AuthApplier
         }
     }
 
+    /// <summary>
+    /// The header <see cref="Apply"/> adds for <paramref name="auth"/> unless the request already has one of that name,
+    /// or null when it adds none (no auth, an API key sent in the query, an OAuth 2.0 auth without a token).
+    /// </summary>
+    public static string? HeaderName(AuthConfig auth, VariableScope scope)
+    {
+        string R(string s) => VariableResolver.Resolve(s, scope);
+
+        return auth.Type switch
+        {
+            AuthType.Basic or AuthType.Bearer => "Authorization",
+            AuthType.ApiKey when auth.ApiKey.AddTo == ApiKeyLocation.Header && R(auth.ApiKey.Key) is { Length: > 0 } key => key,
+            AuthType.OAuth2 when R(auth.OAuth2.AccessToken).Trim().Length > 0 => "Authorization",
+            _ => null,
+        };
+    }
+
     private static void AddHeader(PreparedRequest request, string name, string value)
     {
         if (request.Headers.Any(h => string.Equals(h.Key, name, StringComparison.OrdinalIgnoreCase)))

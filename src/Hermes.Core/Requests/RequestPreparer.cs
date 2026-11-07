@@ -1,4 +1,5 @@
 using Hermes.Core.Auth;
+using Hermes.Core.Headers;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
@@ -75,9 +76,10 @@ public static class RequestPreparer
             pathValues[p.Key] = R(p.Value);
         prepared.Url = UrlUtilities.EnsureScheme(R(UrlUtilities.ReplacePathVariables(request.Url, pathValues)));
 
-        foreach (var h in request.Headers)
-            if (h.Enabled && h.Key.Trim().Length > 0)
-                prepared.Headers.Add(new KeyValueItem(R(h.Key).Trim(), R(h.Value)));
+        // The request's own headers, then those inherited from its folders and collection. Both win over the
+        // automatic ones added below (auth, content type, defaults). The auth-header flag isn't needed here.
+        foreach (var h in HeaderResolver.Resolve(request, context.Folders, context.Collection).HeadersToSend)
+            prepared.Headers.Add(new KeyValueItem(R(h.Key).Trim(), R(h.Value)));
 
         AuthApplier.Apply(auth, scope, prepared);
 
