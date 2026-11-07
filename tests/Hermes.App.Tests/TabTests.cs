@@ -39,6 +39,23 @@ public class TabTests
     }
 
     [AvaloniaFact]
+    public async Task Saving_a_request_keeps_its_skipped_inherited_headers()
+    {
+        var (_, vm) = ShowEmptyWindow();
+        var (_, first, _) = CreateRequests("Skipped headers");
+        first.SkippedInheritedHeaders = ["X-Tenant"];
+
+        await vm.OpenRequestAsync(first);
+        var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+        tab.Name += " edited";
+        await tab.SaveAsync();
+
+        var stored = (HttpRequestModel)Workspace.Find(first.Id)!.Node;
+        Assert.Equal(["X-Tenant"], stored.SkippedInheritedHeaders);
+        Assert.False(tab.IsDirty);
+    }
+
+    [AvaloniaFact]
     public async Task Request_settings_keep_an_override_that_matches_the_app_setting()
     {
         var (window, vm) = ShowEmptyWindow();
