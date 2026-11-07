@@ -37,30 +37,10 @@
       <!-- status: icon + text + colour, never colour alone -->
       <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" Margin="0,2,0,4">
         <Panel>
-          <Border Classes="status tag ok" IsVisible="{Binding IsSuccess}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Data="{StaticResource IconCheck}" Width="13" Height="13" />
-              <TextBlock Text="{Binding StatusText}" />
-            </StackPanel>
-          </Border>
-          <Border Classes="status tag info" IsVisible="{Binding IsRedirect}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Data="{StaticResource IconArrowRight}" Width="13" Height="13" />
-              <TextBlock Text="{Binding StatusText}" />
-            </StackPanel>
-          </Border>
-          <Border Classes="status tag warn" IsVisible="{Binding IsClientError}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Data="{StaticResource IconAlert}" Width="13" Height="13" />
-              <TextBlock Text="{Binding StatusText}" />
-            </StackPanel>
-          </Border>
-          <Border Classes="status tag err" IsVisible="{Binding IsServerError}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Data="{StaticResource IconClose}" Width="13" Height="13" />
-              <TextBlock Text="{Binding StatusText}" />
-            </StackPanel>
-          </Border>
+          <c:IconTag Classes="status" Kind="Ok" Icon="{StaticResource IconCheck}" Text="{Binding StatusText}" IsVisible="{Binding IsSuccess}" />
+          <c:IconTag Classes="status" Kind="Info" Icon="{StaticResource IconArrowRight}" Text="{Binding StatusText}" IsVisible="{Binding IsRedirect}" />
+          <c:IconTag Classes="status" Kind="Warn" Icon="{StaticResource IconAlert}" Text="{Binding StatusText}" IsVisible="{Binding IsClientError}" />
+          <c:IconTag Classes="status" Kind="Err" Icon="{StaticResource IconClose}" Text="{Binding StatusText}" IsVisible="{Binding IsServerError}" />
         </Panel>
         <TextBlock Grid.Column="1" Classes="mono secondary" Text="{Binding TimeText}" ToolTip.Tip="{Binding TimingDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
         <TextBlock Grid.Column="2" Classes="mono secondary" Text="{Binding SizeText}" ToolTip.Tip="{Binding SizeDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
