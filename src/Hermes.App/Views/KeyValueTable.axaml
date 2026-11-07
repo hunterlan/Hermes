@@ -31,7 +31,16 @@
                 <Grid ColumnDefinitions="34,*,*,*,34" MinHeight="31">
                   <CheckBox IsChecked="{Binding Enabled}" IsVisible="{Binding ShowCheckBox}"
                             HorizontalAlignment="Center" MinWidth="0" Padding="0" />
-                  <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto">
+                  <!-- a long tag trims; it must not widen the Key column and push the others out of line -->
+                  <c:ShrinkableCell Grid.Column="1">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <!-- the key always stays readable; what doesn't fit is clipped on the tag side -->
+                      <ColumnDefinition Width="*" MinWidth="90" />
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
                     <TextBox Classes="cell" Text="{Binding Key}" PlaceholderText="Key"
                              IsReadOnly="{Binding Owner.KeysReadOnly}" />
                     <!-- trailing notes (headers only); empty ones take no space -->
@@ -52,6 +61,7 @@
                       <ComboBoxItem>File</ComboBoxItem>
                     </ComboBox>
                   </Grid>
+                  </c:ShrinkableCell>
                   <Border Grid.Column="2" Classes="cellSep">
                     <Panel>
                       <c:VariableTextBox Text="{Binding Value}" PlaceholderText="Value" Margin="8,0" IsVisible="{Binding !IsFile}" />
