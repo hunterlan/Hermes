@@ -3,17 +3,52 @@
              xmlns:vm="using:Hermes.App.ViewModels"
              xmlns:v="using:Hermes.App.Views"
              x:Class="Hermes.App.Views.HeaderListView">
-  <!-- read-only rows: key, value, then a tag saying where the header comes from -->
-  <ItemsControl ItemsSource="{Binding $parent[v:HeaderListView].Rows}">
-    <ItemsControl.ItemTemplate>
-      <DataTemplate x:DataType="vm:HeaderRowViewModel">
-        <Grid ColumnDefinitions="200,*,Auto" MinHeight="28" Margin="8,0">
-          <TextBlock Classes="mono tertiary" Text="{Binding Key}" FontSize="12.5" VerticalAlignment="Center" />
-          <TextBlock Grid.Column="1" Classes="mono tertiary" Text="{Binding Value}" FontSize="12.5" VerticalAlignment="Center"
-                     TextWrapping="Wrap" Margin="8,4" />
-          <Border Grid.Column="2" Classes="tag"><TextBlock Text="{Binding TagText}" /></Border>
-        </Grid>
-      </DataTemplate>
-    </ItemsControl.ItemTemplate>
-  </ItemsControl>
+  <UserControl.Styles>
+    <!-- Overridden rows are crossed out (and tagged); skipped rows are dimmed (and tagged) -->
+    <Style Selector="Grid.overridden > TextBlock.mono">
+      <Setter Property="TextDecorations" Value="Strikethrough" />
+    </Style>
+    <Style Selector="Grid.skipped > TextBlock.mono">
+      <Setter Property="Opacity" Value="0.6" />
+    </Style>
+  </UserControl.Styles>
+  <StackPanel>
+    <!-- optional heading with a hint next to it -->
+    <StackPanel Orientation="Horizontal" Spacing="10" Margin="8,4,8,2"
+                IsVisible="{Binding $parent[v:HeaderListView].HasHeading}">
+      <TextBlock Classes="section" Text="{Binding $parent[v:HeaderListView].Heading}" VerticalAlignment="Center" />
+      <TextBlock Classes="tertiary" FontSize="12" Text="{Binding $parent[v:HeaderListView].Hint}" VerticalAlignment="Center" />
+    </StackPanel>
+    <!-- read-only rows: [checkbox] key, value, [source chip], tag -->
+    <ItemsControl ItemsSource="{Binding $parent[v:HeaderListView].Rows}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:HeaderRowViewModel">
+          <Grid ColumnDefinitions="Auto,200,*,Auto,Auto" MinHeight="28" Margin="8,0"
+                Classes.overridden="{Binding IsOverridden}" Classes.skipped="{Binding IsSkipped}">
+            <CheckBox IsVisible="{Binding CanSkip}" IsChecked="{Binding IsSent}" IsEnabled="{Binding CanToggleSent}"
+                      MinWidth="0" Padding="0" Margin="0,0,8,0" VerticalAlignment="Center"
+                      AutomationProperties.Name="{Binding CheckBoxName}" />
+            <TextBlock Grid.Column="1" Classes="mono tertiary" Text="{Binding Key}" FontSize="12.5" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="2" Classes="mono tertiary" Text="{Binding Value}" FontSize="12.5" VerticalAlignment="Center"
+                       TextWrapping="Wrap" Margin="8,4" />
+            <Button Grid.Column="3" Classes="ghost" IsVisible="{Binding HasSource}" Command="{Binding OpenSourceTabCommand}"
+                    ToolTip.Tip="{Binding SourceToolTip}" Margin="0,0,6,0" Padding="6,1" FontSize="11"
+                    VerticalAlignment="Center" AutomationProperties.Name="{Binding SourceToolTip}">
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <PathIcon Width="11" Height="11" Data="{StaticResource IconFolderOutline}" IsVisible="{Binding !IsSourceCollection}" />
+                <PathIcon Width="11" Height="11" Data="{StaticResource IconCollections}" IsVisible="{Binding IsSourceCollection}" />
+                <TextBlock Text="{Binding SourceName}" MaxWidth="180" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </Button>
+            <Border Grid.Column="4" Classes="tag" Classes.warn="{Binding ShowWarning}" IsVisible="{Binding HasStatus}">
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <PathIcon Width="11" Height="11" Data="{StaticResource IconAlert}" IsVisible="{Binding ShowWarning}" />
+                <TextBlock Text="{Binding StatusText}" />
+              </StackPanel>
+            </Border>
+          </Grid>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </StackPanel>
 </UserControl>
