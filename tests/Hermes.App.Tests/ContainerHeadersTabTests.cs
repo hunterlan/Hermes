@@ -114,11 +114,14 @@ public class ContainerHeadersTabTests
             Assert.Equal("Applies to 1 request. 1 request overrides X-Team.", headers.UsageText);
             Assert.Single(headers.OverridingRequests);
 
-            Assert.Equal(["Collection", "Folder", "Folder", "Request"], headers.Chain.Select(n => n.Title.Split(" · ")[0]));
+            // The chain ends at the open folder; requests further in are covered by the usage line.
+            Assert.Equal(["Collection", "Folder · Users", "Folder · Admin"],
+                headers.Chain.Select(n => n.Title.StartsWith("Collection") ? "Collection" : n.Title));
             Assert.True(headers.Chain[2].IsSource);
-            Assert.True(headers.Chain[3].IsLast);
-            Assert.Contains(headers.Chain[2].Details, d => d.Text == "X-Team" && d.IsStruckThrough);
-            Assert.Contains(headers.Chain[3].Details, d => d.Text == "x-team" && !d.IsStruckThrough);
+            Assert.True(headers.Chain[2].IsLast);
+            Assert.False(headers.Chain[1].IsSource);
+            Assert.Contains(headers.Chain[1].Details, d => d.Text == "X-Outer" && !d.IsStruckThrough);
+            Assert.Contains(headers.Chain[2].Details, d => d.Text == "X-Team" && !d.IsStruckThrough);
 
             await vm.OpenFolderAsync(outer);
             var outerHeaders = Assert.IsType<FolderTabViewModel>(vm.ActiveTab).HeadersEditor;
@@ -149,7 +152,7 @@ public class ContainerHeadersTabTests
             Assert.Empty(outer.Headers);
             Assert.Equal("Applies to 1 request in 1 subfolder. 1 request overrides X-Draft.", tab.HeadersEditor.UsageText);
             var folderNode = tab.HeadersEditor.Chain.Single(n => n.Title == "Folder · Users");
-            Assert.Contains(folderNode.Details, d => d.Text == "X-Draft" && d.IsStruckThrough);
+            Assert.Contains(folderNode.Details, d => d.Text == "X-Draft" && !d.IsStruckThrough);
         }
         finally
         {
@@ -159,19 +162,20 @@ public class ContainerHeadersTabTests
     }
 
     [AvaloniaFact]
-    public async Task Chain_strikes_through_headers_the_request_skips()
+    public async Task Chain_strikes_through_outer_headers_the_folder_overrides()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var (collection, outer, _, request) = CreateTree();
-        request.SkippedInheritedHeaders = ["accept"];
+        var (collection, outer, _, _) = CreateTree();
+        outer.Headers = [new KeyValueItem("accept", "text/plain")];
         Workspace.SaveCollection(collection);
         try
         {
             await vm.OpenFolderAsync(outer);
             var chain = Assert.IsType<FolderTabViewModel>(vm.ActiveTab).HeadersEditor.Chain;
-            var collectionNode = chain[0];
-            Assert.Contains(collectionNode.Details, d => d.Text == "Accept" && d.IsStruckThrough);
-            Assert.Contains(collectionNode.Details, d => d.Text == "X-Api-Version" && !d.IsStruckThrough);
+            Assert.Equal(2, chain.Count);
+            Assert.Contains(chain[0].Details, d => d.Text == "Accept" && d.IsStruckThrough);
+            Assert.Contains(chain[0].Details, d => d.Text == "X-Api-Version" && !d.IsStruckThrough);
+            Assert.Contains(chain[1].Details, d => d.Text == "accept" && !d.IsStruckThrough);
         }
         finally
         {
