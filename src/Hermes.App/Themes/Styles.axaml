@@ -20,6 +20,7 @@
   <StyleInclude Source="avares://Hermes/Themes/Styles/ButtonsSubtle.axaml" />
   <StyleInclude Source="avares://Hermes/Themes/Styles/Inputs.axaml" />
   <StyleInclude Source="avares://Hermes/Themes/Styles/Layout.axaml" />
+  <StyleInclude Source="avares://Hermes/Themes/Styles/Pills.axaml" />
   <StyleInclude Source="avares://Hermes/Themes/Styles/Tables.axaml" />
   <StyleInclude Source="avares://Hermes/Themes/Styles/Status.axaml" />
   <StyleInclude Source="avares://Hermes/Themes/Styles/Chain.axaml" />

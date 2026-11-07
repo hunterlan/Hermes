@@ -5,26 +5,6 @@
              xmlns:core="using:Hermes.Core.Models"
              x:Class="Hermes.App.Views.ResponseView"
              x:DataType="vm:ResponseViewModel">
-  <UserControl.Styles>
-    <Style Selector="Border.status">
-      <Setter Property="CornerRadius" Value="6" />
-      <Setter Property="Padding" Value="9,3" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
-    <Style Selector="Border.status TextBlock">
-      <Setter Property="FontSize" Value="12.5" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-    <Style Selector="Button.layout">
-      <Setter Property="Width" Value="28" />
-      <Setter Property="Height" Value="28" />
-    </Style>
-    <Style Selector="Button.layout.on">
-      <Setter Property="Background" Value="{DynamicResource BgTertiaryBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-    </Style>
-  </UserControl.Styles>
-
   <Panel>
     <!-- empty state -->
     <StackPanel IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
