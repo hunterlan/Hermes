@@ -31,7 +31,7 @@ Each kept tab uses memory: a few megabytes for small requests, about 60 MB with 
 
 | Setting | Meaning |
 | --- | --- |
-| History retention (days) | How many days of history are kept. Today counts as one of the days. 0 keeps history forever. At most 36500 |
+| History retention (days) | Number of days to keep, counting today. 0 keeps history forever. At most 36500 |
 | Data folder | Where the JSON files are stored. Restart Hermes after changing it |
 
 ### History retention
