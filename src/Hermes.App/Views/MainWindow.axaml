@@ -164,7 +164,7 @@
 
                   <Button Classes="picker-footer" Command="{Binding OpenEnvironmentMatrixCommand}">
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                      <PathIcon Data="{StaticResource IconEnvironment}" Width="14" Height="14" Foreground="{DynamicResource TextSecondaryBrush}" />
+                      <PathIcon Data="{StaticResource IconTable}" Width="14" Height="14" Foreground="{DynamicResource TextSecondaryBrush}" />
                       <TextBlock Grid.Column="1" Text="Open environments matrix" VerticalAlignment="Center" />
                       <PathIcon Grid.Column="2" Data="{StaticResource IconChevronRight}" Width="12" Height="12"
                                 Foreground="{DynamicResource TextTertiaryBrush}" />

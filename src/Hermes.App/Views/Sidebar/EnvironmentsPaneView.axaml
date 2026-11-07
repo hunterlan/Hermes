@@ -17,7 +17,7 @@
     <Button Grid.Row="2" Classes="outline" Margin="12,6,12,10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
             Command="{Binding OpenMatrixCommand}" ToolTip.Tip="Every variable in every environment, side by side">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <PathIcon Data="{StaticResource IconEnvironment}" Width="13" Height="13" />
+        <PathIcon Data="{StaticResource IconTable}" Width="13" Height="13" />
         <TextBlock Text="Compare all environments" />
       </StackPanel>
     </Button>
@@ -32,9 +32,9 @@
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="sb:EnvironmentItemViewModel">
           <Grid ColumnDefinitions="Auto,*,Auto,Auto" Background="Transparent" Tapped="OnItemTapped" ContextRequested="OnContextRequested">
-            <!-- Globals keep the generic icon; environments show their colour -->
+            <!-- Globals show the globe icon; environments show their colour -->
             <Panel Width="14" Margin="0,0,10,0">
-              <PathIcon Data="{StaticResource IconEnvironment}" Width="14" Height="14" Foreground="{DynamicResource TextSecondaryBrush}"
+              <PathIcon Data="{StaticResource IconGlobals}" Width="14" Height="14" Foreground="{DynamicResource TextSecondaryBrush}"
                         IsVisible="{Binding IsGlobals}" />
               <c:EnvironmentColorDot Color="{Binding Color}" HorizontalAlignment="Center" IsVisible="{Binding IsRegular}" />
             </Panel>
