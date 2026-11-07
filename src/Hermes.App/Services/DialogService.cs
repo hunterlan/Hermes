@@ -29,6 +29,15 @@ public sealed class DialogService
         return await ShowDialogAsync<string>(dialog) == "include";
     }
 
+    /// <summary>Warns that collection and folder headers become request headers in a Postman export. False when cancelled.</summary>
+    public async Task<bool> ConfirmExportWithInheritedHeadersAsync()
+    {
+        var dialog = new MessageDialog("Export headers to Postman?",
+            "Postman has no folder headers, so collection and folder headers will be copied into each request and will not come back as folder headers when imported.",
+            [("Export", "export", "accent"), ("Cancel", "cancel", "")]);
+        return await ShowDialogAsync<string>(dialog) == "export";
+    }
+
     public async Task ShowMessageAsync(string title, string message)
     {
         var dialog = new MessageDialog(title, message, [("OK", "ok", "accent")]);
