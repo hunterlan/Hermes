@@ -16,7 +16,7 @@ using Hermes.Core.Web;
 
 namespace Hermes.App.ViewModels;
 
-public sealed partial class RequestTabViewModel : TabViewModelBase
+public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 {
     private string _savedSnapshot = "";
     private bool _loading;
@@ -728,12 +728,13 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
     [RelayCommand]
     private void StartRename() => IsRenaming = true;
 
-    [RelayCommand]
-    private void EndRename()
+    /// <summary>Ends the in-place rename. A null name cancels it and keeps the current one.</summary>
+    public void CommitRename(string? newName)
     {
         IsRenaming = false;
-        if (string.IsNullOrWhiteSpace(Name))
-            Name = "Untitled Request";
+        if (newName is null)
+            return;
+        Name = string.IsNullOrWhiteSpace(newName) ? "Untitled Request" : newName;
     }
 
     /// <summary>The request was renamed from the sidebar. A clean tab stays clean.</summary>

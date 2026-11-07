@@ -25,8 +25,7 @@
                   Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="Rename">
             <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="15" />
           </Button>
-          <TextBox Name="NameBox" Text="{Binding Name}" IsVisible="{Binding IsRenaming}" MinWidth="240" MinHeight="26" Padding="6,2"
-                   LostFocus="OnNameLostFocus" KeyDown="OnNameKeyDown" />
+          <c:InlineRenameBox Name="NameBox" IsVisible="{Binding IsRenaming}" MinWidth="240" MinHeight="26" Padding="6,2" />
         </Panel>
         <Border Classes="tag ok" IsVisible="{Binding !IsDirty}">
           <StackPanel Orientation="Horizontal" Spacing="4">
