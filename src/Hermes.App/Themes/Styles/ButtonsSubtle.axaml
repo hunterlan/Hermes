@@ -47,6 +47,14 @@
     <Setter Property="Foreground" Value="{DynamicResource SendHoverBrush}" />
   </Style>
 
+  <!-- Row action button of a sidebar list: hidden until the row (a ListBoxItem or anything with .rowHost) is hovered -->
+  <Style Selector="Button.rowMenu">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector=".rowHost:pointerover Button.rowMenu, ListBoxItem:pointerover Button.rowMenu">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
   <!-- Square toggle for the response layout switch; builds on Button.icon, so it comes after it -->
   <Style Selector="Button.layout">
     <Setter Property="Width" Value="28" />
