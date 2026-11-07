@@ -210,6 +210,34 @@ public class SecretTests : IDisposable
     }
 
     [Fact]
+    public void Inherited_credential_headers_are_masked_like_own_ones()
+    {
+        var folder = new FolderModel
+        {
+            Headers = [new KeyValueItem("Authorization", "Bearer folder-token-123"), new KeyValueItem("X-Api-Key", "{{apiKey}}")],
+        };
+        var context = new RequestContext
+        {
+            Collection = new CollectionModel { Headers = [new KeyValueItem("Proxy-Authorization", "Basic collection-creds")] },
+            Folders = [folder],
+            Environment = new EnvironmentModel { Variables = [new Variable("apiKey", "k3y-value") { Type = VariableType.Secret }] },
+        };
+        var request = new HttpRequestModel { Url = "https://api.test/" };
+
+        var (sent, masked) = RequestPreparer.PrepareWithMasked(request, context);
+        var text = SecretMasker.MaskCredentialHeaders(RawRequestFormatter.Format(masked));
+
+        Assert.Contains("Authorization: Bearer ••••••", text);
+        Assert.Contains("Proxy-Authorization: Basic ••••••", text);
+        Assert.Contains("X-Api-Key: ••••••", text);
+        Assert.DoesNotContain("folder-token-123", text);
+        Assert.DoesNotContain("collection-creds", text);
+        Assert.DoesNotContain("k3y-value", text);
+        Assert.Equal("k3y-value", sent.GetHeader("X-Api-Key"));
+        Assert.Equal("Bearer folder-token-123", sent.GetHeader("Authorization"));
+    }
+
+    [Fact]
     public void Secret_values_are_masked_wherever_variables_are_shown()
     {
         var scope = new Variables.VariableScopeBuilder().AddLayer([new Variable("apiKey", "s3cret") { Type = VariableType.Secret }, new Variable("host", "h")]).Build();

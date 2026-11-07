@@ -1,4 +1,5 @@
 using Hermes.Core.Auth;
+using Hermes.Core.Headers;
 using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
 using Hermes.Core.Variables;
@@ -28,4 +29,11 @@ public sealed class RequestContext
             .Build();
 
     public EffectiveAuth ResolveAuth(AuthConfig own) => AuthResolver.Resolve(own, Folders, Collection);
+
+    /// <summary>
+    /// The request's headers merged with those of its folders and collection, as written (variables unresolved), with
+    /// the header that would take the place of the auth header flagged.
+    /// </summary>
+    public EffectiveHeaders ResolveHeaders(HttpRequestModel request) =>
+        HeaderResolver.Resolve(request, Folders, Collection, AuthApplier.HeaderName(ResolveAuth(request.Auth).Auth, BuildScope()));
 }
