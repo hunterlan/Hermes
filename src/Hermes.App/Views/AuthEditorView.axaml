@@ -6,54 +6,8 @@
              x:Class="Hermes.App.Views.AuthEditorView"
              x:DataType="vm:AuthEditorViewModel">
   <UserControl.Styles>
-    <Style Selector="TextBlock.label">
-      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-      <Setter Property="Margin" Value="0,0,16,0" />
-    </Style>
     <Style Selector="Grid.form > :is(Control)">
       <Setter Property="Margin" Value="0,4" />
-    </Style>
-    <Style Selector="Border.chainNode">
-      <Setter Property="Background" Value="{DynamicResource BgPrimaryBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="10" />
-      <Setter Property="Padding" Value="12,10" />
-    </Style>
-    <Style Selector="Border.chainNode.source">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-      <Setter Property="BorderThickness" Value="2" />
-    </Style>
-    <Style Selector="Border.chainLink">
-      <Setter Property="Width" Value="1" />
-      <Setter Property="Height" Value="12" />
-      <Setter Property="HorizontalAlignment" Value="Left" />
-      <Setter Property="Margin" Value="20,0,0,0" />
-      <Setter Property="Background" Value="{DynamicResource BorderStrongBrush}" />
-    </Style>
-    <Style Selector="ListBox.pills">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
-    </Style>
-    <Style Selector="ListBox.pills ListBoxItem">
-      <Setter Property="Padding" Value="10,5" />
-      <Setter Property="MinHeight" Value="0" />
-      <Setter Property="CornerRadius" Value="7" />
-      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-    </Style>
-    <Style Selector="ListBox.pills ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource BgTertiaryBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-    <Style Selector="Border.input">
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="4" />
-      <Setter Property="Padding" Value="8,0" />
-      <Setter Property="MinHeight" Value="30" />
-      <Setter Property="Background" Value="{DynamicResource BgInputBrush}" />
     </Style>
   </UserControl.Styles>
 
@@ -70,26 +24,7 @@
 
       <StackPanel Spacing="0" Margin="0,8,0,0" IsVisible="{Binding Chain.Count}">
         <TextBlock Classes="section" Text="Where auth comes from" Margin="0,0,0,8" />
-        <ItemsControl ItemsSource="{Binding Chain}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:AuthChainNode">
-              <StackPanel>
-                <Border Classes="chainNode" Classes.source="{Binding IsSource}">
-                  <Grid ColumnDefinitions="*,Auto">
-                    <StackPanel Spacing="2">
-                      <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                      <TextBlock Text="{Binding TypeLabel}" Classes="secondary" FontSize="12" IsVisible="{Binding HasType}" />
-                    </StackPanel>
-                    <Border Grid.Column="1" Classes="tag" Classes.warn="{Binding IsSource}" VerticalAlignment="Top" Margin="8,0,0,0">
-                      <TextBlock Text="{Binding Status}" />
-                    </Border>
-                  </Grid>
-                </Border>
-                <Border Classes="chainLink" IsVisible="{Binding !IsSelf}" />
-              </StackPanel>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <v:InheritanceChainView Nodes="{Binding Chain}" />
       </StackPanel>
 
       <StackPanel Spacing="0" Margin="0,8,0,0" IsVisible="{Binding UsageSummary, Converter={x:Static ObjectConverters.IsNotNull}}">
@@ -122,7 +57,7 @@
         <!-- basic -->
         <Grid Classes="form" IsVisible="{Binding IsBasic}" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto">
           <TextBlock Classes="label" Text="Username" />
-          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding BasicUsername}" PlaceholderText="Username" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+          <c:VariableTextBox Grid.Column="1" Classes="bordered" Text="{Binding BasicUsername}" PlaceholderText="Username" />
           <TextBlock Grid.Row="1" Classes="label" Text="Password" />
           <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding BasicPassword}" PasswordChar="•" RevealPassword="False" PlaceholderText="Password" Classes="revealPasswordButton" />
         </Grid>
@@ -130,15 +65,15 @@
         <!-- bearer -->
         <Grid Classes="form" IsVisible="{Binding IsBearer}" ColumnDefinitions="140,*">
           <TextBlock Classes="label" Text="Token" />
-          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding BearerToken}" PlaceholderText="Token" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+          <v:SecretVariableField Grid.Column="1" Text="{Binding BearerToken}" PlaceholderText="Token" Secret="{Binding BearerTokenSecret}" />
         </Grid>
 
         <!-- api key -->
         <Grid Classes="form" IsVisible="{Binding IsApiKey}" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto">
           <TextBlock Classes="label" Text="Key" />
-          <Border Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding ApiKeyKey}" PlaceholderText="Key" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+          <c:VariableTextBox Grid.Column="1" Classes="bordered" Text="{Binding ApiKeyKey}" PlaceholderText="Key" />
           <TextBlock Grid.Row="1" Classes="label" Text="Value" />
-          <Border Grid.Row="1" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding ApiKeyValue}" PlaceholderText="Value" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+          <v:SecretVariableField Grid.Row="1" Grid.Column="1" Text="{Binding ApiKeyValue}" PlaceholderText="Value" Secret="{Binding ApiKeyValueSecret}" />
           <TextBlock Grid.Row="2" Classes="label" Text="Add to" />
           <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding ApiKeyLocations}" SelectedItem="{Binding SelectedApiKeyLocation}" HorizontalAlignment="Stretch" />
         </Grid>
@@ -151,7 +86,7 @@
               <Grid Classes="form" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto">
                 <TextBlock Classes="label" Text="Access Token" />
                 <Grid Grid.Column="1" ColumnDefinitions="*,Auto">
-                  <Border Classes="input"><c:VariableTextBox Text="{Binding OAuthAccessToken}" PlaceholderText="Token" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+                  <v:SecretVariableField Text="{Binding OAuthAccessToken}" PlaceholderText="Token" Secret="{Binding AccessTokenSecret}" />
                   <Button Grid.Column="1" Classes="ghost" Content="Clear" Margin="6,0,0,0" Command="{Binding ClearTokenCommand}" />
                 </Grid>
                 <TextBlock Grid.Row="1" Classes="label" Text="Header Prefix" />
@@ -171,13 +106,13 @@
                          ToolTip.Tip="Must be a loopback URL (http://localhost:PORT/...) so Hermes can receive the code." />
 
                 <TextBlock Grid.Row="2" Classes="label" Text="Auth URL" IsVisible="{Binding IsAuthCodeGrant}" />
-                <Border Grid.Row="2" Grid.Column="1" Classes="input" IsVisible="{Binding IsAuthCodeGrant}"><c:VariableTextBox Text="{Binding OAuthAuthUrl}" PlaceholderText="https://example.com/oauth/authorize" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+                <c:VariableTextBox Grid.Row="2" Grid.Column="1" IsVisible="{Binding IsAuthCodeGrant}" Classes="bordered" Text="{Binding OAuthAuthUrl}" PlaceholderText="https://example.com/oauth/authorize" />
 
                 <TextBlock Grid.Row="3" Classes="label" Text="Access Token URL" />
-                <Border Grid.Row="3" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding OAuthTokenUrl}" PlaceholderText="https://example.com/oauth/token" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+                <c:VariableTextBox Grid.Row="3" Grid.Column="1" Classes="bordered" Text="{Binding OAuthTokenUrl}" PlaceholderText="https://example.com/oauth/token" />
 
                 <TextBlock Grid.Row="4" Classes="label" Text="Client ID" />
-                <Border Grid.Row="4" Grid.Column="1" Classes="input"><c:VariableTextBox Text="{Binding OAuthClientId}" PlaceholderText="Client ID" Variables="{Binding $parent[v:AuthEditorView].Variables}" /></Border>
+                <c:VariableTextBox Grid.Row="4" Grid.Column="1" Classes="bordered" Text="{Binding OAuthClientId}" PlaceholderText="Client ID" />
 
                 <TextBlock Grid.Row="5" Classes="label" Text="Client Secret" />
                 <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding OAuthClientSecret}" PasswordChar="•" Classes="revealPasswordButton" PlaceholderText="Client Secret" />

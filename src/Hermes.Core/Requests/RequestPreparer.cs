@@ -1,4 +1,5 @@
 using Hermes.Core.Auth;
+using Hermes.Core.Headers;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
@@ -75,26 +76,39 @@ public static class RequestPreparer
             pathValues[p.Key] = R(p.Value);
         prepared.Url = UrlUtilities.EnsureScheme(R(UrlUtilities.ReplacePathVariables(request.Url, pathValues)));
 
-        foreach (var h in request.Headers)
-            if (h.Enabled && h.Key.Trim().Length > 0)
-                prepared.Headers.Add(new KeyValueItem(R(h.Key).Trim(), R(h.Value)));
+        // The request's own headers, then those inherited from its folders and collection. Both win over the
+        // automatic ones added below (auth, content type, defaults). The auth-header flag isn't needed here.
+        var rowOfHeader = new Dictionary<KeyValueItem, KeyValueItem>(ReferenceEqualityComparer.Instance);
+        foreach (var h in HeaderResolver.Resolve(request, context.Folders, context.Collection).HeadersToSend)
+        {
+            var header = new KeyValueItem(R(h.Key).Trim(), R(h.Value));
+            prepared.Headers.Add(header);
+            rowOfHeader[header] = h;
+        }
 
+        var configuredHeaderCount = prepared.Headers.Count;
         AuthApplier.Apply(auth, scope, prepared);
+        prepared.MarkHeadersFrom(configuredHeaderCount, PreparedHeaderOrigin.Auth);
 
         switch (request.Body.Mode)
         {
             case BodyMode.Raw:
                 prepared.RawBody = R(request.Body.Raw);
-                AddIfMissing(prepared, "Content-Type", RequestBody.ContentTypeFor(request.Body.RawLanguage));
+                AddIfMissing(prepared, "Content-Type", RequestBody.ContentTypeFor(request.Body.RawLanguage), PreparedHeaderOrigin.Body);
                 break;
             case BodyMode.UrlEncoded:
                 prepared.FormFields.AddRange(ResolveFields(request.Body.UrlEncoded, R));
-                AddIfMissing(prepared, "Content-Type", "application/x-www-form-urlencoded");
+                AddIfMissing(prepared, "Content-Type", "application/x-www-form-urlencoded", PreparedHeaderOrigin.Body);
                 break;
             case BodyMode.FormData:
                 prepared.FormFields.AddRange(ResolveFields(request.Body.FormData, R));
                 // The multipart boundary is generated when sending, so the user's Content-Type can't be honoured.
-                prepared.Headers.RemoveAll(h => string.Equals(h.Key, "Content-Type", StringComparison.OrdinalIgnoreCase));
+                foreach (var removed in prepared.Headers.Where(h => string.Equals(h.Key, "Content-Type", StringComparison.OrdinalIgnoreCase)).ToList())
+                {
+                    prepared.Headers.Remove(removed);
+                    if (rowOfHeader.TryGetValue(removed, out var row))
+                        prepared.RowsReplacedByBody.Add(row);
+                }
                 break;
             case BodyMode.Binary:
                 prepared.BinaryFilePath = request.Body.BinaryFilePath is { } path ? R(path) : null;
@@ -103,7 +117,7 @@ public static class RequestPreparer
 
         if (includeDefaultHeaders)
             foreach (var h in DefaultHeaders)
-                AddIfMissing(prepared, h.Key, h.Value);
+                AddIfMissing(prepared, h.Key, h.Value, PreparedHeaderOrigin.Default);
 
         return prepared;
     }
@@ -112,9 +126,9 @@ public static class RequestPreparer
         items.Where(i => i.Enabled && i.Key.Length > 0)
              .Select(i => new KeyValueItem(resolve(i.Key), resolve(i.Value)) { Kind = i.Kind });
 
-    private static void AddIfMissing(PreparedRequest request, string name, string value)
+    private static void AddIfMissing(PreparedRequest request, string name, string value, PreparedHeaderOrigin origin)
     {
         if (request.GetHeader(name) is null)
-            request.Headers.Add(new KeyValueItem(name, value));
+            request.AddAutomaticHeader(new KeyValueItem(name, value), origin);
     }
 }

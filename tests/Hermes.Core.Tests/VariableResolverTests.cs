@@ -5,6 +5,18 @@ namespace Hermes.Core.Tests;
 
 public class VariableResolverTests
 {
+    [Theory]
+    [InlineData("{{token}}", true)]
+    [InlineData(" {{ token }} ", true)]
+    [InlineData("{{prefix}}{{token}}", true)]
+    [InlineData("Bearer {{token}}", false)]
+    [InlineData("abc123", false)]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
+    [InlineData(null, false)]
+    public void Tells_text_made_only_of_variables(string? text, bool expected) =>
+        Assert.Equal(expected, VariableResolver.IsOnlyVariables(text));
+
     [Fact]
     public void Resolves_with_environment_overriding_collection_and_globals()
     {

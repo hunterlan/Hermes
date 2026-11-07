@@ -6,6 +6,19 @@ A collection groups requests. It can contain folders, and folders can contain mo
 can hold its own [variables](03-variables.md) and [authorization](05-authorization.md), which its requests can
 inherit. Use the sidebar to create, rename (`F2`) and delete items. `Ctrl+\` shows or hides the sidebar.
 
+A collection or folder can also have header rows. They are sent with every request inside it, along with the request's
+own headers:
+
+- **Nearest wins:** if a request, folder or collection sets a header that an outer level also sets, the nearest one is
+  sent. Header names ignore case.
+- **Unticked rows** are off. They are not sent, and they don't replace a header of the same name from an outer level.
+- **Skipping:** a request can skip an inherited header from its Headers section. This applies to that request only.
+- **Authorization:** if a header has the name the request's authorization would add (for example `Authorization`),
+  it is sent instead of the one from the authorization, and Hermes shows a warning on the row. See
+  [Authorization](05-authorization.md).
+- **Postman export:** Postman has no folder headers, so the ticked collection and folder headers are copied into each
+  request. Hermes warns you before exporting a collection that has any.
+
 ## Tabs
 
 - **Preview tab:** opening an item from the sidebar with a single click shows it in a preview tab, which the next

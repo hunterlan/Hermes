@@ -12,7 +12,6 @@ namespace Hermes.App.Views;
 public partial class RequestTabView : UserControl
 {
     private SettingsService? _settings;
-    private RequestTabViewModel? _viewModel;
 
     public RequestTabView()
     {
@@ -33,29 +32,6 @@ public partial class RequestTabView : UserControl
         base.OnDetachedFromVisualTree(e);
         if (_settings is not null)
             _settings.Changed -= ApplyLayout;
-    }
-
-    protected override void OnDataContextChanged(EventArgs e)
-    {
-        base.OnDataContextChanged(e);
-        if (_viewModel is not null)
-            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-        _viewModel = DataContext as RequestTabViewModel;
-        if (_viewModel is not null)
-            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-    }
-
-    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(RequestTabViewModel.IsRenaming) && _viewModel?.IsRenaming == true)
-        {
-            // Deferred: the box only becomes visible once its IsVisible binding has caught up.
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                NameBox.Focus();
-                NameBox.SelectAll();
-            });
-        }
     }
 
     public void FocusUrl() => UrlBox.FocusEditor();
@@ -99,17 +75,6 @@ public partial class RequestTabView : UserControl
         {
             Grid.SetRow(control, row);
             Grid.SetColumn(control, column);
-        }
-    }
-
-    private void OnNameLostFocus(object? sender, RoutedEventArgs e) => _viewModel?.EndRenameCommand.Execute(null);
-
-    private void OnNameKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key is Key.Enter or Key.Escape)
-        {
-            _viewModel?.EndRenameCommand.Execute(null);
-            e.Handled = true;
         }
     }
 }

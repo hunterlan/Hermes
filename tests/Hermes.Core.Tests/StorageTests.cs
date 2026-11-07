@@ -169,6 +169,64 @@ public class StorageTests : IDisposable
     }
 
     [Fact]
+    public void Collection_and_folder_headers_and_skipped_names_persist()
+    {
+        var repo = new WorkspaceRepository(_dir);
+        var collection = new CollectionModel { Name = "C", Headers = [new KeyValueItem("X-Collection", "{{c}}")] };
+        var folder = new FolderModel { Name = "F", Headers = [new KeyValueItem("X-Folder", "f", enabled: false)] };
+        folder.Items.Add(new HttpRequestModel { Name = "R", SkippedInheritedHeaders = ["X-Collection"] });
+        collection.Items.Add(folder);
+        repo.SaveCollection(collection);
+
+        var loaded = Assert.Single(new WorkspaceRepository(_dir).LoadCollections());
+        var loadedFolder = Assert.IsType<FolderModel>(loaded.Items[0]);
+        var loadedRequest = Assert.IsType<HttpRequestModel>(loadedFolder.Items[0]);
+        Assert.Equal(("X-Collection", "{{c}}"), (loaded.Headers[0].Key, loaded.Headers[0].Value));
+        Assert.Equal(("X-Folder", false), (loadedFolder.Headers[0].Key, loadedFolder.Headers[0].Enabled));
+        Assert.Equal(["X-Collection"], loadedRequest.SkippedInheritedHeaders);
+    }
+
+    [Fact]
+    public void Collection_files_from_before_inherited_headers_load_with_empty_lists()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "collections"));
+        File.WriteAllText(Path.Combine(_dir, "collections", "old.json"), """
+            {
+              "id": "7f8a3c2e-1b4d-4e5f-9a6b-0c1d2e3f4a5b",
+              "name": "Old",
+              "items": [
+                {
+                  "$kind": "folder",
+                  "id": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+                  "name": "F",
+                  "items": [
+                    {
+                      "$kind": "request",
+                      "id": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+                      "name": "R",
+                      "url": "http://x",
+                      "headers": [ { "enabled": true, "key": "X-A", "value": "1" } ]
+                    }
+                  ]
+                }
+              ],
+              "variables": []
+            }
+            """);
+
+        var repo = new WorkspaceRepository(_dir);
+        var loaded = Assert.Single(repo.LoadCollections());
+
+        Assert.Empty(repo.LoadErrors);
+        Assert.Empty(loaded.Headers);
+        var folder = Assert.IsType<FolderModel>(loaded.Items[0]);
+        Assert.Empty(folder.Headers);
+        var request = Assert.IsType<HttpRequestModel>(folder.Items[0]);
+        Assert.Empty(request.SkippedInheritedHeaders);
+        Assert.Equal("X-A", Assert.Single(request.Headers).Key);
+    }
+
+    [Fact]
     public void Corrupt_files_are_reported_not_thrown()
     {
         Directory.CreateDirectory(Path.Combine(_dir, "collections"));

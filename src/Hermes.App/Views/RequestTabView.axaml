@@ -5,46 +5,9 @@
              xmlns:v="using:Hermes.App.Views"
              xmlns:core="using:Hermes.Core.Models"
              x:Class="Hermes.App.Views.RequestTabView"
-             x:DataType="vm:RequestTabViewModel">
+             x:DataType="vm:RequestTabViewModel"
+             c:VariableScopeProperties.Variables="{Binding Variables}">
   <UserControl.Styles>
-    <!-- Collapsible section header: chevron, title, quiet summary -->
-    <Style Selector="ToggleButton.sectionHeader">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="0" />
-      <Setter Property="Padding" Value="0" />
-      <Setter Property="MinHeight" Value="38" />
-      <Setter Property="HorizontalAlignment" Value="Stretch" />
-      <Setter Property="HorizontalContentAlignment" Value="Left" />
-      <Setter Property="VerticalContentAlignment" Value="Center" />
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-    </Style>
-    <Style Selector="ToggleButton.sectionHeader:pointerover /template/ ContentPresenter#PART_ContentPresenter,
-                     ToggleButton.sectionHeader:checked /template/ ContentPresenter#PART_ContentPresenter,
-                     ToggleButton.sectionHeader:pressed /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-    </Style>
-    <!-- Fluent shrinks pressed buttons; a shrunken header moves the arrow out from under the pointer before release -->
-    <Style Selector="ToggleButton.sectionHeader:pressed">
-      <Setter Property="RenderTransform" Value="none" />
-    </Style>
-    <Style Selector="ToggleButton.sectionHeader PathIcon.chevron">
-      <Setter Property="Width" Value="12" />
-      <Setter Property="Height" Value="12" />
-      <Setter Property="Data" Value="{StaticResource IconChevronRight}" />
-    </Style>
-    <Style Selector="ToggleButton.sectionHeader:checked PathIcon.chevron">
-      <Setter Property="Data" Value="{StaticResource IconChevronDown}" />
-    </Style>
-    <Style Selector="ToggleButton.sectionHeader TextBlock.title">
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
-    <Style Selector="ToggleButton.sectionHeader TextBlock.summary">
-      <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
     <Style Selector="Border.section">
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
       <Setter Property="BorderThickness" Value="0,1,0,0" />
@@ -62,8 +25,7 @@
                   Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="Rename">
             <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="15" />
           </Button>
-          <TextBox Name="NameBox" Text="{Binding Name}" IsVisible="{Binding IsRenaming}" MinWidth="240" MinHeight="26" Padding="6,2"
-                   LostFocus="OnNameLostFocus" KeyDown="OnNameKeyDown" />
+          <c:InlineRenameBox Name="NameBox" IsVisible="{Binding IsRenaming}" MinWidth="240" MinHeight="26" Padding="6,2" />
         </Panel>
         <Border Classes="tag ok" IsVisible="{Binding !IsDirty}">
           <StackPanel Orientation="Horizontal" Spacing="4">
@@ -103,7 +65,7 @@
           </ComboBox.ItemTemplate>
         </ComboBox>
         <Border Grid.Column="1" Background="{DynamicResource BorderBrush}" Margin="0,9" />
-        <c:VariableTextBox Grid.Column="2" Name="UrlBox" Margin="12,0" Text="{Binding Url}" Variables="{Binding Variables}"
+        <c:VariableTextBox Grid.Column="2" Name="UrlBox" Margin="12,0" Text="{Binding Url}"
                            PlaceholderText="Enter URL or paste cURL" SubmitCommand="{Binding SendButtonCommand}" AllowMultilineInput="True" />
         <Button Grid.Column="3" Classes="send" Height="32" MinWidth="0" Padding="14,0" VerticalAlignment="Center"
                 Command="{Binding SendButtonCommand}" ToolTip.Tip="Send (Ctrl+Enter)">
@@ -118,8 +80,8 @@
     </Border>
 
     <!-- the exact target after variable resolution, with the environment it came from -->
-    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="2,8,0,4"
-                IsVisible="{Binding ResolvedUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+    <StackPanel Name="ResolvedUrlLine" Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="2,8,0,4"
+                IsVisible="{Binding HasUrlSubstitutions}">
       <PathIcon Data="{StaticResource IconArrowRight}" Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}" />
       <TextBlock Classes="secondary" Text="Sends to" FontSize="12" VerticalAlignment="Center" />
       <SelectableTextBlock Classes="mono" Text="{Binding ResolvedUrl}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
@@ -135,43 +97,29 @@
 
           <!-- Params -->
           <Border Classes="section" BorderThickness="0" IsVisible="{Binding IsParamsSectionVisible}">
-            <StackPanel>
-              <ToggleButton Classes="sectionHeader" IsChecked="{Binding ParamsExpanded}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <PathIcon Classes="chevron" />
-                  <TextBlock Classes="title" Text="Params" />
-                  <TextBlock Classes="summary" Text="{Binding ParamsSummary}" />
-                </StackPanel>
-              </ToggleButton>
-              <StackPanel Spacing="8" Margin="0,0,0,12" IsVisible="{Binding ParamsExpanded}">
-                <v:KeyValueTable DataContext="{Binding Params}" Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+            <c:CollapsibleSection Header="Params" Summary="{Binding ParamsSummary}" IsExpanded="{Binding ParamsExpanded}">
+              <StackPanel Spacing="8" Margin="0,0,0,12">
+                <v:KeyValueTable DataContext="{Binding Params}" />
                 <StackPanel Spacing="8" IsVisible="{Binding HasPathVariables}" Margin="0,4,0,0">
                   <TextBlock Classes="section" Text="Path variables" />
-                  <v:KeyValueTable DataContext="{Binding PathVariables}" Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+                  <v:KeyValueTable DataContext="{Binding PathVariables}" />
                 </StackPanel>
               </StackPanel>
-            </StackPanel>
+            </c:CollapsibleSection>
           </Border>
 
           <!-- Body -->
           <Border Classes="section" IsVisible="{Binding IsBodySectionVisible}">
-            <StackPanel>
-              <Grid ColumnDefinitions="*,Auto">
-                <ToggleButton Classes="sectionHeader" IsChecked="{Binding BodyExpanded}">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <PathIcon Classes="chevron" />
-                    <TextBlock Classes="title" Text="Body" />
-                    <TextBlock Classes="summary" Text="{Binding BodySummary}" />
-                  </StackPanel>
-                </ToggleButton>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" IsVisible="{Binding BodyExpanded}">
+            <c:CollapsibleSection Header="Body" Summary="{Binding BodySummary}" IsExpanded="{Binding BodyExpanded}">
+              <c:CollapsibleSection.HeaderActions>
+                <StackPanel Orientation="Horizontal" Spacing="6">
                   <ComboBox ItemsSource="{x:Static vm:RequestTabViewModel.RawLanguages}" SelectedItem="{Binding SelectedRawLanguage}"
                             IsVisible="{Binding IsBodyRaw}" MinWidth="100" MinHeight="26" Padding="8,2" FontSize="12" />
                   <Button Classes="outline" Content="Format" FontSize="12" MinHeight="26" Padding="10,2" Command="{Binding BeautifyCommand}"
                           IsVisible="{Binding IsBodyRaw}" ToolTip.Tip="Beautify" />
                 </StackPanel>
-              </Grid>
-              <Grid RowDefinitions="Auto,Auto" IsVisible="{Binding BodyExpanded}" Margin="0,0,0,12">
+              </c:CollapsibleSection.HeaderActions>
+              <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,12">
                 <StackPanel Orientation="Horizontal" Spacing="14" Margin="0,0,0,8">
                   <RadioButton GroupName="BodyMode" Content="none" IsChecked="{Binding IsBodyNone, Mode=OneWay}"
                                Command="{Binding SetBodyModeCommand}" CommandParameter="{x:Static core:BodyMode.None}" />
@@ -191,10 +139,8 @@
                     <TextBlock Classes="tertiary" FontSize="12" IsVisible="{Binding HasUnsupportedBody}" TextWrapping="Wrap"
                                Text="The imported body uses a mode Hermes doesn't support (e.g. GraphQL); it is kept for export." />
                   </StackPanel>
-                  <v:KeyValueTable DataContext="{Binding FormData}" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).IsBodyFormData}"
-                                   Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
-                  <v:KeyValueTable DataContext="{Binding UrlEncoded}" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).IsBodyUrlEncoded}"
-                                   Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
+                  <v:KeyValueTable DataContext="{Binding FormData}" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).IsBodyFormData}" />
+                  <v:KeyValueTable DataContext="{Binding UrlEncoded}" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).IsBodyUrlEncoded}" />
                   <Border Classes="table" IsVisible="{Binding IsBodyRaw}" Background="{DynamicResource BgCodeBrush}" Height="260">
                     <c:CodeEditor Text="{Binding RawBody}" Language="{Binding RawEditorLanguage}" />
                   </Border>
@@ -204,88 +150,49 @@
                   </StackPanel>
                 </Panel>
               </Grid>
-            </StackPanel>
+            </c:CollapsibleSection>
           </Border>
 
           <!-- Headers: yours, then the ones Hermes adds, so nothing sent is invisible -->
           <Border Classes="section">
-            <StackPanel>
-              <ToggleButton Classes="sectionHeader" IsChecked="{Binding HeadersExpanded}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <PathIcon Classes="chevron" />
-                  <TextBlock Classes="title" Text="Headers" />
-                  <TextBlock Classes="summary" Text="{Binding HeadersSummary}" />
-                </StackPanel>
-              </ToggleButton>
-              <StackPanel Spacing="8" Margin="0,0,0,12" IsVisible="{Binding HeadersExpanded}">
-                <v:KeyValueTable DataContext="{Binding Headers}" Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
-                <ItemsControl ItemsSource="{Binding HiddenHeaders}" IsVisible="{Binding HiddenHeaders.Count}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="core:KeyValueItem">
-                      <Grid ColumnDefinitions="200,*,Auto" MinHeight="28" Margin="8,0">
-                        <TextBlock Classes="mono tertiary" Text="{Binding Key}" FontSize="12.5" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1" Classes="mono tertiary" Text="{Binding Value}" FontSize="12.5" VerticalAlignment="Center"
-                                   TextWrapping="Wrap" Margin="8,4" />
-                        <Border Grid.Column="2" Classes="tag"><TextBlock Text="added automatically" /></Border>
-                      </Grid>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
+            <c:CollapsibleSection Header="Headers" Summary="{Binding HeadersEditor.Summary}" IsExpanded="{Binding HeadersExpanded}">
+              <StackPanel Spacing="8" Margin="0,0,0,12">
+                <v:KeyValueTable DataContext="{Binding HeadersEditor.Headers}" />
+                <v:HeaderListView Heading="Inherited" Hint="untick to skip one for this request only"
+                                  Rows="{Binding HeadersEditor.InheritedRows}" IsVisible="{Binding HeadersEditor.HasInheritedRows}" />
+                <v:HeaderListView Heading="Added automatically" Rows="{Binding HeadersEditor.AutomaticRows}"
+                                  IsVisible="{Binding HeadersEditor.HasAutomaticRows}" />
               </StackPanel>
-            </StackPanel>
+            </c:CollapsibleSection>
           </Border>
 
           <!-- Auth: one line with where it comes from; expand to change it -->
           <Border Classes="section">
-            <StackPanel>
-              <ToggleButton Classes="sectionHeader" IsChecked="{Binding AuthExpanded}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <PathIcon Classes="chevron" />
-                  <TextBlock Classes="title" Text="Auth" />
-                  <TextBlock Classes="summary" Text="{Binding Auth.Summary}" Foreground="{DynamicResource TextSecondaryBrush}" />
-                </StackPanel>
-              </ToggleButton>
-              <v:AuthEditorView DataContext="{Binding Auth}" Margin="0,0,0,12" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).AuthExpanded}"
-                                Variables="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).Variables}" />
-            </StackPanel>
+            <c:CollapsibleSection Header="Auth" Summary="{Binding Auth.Summary}" SummaryForeground="{DynamicResource TextSecondaryBrush}"
+                                  IsExpanded="{Binding AuthExpanded}">
+              <v:AuthEditorView DataContext="{Binding Auth}" Margin="0,0,0,12" />
+            </c:CollapsibleSection>
           </Border>
 
           <!-- Settings -->
           <Border Classes="section" IsVisible="{Binding IsSettingsSectionVisible}">
-            <StackPanel>
-              <ToggleButton Classes="sectionHeader" IsChecked="{Binding SettingsExpanded}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <PathIcon Classes="chevron" />
-                  <TextBlock Classes="title" Text="Settings" />
-                  <TextBlock Classes="summary" Text="Overrides app defaults" IsVisible="{Binding HasSettingsOverrides}" />
-                </StackPanel>
-              </ToggleButton>
-              <StackPanel Spacing="18" Margin="0,4,0,12" MaxWidth="720" HorizontalAlignment="Left" IsVisible="{Binding SettingsExpanded}">
-                <Grid ColumnDefinitions="*,Auto">
-                  <StackPanel Spacing="2">
-                    <TextBlock Text="Automatically follow redirects" FontWeight="SemiBold" />
-                    <TextBlock Classes="secondary" FontSize="12" Text="Follow HTTP 3xx responses as redirects." />
-                  </StackPanel>
-                  <ToggleSwitch Grid.Column="1" IsChecked="{Binding FollowRedirects}" OnContent="" OffContent="" />
-                </Grid>
-                <Grid ColumnDefinitions="*,Auto">
-                  <StackPanel Spacing="2">
-                    <TextBlock Text="Enable SSL certificate verification" FontWeight="SemiBold" />
-                    <TextBlock Classes="secondary" FontSize="12" Text="Verify SSL certificates when sending a request." />
-                  </StackPanel>
-                  <ToggleSwitch Grid.Column="1" IsChecked="{Binding VerifySsl}" OnContent="" OffContent="" />
-                </Grid>
-                <Grid ColumnDefinitions="*,Auto">
-                  <StackPanel Spacing="2">
-                    <TextBlock Text="Request timeout (ms)" FontWeight="SemiBold" />
-                    <TextBlock Classes="secondary" FontSize="12" Text="Overrides the app-wide timeout for this request. Empty = use app setting, 0 = no timeout." />
-                  </StackPanel>
-                  <TextBox Grid.Column="1" Text="{Binding TimeoutText}" Width="120" PlaceholderText="Default" />
-                </Grid>
+            <c:CollapsibleSection Header="Settings" IsExpanded="{Binding SettingsExpanded}"
+                                  Summary="{Binding HasSettingsOverrides, Converter={x:Static vm:UiConverters.OverridesSummary}}">
+              <StackPanel Spacing="18" Margin="0,4,0,12" MaxWidth="720" HorizontalAlignment="Left">
+                <c:SettingRow Title="Automatically follow redirects" Hint="Follow HTTP 3xx responses as redirects.">
+                  <ToggleSwitch IsChecked="{Binding FollowRedirects}" />
+                </c:SettingRow>
+                <c:SettingRow Title="Enable SSL certificate verification" Hint="Verify SSL certificates when sending a request.">
+                  <ToggleSwitch IsChecked="{Binding VerifySsl}" />
+                </c:SettingRow>
+                <c:SettingRow Title="Request timeout (ms)"
+                              Hint="Overrides the app-wide timeout for this request. Empty = use app setting, 0 = no timeout.">
+                  <TextBox Text="{Binding TimeoutText}" Width="120" PlaceholderText="Default" />
+                </c:SettingRow>
                 <Button Classes="ghost" HorizontalAlignment="Left" Content="Use app defaults" Command="{Binding UseDefaultSettingsCommand}"
                         IsVisible="{Binding HasSettingsOverrides}" />
               </StackPanel>
-            </StackPanel>
+            </c:CollapsibleSection>
           </Border>
 
           <!-- Not used yet -->

@@ -74,6 +74,60 @@ public class PostmanTests
     }
 
     [Fact]
+    public void Export_copies_inherited_headers_into_each_request()
+    {
+        var nested = new HttpRequestModel
+        {
+            Name = "nested",
+            Url = "http://x",
+            Headers = [new KeyValueItem("X-Own", "1"), new KeyValueItem("X-Off", "0", enabled: false), new KeyValueItem("x-level", "request")],
+            SkippedInheritedHeaders = ["X-Skipped"],
+        };
+        var inner = new FolderModel
+        {
+            Name = "inner",
+            Headers = [new KeyValueItem("X-Level", "inner"), new KeyValueItem("X-Tenant", "{{tenantId}}"), new KeyValueItem("X-Unticked", "u", enabled: false)],
+            Items = [nested],
+        };
+        var outer = new FolderModel
+        {
+            Name = "outer",
+            Headers = [new KeyValueItem("X-Skipped", "s"), new KeyValueItem("X-Outer", "o")],
+            Items = [inner],
+        };
+        var collection = new CollectionModel
+        {
+            Name = "C",
+            Headers = [new KeyValueItem("X-Collection", "c"), new KeyValueItem("X-Outer", "collection")],
+            Items = [outer, new HttpRequestModel { Name = "top", Url = "http://x" }],
+        };
+
+        var json = JsonNode.Parse(PostmanCollectionExporter.Export(collection))!;
+
+        static List<(string Key, string Value, bool Disabled)> Headers(JsonNode item) =>
+            item["request"]!["header"]!.AsArray()
+                .Select(h => (h!["key"]!.GetValue<string>(), h["value"]!.GetValue<string>(), h["disabled"]?.GetValue<bool>() ?? false))
+                .ToList();
+
+        var nestedItem = json["item"]![0]!["item"]![0]!["item"]![0]!;
+        Assert.Equal(
+        [
+            ("X-Own", "1", false), ("X-Off", "0", true), ("x-level", "request", false),
+            ("X-Collection", "c", false), ("X-Outer", "o", false), ("X-Tenant", "{{tenantId}}", false),
+        ], Headers(nestedItem));
+        Assert.Equal([("X-Collection", "c", false), ("X-Outer", "collection", false)], Headers(json["item"]![1]!));
+        // Postman has no folder headers: they only reach the requests.
+        Assert.Null(json["item"]![0]!["header"]);
+        Assert.Null(json["header"]);
+
+        // Importing the export back gives the same headers on the request, now its own.
+        var reimported = PostmanCollectionImporter.Import(json.ToJsonString());
+        var reimportedNested = (HttpRequestModel)((FolderModel)((FolderModel)reimported.Items[0]).Items[0]).Items[0];
+        Assert.Equal(6, reimportedNested.Headers.Count);
+        Assert.Empty(((FolderModel)reimported.Items[0]).Headers);
+    }
+
+    [Fact]
     public void OAuth2_auth_round_trips()
     {
         var auth = new AuthConfig

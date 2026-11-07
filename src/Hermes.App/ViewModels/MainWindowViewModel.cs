@@ -21,6 +21,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     public MainWindowViewModel(TabServices services)
     {
         _services = services;
+        services.OpenContainerAsync = OpenContainerAsync;
         Collections = new CollectionsPaneViewModel(services.Workspace, services.Dialogs, this);
         Environments = new EnvironmentsPaneViewModel(services.Workspace, services.Dialogs, this);
         History = new HistoryPaneViewModel(services.Workspace, services.Dialogs, this);
@@ -53,6 +54,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             History.OnShowTabsChanged();
             OnPropertyChanged(nameof(ShowTabs));
             OnPropertyChanged(nameof(IsTabStripVisible));
+            OnPropertyChanged(nameof(TabViewPoolSize));
         };
         Workspace.CollectionChanged += _ => NotifyWorkspaceChanged();
         Workspace.Secrets.ProtectionLost += () => Dispatcher.UIThread.Post(() =>
@@ -225,6 +227,16 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     public Task OpenFolderAsync(FolderModel folder) =>
         OpenOrFocusAsync(folder.Id, () => new FolderTabViewModel(_services, folder));
 
+    /// <summary>Opens the tab of the collection or folder with this id, if it still exists.</summary>
+    public Task OpenContainerAsync(Guid id)
+    {
+        if (Workspace.FindCollection(id) is { } collection)
+            return OpenCollectionAsync(collection);
+        if (Workspace.Find(id)?.Node is FolderModel folder)
+            return OpenFolderAsync(folder);
+        return Task.CompletedTask;
+    }
+
     [RelayCommand]
     public Task OpenEnvironmentMatrixAsync() =>
         OpenOrFocusAsync(EnvironmentMatrixTabViewModel.MatrixId, () => new EnvironmentMatrixTabViewModel(_services));
@@ -379,6 +391,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     // ---- tab strip ----
 
     public bool ShowTabs => _services.Settings.Current.ShowTabs;
+
+    /// <summary>How many tab views stay alive for instant switching; clamped in case the settings file was edited by hand.</summary>
+    public int TabViewPoolSize => Math.Clamp(_services.Settings.Current.TabViewPoolSize, 1, SettingsDialogViewModel.MaxTabViewPoolSize);
 
     /// <summary>With tabs turned off there's only ever one tab, so the strip is hidden.</summary>
     public bool IsTabStripVisible => ShowTabs;

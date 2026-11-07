@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Hermes.App.Views.ContainerTabHeader"
+             x:Name="Header">
+  <UserControl.Styles>
+    <!-- the gap sits on each action rather than on the panel, so a hidden action leaves no gap before Save -->
+    <Style Selector="StackPanel#ActionsPanel > :is(Control)">
+      <Setter Property="Margin" Value="0,0,6,0" />
+    </Style>
+  </UserControl.Styles>
+  <Grid ColumnDefinitions="*,Auto">
+    <StackPanel Orientation="Horizontal" Spacing="10">
+      <PathIcon Data="{Binding #Header.Icon}" Width="18" Height="18" Foreground="{DynamicResource TextSecondaryBrush}" />
+      <TextBox Text="{Binding #Header.Title, Mode=TwoWay}" IsVisible="{Binding #Header.IsTitleEditable}" FontSize="16" FontWeight="SemiBold"
+               MinWidth="260" BorderThickness="0" Background="Transparent" Padding="4,2" />
+      <TextBlock Classes="h1" Text="{Binding #Header.ReadOnlyTitle}" IsVisible="{Binding !#Header.IsTitleEditable}" VerticalAlignment="Center" />
+    </StackPanel>
+    <StackPanel Grid.Column="1" Orientation="Horizontal">
+      <StackPanel Name="ActionsPanel" Orientation="Horizontal" />
+      <Button Classes="ghost" Command="{Binding #Header.SaveCommand}" ToolTip.Tip="Save (Ctrl+S)">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Width="14" Height="14" Data="{StaticResource IconSave}" />
+          <TextBlock Text="Save" />
+        </StackPanel>
+      </Button>
+    </StackPanel>
+  </Grid>
+</UserControl>

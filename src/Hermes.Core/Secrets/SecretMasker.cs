@@ -1,4 +1,5 @@
 using System.Text;
+using Hermes.Core.Headers;
 using Hermes.Core.Http;
 using Hermes.Core.Variables;
 
@@ -15,11 +16,10 @@ public static class SecretMasker
     /// <summary>Shorter values would mask unrelated text (a secret "1" would hide every digit 1).</summary>
     private const int MinSecretLength = 4;
 
-    private static readonly string[] CredentialHeaders = ["Authorization", "Proxy-Authorization"];
-
     /// <summary>
-    /// Masks credential headers whatever their origin (keeping the scheme, e.g. "Bearer ••••••"): a header typed in
-    /// by hand isn't a secret variable, and Basic credentials are encoded. Masks put in a URL show unescaped.
+    /// Masks sensitive headers (see <see cref="SensitiveHeaders"/>) whatever their origin, keeping the scheme of
+    /// Authorization headers, e.g. "Bearer ••••••": a header typed in by hand isn't a secret variable, and Basic
+    /// credentials are encoded. Masks put in a URL show unescaped.
     /// </summary>
     public static string MaskCredentialHeaders(string text)
     {
@@ -28,11 +28,13 @@ public static class SecretMasker
         for (var i = 1; i < lines.Length && lines[i].Length > 0; i++)
         {
             var colon = lines[i].IndexOf(':');
-            if (colon <= 0 || !CredentialHeaders.Contains(lines[i][..colon], StringComparer.OrdinalIgnoreCase))
+            if (colon <= 0 || !SensitiveHeaders.IsSensitiveName(lines[i][..colon]))
                 continue;
             var value = lines[i][(colon + 1)..].Trim();
             var space = value.IndexOf(' ');
-            var scheme = space > 0 && value[..space].All(char.IsLetter) ? value[..space] + " " : "";
+            var hasScheme = SensitiveHeaders.HasAuthenticationScheme(lines[i][..colon]) && space > 0
+                && value[..space].All(char.IsLetter);
+            var scheme = hasScheme ? value[..space] + " " : "";
             lines[i] = $"{lines[i][..colon]}: {scheme}{Mask}";
         }
         return string.Join('\n', lines);

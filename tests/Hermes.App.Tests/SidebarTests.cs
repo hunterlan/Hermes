@@ -187,10 +187,10 @@ public class SidebarTests
 
         vm.Collections.AddRequestCommand.Execute(vm.Collections.Find(collection.Id));
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        Assert.Contains(tab.HiddenHeaders, h => h.Key == "Authorization" && h.Value == "Bearer secret-123");
+        Assert.Contains(tab.HeadersEditor.AutomaticRows, h => h.Key == "Authorization" && h.Value == "Bearer secret-123");
         Assert.Contains("Bearer Token", tab.Auth.InheritedDescription);
 
-        Assert.Equal(["Collection", "Request"], tab.Auth.Chain.Select(n => n.Kind));
+        Assert.Equal(["Collection · " + collection.Model.Name, "Request · " + tab.Name], tab.Auth.Chain.Select(n => n.Title));
         Assert.True(tab.Auth.Chain[0].IsSource);
         Assert.Equal("Inherits", tab.Auth.Chain[1].Status);
 

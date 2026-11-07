@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:v="using:Hermes.App.Views"
+             x:Class="Hermes.App.Views.InheritanceChainView"
+             x:DataType="v:InheritanceChainView">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.chainDetailSeparator">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <!-- the separator belongs to every detail but the first; relies on ItemsControl wrapping each item in a ContentPresenter -->
+    <Style Selector="ItemsControl.chainDetails ContentPresenter:nth-child(n+2) TextBlock.chainDetailSeparator">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+  </UserControl.Styles>
+  <ItemsControl ItemsSource="{Binding Nodes, RelativeSource={RelativeSource AncestorType=v:InheritanceChainView}}">
+    <ItemsControl.ItemTemplate>
+      <DataTemplate x:DataType="vm:InheritanceChainNode">
+        <StackPanel>
+          <Border Classes="chainNode" Classes.source="{Binding IsSource}">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <ItemsControl Classes="chainDetails" ItemsSource="{Binding Details}" IsVisible="{Binding HasDetails}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:InheritanceChainDetail">
+                      <StackPanel Orientation="Horizontal">
+                        <TextBlock Classes="chainDetail chainDetailSeparator" Text="·" Margin="5,0" />
+                        <TextBlock Classes="chainDetail" Classes.struck="{Binding IsStruckThrough}" Text="{Binding Text}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+              <Border Grid.Column="1" Classes="tag" Classes.warn="{Binding IsSource}" VerticalAlignment="Top" Margin="8,0,0,0">
+                <TextBlock Text="{Binding Status}" />
+              </Border>
+            </Grid>
+          </Border>
+          <Border Classes="chainLink" IsVisible="{Binding !IsLast}" />
+        </StackPanel>
+      </DataTemplate>
+    </ItemsControl.ItemTemplate>
+  </ItemsControl>
+</UserControl>

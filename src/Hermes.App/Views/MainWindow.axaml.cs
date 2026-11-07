@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows.Input;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -15,10 +16,17 @@ namespace Hermes.App.Views;
 
 public partial class MainWindow : Window
 {
+    private const double TabStripWheelStepPixels = 60;
     private readonly DispatcherTimer _sessionTimer = new() { Interval = TimeSpan.FromSeconds(30) };
     private MainWindowViewModel? _viewModel;
     private bool _quitConfirmed;
     private bool _confirmingQuit;
+
+    // Header density breakpoint (window width). The trailing group (environment button with a 200px name)
+    // needs ~343px, and each side group must fit its third of the header grid ((width - 24) / 3), so the
+    // environment name trims below 1060px. Labels and the search placeholder fit at the 900px minimum.
+    // Checked by MainWindowHeaderLayoutTests; re-measure there if these groups change.
+    private const double TightHeaderWidth = 1060;
 
     public MainWindow()
     {
@@ -27,6 +35,10 @@ public partial class MainWindow : Window
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
         // Tunnel: a bubbling KeyDown handler on the list never sees Enter.
         EnvironmentList.AddHandler(KeyDownEvent, OnEnvironmentListKeyDown, RoutingStrategies.Tunnel);
+        // Tunnel: handled before the scroll viewer sees the wheel, so a horizontal swipe isn't scrolled twice.
+        TabScroller.AddHandler(PointerWheelChangedEvent, OnTabStripPointerWheelChanged, RoutingStrategies.Tunnel);
+        TabStripGrid.SizeChanged += (_, _) => UpdateTabScrollerMaxWidth();
+        NewTabButton.SizeChanged += (_, _) => UpdateTabScrollerMaxWidth();
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
         _sessionTimer.Tick += (_, _) => _viewModel?.SaveSession();
@@ -35,6 +47,15 @@ public partial class MainWindow : Window
     }
 
     private ColumnDefinition SidebarColumn => BodyGrid.ColumnDefinitions[0];
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == BoundsProperty)
+            UpdateHeaderDensity(Bounds.Width);
+    }
+
+    private void UpdateHeaderDensity(double windowWidth) => Classes.Set("tight", windowWidth < TightHeaderWidth);
 
     protected override void OnDataContextChanged(EventArgs e)
     {
@@ -52,6 +73,37 @@ public partial class MainWindow : Window
             SidebarColumn.Width = new GridLength(_viewModel.SidebarWidth);
         }
     }
+
+    // ---- tab strip ----
+
+    // The tabs may take only the space left beside the + button, so + follows the last tab until they overflow.
+    private void UpdateTabScrollerMaxWidth()
+    {
+        var buttonSpace = NewTabButton.Bounds.Width + NewTabButton.Margin.Left + NewTabButton.Margin.Right;
+        TabScroller.MaxWidth = Math.Max(0, TabStripGrid.Bounds.Width - buttonSpace);
+    }
+
+    // The strip scrolls sideways: a vertical wheel (or Shift+wheel, or a horizontal touchpad swipe) moves it.
+    private void OnTabStripPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        var delta = Math.Abs(e.Delta.X) > Math.Abs(e.Delta.Y) ? e.Delta.X : e.Delta.Y;
+        if (delta == 0)
+            return;
+        var maxOffsetX = Math.Max(0, TabScroller.Extent.Width - TabScroller.Viewport.Width);
+        var offsetX = Math.Clamp(TabScroller.Offset.X - delta * TabStripWheelStepPixels, 0, maxOffsetX);
+        TabScroller.Offset = new Vector(offsetX, TabScroller.Offset.Y);
+        e.Handled = true;
+    }
+
+    // A tab that was just added has no container or bounds until the strip is laid out, so lay it out first.
+    private void ScrollActiveTabIntoView() => Dispatcher.UIThread.Post(() =>
+    {
+        if (_viewModel?.ActiveTab is not { } activeTab)
+            return;
+        var index = _viewModel.Tabs.IndexOf(activeTab);
+        TabScroller.UpdateLayout();
+        TabItems.ContainerFromIndex(index)?.BringIntoView();
+    }, DispatcherPriority.Loaded);
 
     // ---- command palette ----
 
@@ -97,6 +149,11 @@ public partial class MainWindow : Window
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(MainWindowViewModel.ActiveTab))
+        {
+            ScrollActiveTabIntoView();
+            return;
+        }
         if (e.PropertyName != nameof(MainWindowViewModel.IsSidebarVisible) || _viewModel is null)
             return;
         // The splitter sets a pixel width on the column, so hiding the pane must collapse the column too.
@@ -268,7 +325,8 @@ public partial class MainWindow : Window
                 EnvironmentButton.Flyout?.ShowAt(EnvironmentButton);
                 break;
             case Key.L:
-                this.GetVisualDescendants().OfType<RequestTabView>().FirstOrDefault()?.FocusUrl();
+                // Hidden views of other tabs stay alive, so pick the one on screen.
+                this.GetVisualDescendants().OfType<RequestTabView>().FirstOrDefault(view => view.IsEffectivelyVisible)?.FocusUrl();
                 break;
             case Key.Tab:
                 Run(shift ? vm.PreviousTabCommand : vm.NextTabCommand);

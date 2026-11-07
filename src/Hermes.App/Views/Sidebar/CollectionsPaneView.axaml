@@ -11,12 +11,6 @@
       <Setter Property="MinHeight" Value="30" />
       <Setter Property="Padding" Value="0" />
     </Style>
-    <Style Selector="Button.rowMenu">
-      <Setter Property="Opacity" Value="0" />
-    </Style>
-    <Style Selector="Grid.row:pointerover Button.rowMenu">
-      <Setter Property="Opacity" Value="1" />
-    </Style>
     <Style Selector="Border.dropTarget">
       <Setter Property="Background" Value="{DynamicResource VarResolvedBgBrush}" />
     </Style>
@@ -27,11 +21,7 @@
       <Button Classes="icon" Command="{Binding NewCollectionCommand}" ToolTip.Tip="Create new collection">
         <PathIcon Data="{StaticResource IconPlus}" />
       </Button>
-      <TextBox Grid.Column="1" Margin="6,0,0,0" Text="{Binding Filter}" PlaceholderText="Search collections" MinHeight="28" Padding="8,3">
-        <TextBox.InnerLeftContent>
-          <PathIcon Data="{StaticResource IconSearch}" Width="13" Height="13" Margin="8,0,0,0" Foreground="{DynamicResource TextTertiaryBrush}" />
-        </TextBox.InnerLeftContent>
-      </TextBox>
+      <TextBox Grid.Column="1" Classes="search" Margin="6,0,0,0" Text="{Binding Filter}" PlaceholderText="Search collections" />
     </Grid>
 
     <StackPanel Grid.Row="1" IsVisible="{Binding IsEmpty}" Margin="24,40" Spacing="10">
@@ -50,7 +40,7 @@
           <Border Classes.dropTarget="{Binding IsDropTarget}" CornerRadius="3" Background="Transparent"
                   PointerPressed="OnRowPointerPressed" PointerMoved="OnRowPointerMoved" PointerReleased="OnRowPointerReleased"
                   ContextRequested="OnRowContextRequested">
-            <Grid Classes="row" ColumnDefinitions="Auto,*,Auto" MinHeight="28" Background="Transparent">
+            <Grid Classes="row rowHost" ColumnDefinitions="Auto,*,Auto" MinHeight="28" Background="Transparent">
               <Panel Width="40" VerticalAlignment="Center">
                 <PathIcon Data="{StaticResource IconCollections}" Width="14" Height="14" HorizontalAlignment="Left"
                           Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsCollection}" />
@@ -61,8 +51,7 @@
               </Panel>
               <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,5"
                          IsVisible="{Binding !IsRenaming}" />
-              <TextBox Grid.Column="1" Text="{Binding Name, Mode=OneWay}" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1"
-                       KeyDown="OnRenameKeyDown" LostFocus="OnRenameLostFocus" PropertyChanged="OnRenameBoxPropertyChanged" />
+              <c:InlineRenameBox Grid.Column="1" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1" />
               <Button Grid.Column="2" Classes="icon rowMenu" Width="22" Height="22" Padding="3" Click="OnRowMenuClick" ToolTip.Tip="More actions">
                 <PathIcon Data="{StaticResource IconMore}" Width="13" Height="13" />
               </Button>

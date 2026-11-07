@@ -25,6 +25,22 @@ public sealed partial class KeyValueListViewModel : ObservableObject
 
     public Func<Task<string?>>? PickFile { get; set; }
 
+    /// <summary>
+    /// Opt-in for header tables: a row whose key is a sensitive header name (Authorization, Cookie, ...) shows its
+    /// value masked until revealed. Params and form tables leave it off.
+    /// </summary>
+    public bool MasksSensitiveKeys { get; init; }
+
+    /// <summary>Copies text to the clipboard, for the copy button of a sensitive row.</summary>
+    public Func<string, Task>? CopyText { get; set; }
+
+    /// <summary>Masks every revealed value again.</summary>
+    public void HideRevealedValues()
+    {
+        foreach (var row in Rows)
+            row.Sensitive.Hide();
+    }
+
     [ObservableProperty] public partial bool IsBulkEdit { get; set; }
     [ObservableProperty] public partial string BulkText { get; set; } = "";
 
@@ -54,6 +70,21 @@ public sealed partial class KeyValueListViewModel : ObservableObject
             AddPlaceholder();
         _loading = false;
         RaiseCounts();
+    }
+
+    /// <summary>
+    /// Sets the notes after the keys. <paramref name="tags"/> has one entry per row of <see cref="ToModels"/>, in
+    /// order; the placeholder row has none.
+    /// </summary>
+    public void SetRowTags(IReadOnlyList<(string Tag, string Warning)> tags)
+    {
+        var rows = Rows.Where(r => !r.IsPlaceholder).ToList();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var (tag, warning) = i < tags.Count ? tags[i] : ("", "");
+            rows[i].TagText = tag;
+            rows[i].WarningTagText = warning;
+        }
     }
 
     public List<KeyValueItem> ToModels() => Rows.Where(r => !r.IsPlaceholder).Select(r => r.ToModel()).ToList();

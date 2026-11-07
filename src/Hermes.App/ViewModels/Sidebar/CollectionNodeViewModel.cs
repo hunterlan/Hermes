@@ -13,6 +13,10 @@ public sealed class CollectionNodeViewModel : TreeNodeViewModel
     }
 
     public CollectionModel Model { get; }
+
+    /// <summary>Applies a rename of this collection or of a node inside it; set by the pane that owns the tree.</summary>
+    public Action<TreeNodeViewModel, string?>? RenameCommitter { get; set; }
+
     public override Guid Id => Model.Id;
     public override bool IsCollection => true;
 

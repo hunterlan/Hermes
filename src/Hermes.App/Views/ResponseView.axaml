@@ -2,29 +2,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hermes.App.ViewModels"
              xmlns:c="using:Hermes.App.Controls"
+             xmlns:v="using:Hermes.App.Views"
              xmlns:core="using:Hermes.Core.Models"
              x:Class="Hermes.App.Views.ResponseView"
              x:DataType="vm:ResponseViewModel">
-  <UserControl.Styles>
-    <Style Selector="Border.status">
-      <Setter Property="CornerRadius" Value="6" />
-      <Setter Property="Padding" Value="9,3" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
-    <Style Selector="Border.status TextBlock">
-      <Setter Property="FontSize" Value="12.5" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-    <Style Selector="Button.layout">
-      <Setter Property="Width" Value="28" />
-      <Setter Property="Height" Value="28" />
-    </Style>
-    <Style Selector="Button.layout.on">
-      <Setter Property="Background" Value="{DynamicResource BgTertiaryBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-    </Style>
-  </UserControl.Styles>
-
   <Panel>
     <!-- empty state -->
     <StackPanel IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
@@ -57,30 +38,10 @@
       <!-- status: icon + text + colour, never colour alone -->
       <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" Margin="0,2,0,4">
         <Panel>
-          <Border Classes="status tag ok" IsVisible="{Binding IsSuccess}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Data="{StaticResource IconCheck}" Width="13" Height="13" />
-              <TextBlock Text="{Binding StatusText}" />
-            </StackPanel>
-          </Border>
-          <Border Classes="status tag info" IsVisible="{Binding IsRedirect}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Data="{StaticResource IconArrowRight}" Width="13" Height="13" />
-              <TextBlock Text="{Binding StatusText}" />
-            </StackPanel>
-          </Border>
-          <Border Classes="status tag warn" IsVisible="{Binding IsClientError}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Data="{StaticResource IconAlert}" Width="13" Height="13" />
-              <TextBlock Text="{Binding StatusText}" />
-            </StackPanel>
-          </Border>
-          <Border Classes="status tag err" IsVisible="{Binding IsServerError}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <PathIcon Data="{StaticResource IconClose}" Width="13" Height="13" />
-              <TextBlock Text="{Binding StatusText}" />
-            </StackPanel>
-          </Border>
+          <c:IconTag Classes="status" Kind="Ok" Icon="{StaticResource IconCheck}" Text="{Binding StatusText}" IsVisible="{Binding IsSuccess}" />
+          <c:IconTag Classes="status" Kind="Info" Icon="{StaticResource IconArrowRight}" Text="{Binding StatusText}" IsVisible="{Binding IsRedirect}" />
+          <c:IconTag Classes="status" Kind="Warn" Icon="{StaticResource IconAlert}" Text="{Binding StatusText}" IsVisible="{Binding IsClientError}" />
+          <c:IconTag Classes="status" Kind="Err" Icon="{StaticResource IconClose}" Text="{Binding StatusText}" IsVisible="{Binding IsServerError}" />
         </Panel>
         <TextBlock Grid.Column="1" Classes="mono secondary" Text="{Binding TimeText}" ToolTip.Tip="{Binding TimingDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
         <TextBlock Grid.Column="2" Classes="mono secondary" Text="{Binding SizeText}" ToolTip.Tip="{Binding SizeDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
@@ -163,9 +124,9 @@
                 <ScrollViewer IsVisible="{Binding HasPreviewImage}" HorizontalScrollBarVisibility="Auto">
                   <Image Source="{Binding PreviewImage}" Stretch="None" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Top" />
                 </ScrollViewer>
-                <ScrollViewer IsVisible="{Binding !HasPreviewImage}">
-                  <SelectableTextBlock Text="{Binding RawText}" TextWrapping="Wrap" Margin="12" />
-                </ScrollViewer>
+                <!-- An editor, not a SelectableTextBlock: it lays out only the visible lines, so a large body stays fast -->
+                <c:CodeEditor Name="PreviewTextEditor" IsVisible="{Binding !HasPreviewImage}" Text="{Binding PreviewText, Mode=OneWay}"
+                              Language="text" IsReadOnly="True" WordWrap="True" ShowLineNumbers="False" Margin="8,4" />
               </Panel>
             </Border>
           </Grid>
@@ -179,8 +140,8 @@
               <StackPanel>
                 <Border Classes="tableHeader">
                   <Grid ColumnDefinitions="*,2*">
-                    <TextBlock Classes="section" Text="Key" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Classes="section" Text="Value" Margin="8,0" VerticalAlignment="Center" />
+                    <TextBlock Classes="section" Text="Key" />
+                    <TextBlock Grid.Column="1" Classes="section" Text="Value" />
                   </Grid>
                 </Border>
                 <ItemsControl ItemsSource="{Binding Headers}">
@@ -209,13 +170,13 @@
               <StackPanel>
                 <Border Classes="tableHeader">
                   <Grid ColumnDefinitions="2*,3*,2*,*,2*,Auto,Auto">
-                    <TextBlock Classes="section" Text="Name" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Classes="section" Text="Value" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="2" Classes="section" Text="Domain" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="3" Classes="section" Text="Path" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="4" Classes="section" Text="Expires" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="5" Classes="section" Text="HttpOnly" Margin="8,0" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="6" Classes="section" Text="Secure" Margin="8,0" VerticalAlignment="Center" />
+                    <TextBlock Classes="section" Text="Name" />
+                    <TextBlock Grid.Column="1" Classes="section" Text="Value" />
+                    <TextBlock Grid.Column="2" Classes="section" Text="Domain" />
+                    <TextBlock Grid.Column="3" Classes="section" Text="Path" />
+                    <TextBlock Grid.Column="4" Classes="section" Text="Expires" />
+                    <TextBlock Grid.Column="5" Classes="section" Text="HttpOnly" />
+                    <TextBlock Grid.Column="6" Classes="section" Text="Secure" />
                   </Grid>
                 </Border>
                 <ItemsControl ItemsSource="{Binding Cookies}">
@@ -247,7 +208,18 @@
             </StackPanel>
           </TabItem.Header>
           <Border Classes="table" Margin="0,6,0,0" Background="{DynamicResource BgCodeBrush}">
-            <c:CodeEditor Text="{Binding SentRequestText, Mode=OneWay}" Language="text" IsReadOnly="True" />
+            <!-- request line and headers (credentials masked until revealed), then the body in the editor -->
+            <Grid RowDefinitions="Auto,*">
+              <ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="0,8">
+                  <TextBlock Name="SentRequestLineText" Classes="mono" Text="{Binding SentRequestLine}" FontSize="12.5" FontWeight="SemiBold"
+                             Margin="16,0,16,6" TextTrimming="CharacterEllipsis" />
+                  <v:HeaderListView Rows="{Binding SentHeaderRows}" />
+                </StackPanel>
+              </ScrollViewer>
+              <c:CodeEditor Grid.Row="1" Text="{Binding SentBodyText, Mode=OneWay}" Language="text" IsReadOnly="True"
+                            IsVisible="{Binding HasSentBody}" />
+            </Grid>
           </Border>
         </TabItem>
       </TabControl>

@@ -1,0 +1,61 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Hermes.App.Controls">
+
+  <Styles.Resources>
+    <ResourceDictionary>
+      <!-- Same look as Border.tag plus ok/info/warn/err; the .status class is the larger response-status variant -->
+      <ControlTheme x:Key="{x:Type c:IconTag}" TargetType="c:IconTag">
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="Padding" Value="7,1" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Background" Value="{DynamicResource BgTertiaryBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Background="{TemplateBinding Background}"
+                    CornerRadius="{TemplateBinding CornerRadius}"
+                    Padding="{TemplateBinding Padding}">
+              <StackPanel Name="PART_Content" Orientation="Horizontal" Spacing="5">
+                <PathIcon Name="PART_Icon" Data="{TemplateBinding Icon}" Width="11" Height="11"
+                          IsVisible="{TemplateBinding Icon, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Text="{TemplateBinding Text}" />
+              </StackPanel>
+            </Border>
+          </ControlTemplate>
+        </Setter>
+
+        <Style Selector="^:ok">
+          <Setter Property="Background" Value="{DynamicResource SuccessBgBrush}" />
+          <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+        </Style>
+        <Style Selector="^:info">
+          <Setter Property="Background" Value="{DynamicResource InfoBgBrush}" />
+          <Setter Property="Foreground" Value="{DynamicResource InfoBrush}" />
+        </Style>
+        <Style Selector="^:warn">
+          <Setter Property="Background" Value="{DynamicResource WarningBgBrush}" />
+          <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+        </Style>
+        <Style Selector="^:err">
+          <Setter Property="Background" Value="{DynamicResource ErrorBgBrush}" />
+          <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+        </Style>
+        <Style Selector="^.status">
+          <Setter Property="CornerRadius" Value="6" />
+          <Setter Property="Padding" Value="9,3" />
+          <Setter Property="FontSize" Value="12.5" />
+        </Style>
+        <Style Selector="^.status /template/ StackPanel#PART_Content">
+          <Setter Property="Spacing" Value="6" />
+        </Style>
+        <Style Selector="^.status /template/ PathIcon#PART_Icon">
+          <Setter Property="Width" Value="13" />
+          <Setter Property="Height" Value="13" />
+        </Style>
+      </ControlTheme>
+    </ResourceDictionary>
+  </Styles.Resources>
+</Styles>

@@ -76,7 +76,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     /// <summary>For collections and folders: the items whose auth this one supplies.</summary>
     public Func<IEnumerable<CollectionNode>>? ContainedItemsProvider { get; set; }
 
-    public IReadOnlyList<AuthChainNode> Chain =>
+    public IReadOnlyList<InheritanceChainNode> Chain =>
         ChainProvider?.Invoke() is var (outer, kind, name) ? AuthInheritance.Chain(outer, (kind, name, ToModel())) : [];
 
     public IReadOnlyList<AuthOverride> Overrides =>
@@ -121,6 +121,15 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     [ObservableProperty] public partial Option<OAuth2ClientAuthentication> SelectedClientAuth { get; set; }
     [ObservableProperty] public partial string OAuthHeaderPrefix { get; set; } = "Bearer";
     [ObservableProperty] public partial string OAuthAccessToken { get; set; } = "";
+
+    /// <summary>Masks <see cref="BearerToken"/> in the form until revealed or focused.</summary>
+    public SensitiveValueViewModel BearerTokenSecret { get; } = CreateSecret();
+
+    /// <summary>Masks <see cref="ApiKeyValue"/> in the form until revealed or focused.</summary>
+    public SensitiveValueViewModel ApiKeyValueSecret { get; } = CreateSecret();
+
+    /// <summary>Masks <see cref="OAuthAccessToken"/> in the form until revealed or focused.</summary>
+    public SensitiveValueViewModel AccessTokenSecret { get; } = CreateSecret();
 
     [ObservableProperty] public partial string TokenStatus { get; set; } = "";
 
@@ -279,6 +288,32 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     public ICommand TokenButtonCommand => IsFetchingToken ? CancelTokenCommand : GetNewAccessTokenCommand;
 
     partial void OnIsFetchingTokenChanged(bool value) => OnPropertyChanged(nameof(TokenButtonCommand));
+
+    partial void OnBearerTokenChanged(string value) => UpdateSecret(BearerTokenSecret, value);
+
+    partial void OnApiKeyValueChanged(string value) => UpdateSecret(ApiKeyValueSecret, value);
+
+    partial void OnOAuthAccessTokenChanged(string value) => UpdateSecret(AccessTokenSecret, value);
+
+    /// <summary>Masks every revealed credential again, for when the user leaves the tab.</summary>
+    public void HideRevealedValues()
+    {
+        BearerTokenSecret.Hide();
+        ApiKeyValueSecret.Hide();
+        AccessTokenSecret.Hide();
+    }
+
+    private static SensitiveValueViewModel CreateSecret() => new("", isSensitive: false, copyText: null);
+
+    /// <summary>
+    /// A credential typed in is masked. One that only names variables (e.g. "{{token}}") shows no secret, so it stays
+    /// readable.
+    /// </summary>
+    private static void UpdateSecret(SensitiveValueViewModel secret, string value)
+    {
+        secret.Value = value;
+        secret.IsSensitive = !VariableResolver.IsOnlyVariables(value);
+    }
 
     [RelayCommand]
     private void CancelToken() => _tokenCts?.Cancel();

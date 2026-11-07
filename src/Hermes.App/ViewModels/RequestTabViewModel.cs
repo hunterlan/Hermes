@@ -2,8 +2,10 @@ using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Views.Dialogs;
+using Hermes.Core.Auth;
 using Hermes.Core.CodeGen;
 using Hermes.Core.Formatting;
+using Hermes.Core.Headers;
 using Hermes.Core.Http;
 using Hermes.Core.Import;
 using Hermes.Core.Models;
@@ -16,7 +18,7 @@ using Hermes.Core.Web;
 
 namespace Hermes.App.ViewModels;
 
-public sealed partial class RequestTabViewModel : TabViewModelBase
+public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 {
     private string _savedSnapshot = "";
     private bool _loading;
@@ -53,7 +55,10 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         RequestId = model.Id;
         Params.Changed += OnParamsChanged;
         PathVariables.Changed += OnAnyChanged;
-        Headers.Changed += OnAnyChanged;
+        HeadersEditor = new RequestHeadersViewModel(BuildModel, CreateContext,
+            id => Services.OpenContainerAsync?.Invoke(id) ?? Task.CompletedTask, services.Dialogs.CopyTextAsync);
+        HeadersEditor.Headers.Changed += OnAnyChanged;
+        HeadersEditor.Changed += UpdateDirty;
         FormData.Changed += OnAnyChanged;
         UrlEncoded.Changed += OnAnyChanged;
         FormData.PickFile = () => services.Dialogs.PickFileAsync("Select file");
@@ -84,7 +89,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
 
     public KeyValueListViewModel Params { get; } = new();
     public KeyValueListViewModel PathVariables { get; } = new(keysReadOnly: true);
-    public KeyValueListViewModel Headers { get; } = new();
+    public RequestHeadersViewModel HeadersEditor { get; }
     public KeyValueListViewModel FormData { get; } = new(allowFiles: true);
     public KeyValueListViewModel UrlEncoded { get; } = new();
     public AuthEditorViewModel Auth { get; }
@@ -92,7 +97,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
 
     [ObservableProperty] public partial string Name { get; set; } = "";
     [ObservableProperty] public partial string SelectedMethod { get; set; } = "GET";
-    [ObservableProperty] public partial string Url { get; set; } = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUrlSubstitutions))]
+    public partial string Url { get; set; } = "";
     [ObservableProperty] public partial Option<BodyMode> SelectedBodyMode { get; set; } = BodyModes[0];
     [ObservableProperty] public partial Option<RawLanguage> SelectedRawLanguage { get; set; } = RawLanguages[2];
     [ObservableProperty] public partial string RawBody { get; set; } = "";
@@ -144,17 +151,11 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
 
     public string? ActiveEnvironmentName => Services.Workspace.ActiveEnvironment?.Name;
 
-    public List<KeyValueItem> HiddenHeaders { get; private set; } = [];
-
-    public string HeadersSummary => (Headers.ActiveCount, HiddenHeaders.Count) switch
-    {
-        (0, 0) => "",
-        (var mine, 0) => $"{mine} yours",
-        (0, var auto) => $"{auto} added automatically",
-        var (mine, auto) => $"{mine} yours · {auto} added automatically",
-    };
     public string ParamsSummary => Params.ActiveCount is var n and > 0 ? $"{n} active" : "";
     public string BodySummary => SelectedBodyMode.Value == BodyMode.Raw ? SelectedRawLanguage.Label : SelectedBodyMode.Label;
+    /// <summary>Whether the URL has <c>{{variables}}</c> (including dynamic ones) or <c>:path</c> variables, i.e. whether "Sends to" adds information.</summary>
+    public bool HasUrlSubstitutions =>
+        VariableResolver.FindVariables(Url).Any() || UrlUtilities.ParsePathVariables(Url).Count > 0;
     public bool HasPathVariables => PathVariables.Rows.Count > 0;
     public bool HasBody => SelectedBodyMode.Value != BodyMode.None;
     public bool IsBodyNone => SelectedBodyMode.Value == BodyMode.None;
@@ -187,7 +188,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         Url = model.Url;
         Params.Load(model.QueryParams.Count > 0 ? model.QueryParams : UrlUtilities.ParseQuery(UrlUtilities.Split(model.Url).Query));
         PathVariables.Load(MergePathVariables(model.Url, model.PathVariables));
-        Headers.Load(model.Headers);
+        HeadersEditor.Load(model.Headers, model.SkippedInheritedHeaders);
         SelectedBodyMode = BodyModes.First(m => m.Value == model.Body.Mode);
         SelectedRawLanguage = RawLanguages.First(l => l.Value == model.Body.RawLanguage);
         RawBody = model.Body.Raw;
@@ -206,7 +207,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         OnPropertyChanged(nameof(HasPathVariables));
         OnPropertyChanged(nameof(HasUnsupportedBody));
         OnPropertyChanged(nameof(Method));
-        RefreshHiddenHeaders();
+        RefreshPreview();
         NotifySections();
     }
 
@@ -222,7 +223,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
             Url = Url,
             QueryParams = Params.ToModels(),
             PathVariables = PathVariables.ToModels(),
-            Headers = Headers.ToModels(),
+            Headers = HeadersEditor.Headers.ToModels(),
+            SkippedInheritedHeaders = [.. HeadersEditor.SkippedInheritedHeaders],
             Body = new RequestBody
             {
                 Mode = SelectedBodyMode.Value,
@@ -310,7 +312,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
     {
         if (_loading)
             return;
-        RefreshHiddenHeaders();
+        RefreshPreview();
         UpdateDirty();
         NotifySections();
     }
@@ -425,32 +427,25 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
             .ToList();
     }
 
-    /// <summary>Headers Hermes adds automatically (defaults, content type, auth) that the user didn't set, and the resolved URL.</summary>
-    private void RefreshHiddenHeaders()
+    /// <summary>
+    /// Updates the resolved URL and the Headers section from one preview of the request, so the preview is computed
+    /// once per change.
+    /// </summary>
+    private void RefreshPreview()
     {
         try
         {
             var model = BuildModel();
-            var prepared = RequestPreparer.Preview(model, CreateContext());
+            var context = CreateContext();
+            var prepared = RequestPreparer.Preview(model, context);
             ResolvedUrl = prepared.Url;
-            var userKeys = model.Headers.Where(h => h.Enabled).Select(h => h.Key.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var hidden = prepared.Headers.Where(h => !userKeys.Contains(h.Key)).ToList();
-
-            if (Uri.TryCreate(prepared.Url, UriKind.Absolute, out var uri))
-                hidden.Insert(0, new KeyValueItem("Host", uri.IsDefaultPort ? uri.Host : $"{uri.Host}:{uri.Port}"));
-            if (model.Body.Mode is BodyMode.FormData)
-                hidden.Add(new KeyValueItem("Content-Type", "multipart/form-data; boundary=<calculated when request is sent>"));
-            if (model.Body.Mode != BodyMode.None)
-                hidden.Add(new KeyValueItem("Content-Length", "<calculated when request is sent>"));
-            HiddenHeaders = hidden;
+            HeadersEditor.Refresh(model, context, prepared);
         }
         catch (Exception)
         {
-            HiddenHeaders = [];
+            HeadersEditor.Clear();
             ResolvedUrl = Url;
         }
-        OnPropertyChanged(nameof(HiddenHeaders));
-        OnPropertyChanged(nameof(HeadersSummary));
         OnPropertyChanged(nameof(ActiveEnvironmentName));
     }
 
@@ -466,7 +461,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
     public override void OnVariablesChanged()
     {
         RefreshVariables();
-        RefreshHiddenHeaders();
+        RefreshPreview();
         Auth.RefreshInherited();
     }
 
@@ -475,6 +470,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
         RefreshBreadcrumb();
         Auth.RefreshInherited();
         RefreshVariables();
+        RefreshPreview();
     }
 
     private void RefreshVariables() => Variables = CreateContext().BuildScope();
@@ -562,12 +558,13 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
     public IReadOnlyList<string> FindUnresolvedVariables()
     {
         var model = BuildModel();
-        var scope = CreateContext().BuildScope();
+        var context = CreateContext();
+        var scope = context.BuildScope();
         IEnumerable<string?> texts =
         [
             model.Url,
             .. model.PathVariables.Select(p => p.Value),
-            .. model.Headers.Where(h => h.Enabled).SelectMany(h => new[] { h.Key, h.Value }),
+            .. context.ResolveHeaders(model).HeadersToSend.SelectMany(h => new[] { h.Key, h.Value }),
             .. model.Body.Mode switch
             {
                 BodyMode.Raw => [model.Body.Raw],
@@ -603,6 +600,15 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
                 $"Send to {environment.Name}");
         }
         return true;
+    }
+
+    protected override void OnActiveChanged(bool isActive)
+    {
+        if (isActive)
+            return;
+        HeadersEditor.HideRevealedValues();
+        Auth.HideRevealedValues();
+        Response.HideRevealedValues();
     }
 
     public override async Task<bool> SaveAsync()
@@ -722,12 +728,13 @@ public sealed partial class RequestTabViewModel : TabViewModelBase
     [RelayCommand]
     private void StartRename() => IsRenaming = true;
 
-    [RelayCommand]
-    private void EndRename()
+    /// <summary>Ends the in-place rename. A null name cancels it and keeps the current one.</summary>
+    public void CommitRename(string? newName)
     {
         IsRenaming = false;
-        if (string.IsNullOrWhiteSpace(Name))
-            Name = "Untitled Request";
+        if (newName is null)
+            return;
+        Name = string.IsNullOrWhiteSpace(newName) ? "Untitled Request" : newName;
     }
 
     /// <summary>The request was renamed from the sidebar. A clean tab stays clean.</summary>

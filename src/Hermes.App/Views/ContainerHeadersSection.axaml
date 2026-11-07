@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:v="using:Hermes.App.Views"
+             x:Class="Hermes.App.Views.ContainerHeadersSection"
+             x:DataType="vm:ContainerHeadersViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="12" Margin="0,10,8,16" MaxWidth="900" HorizontalAlignment="Left">
+      <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap" Text="{Binding IntroText}" />
+
+      <!-- defined here -->
+      <StackPanel Spacing="4">
+        <TextBlock Classes="section" Text="Defined here" Margin="8,0" />
+        <v:KeyValueTable DataContext="{Binding Headers}" />
+      </StackPanel>
+
+      <!-- usage -->
+      <StackPanel Spacing="4" IsVisible="{Binding HasUsage}">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <TextBlock Classes="secondary" FontSize="12" Text="{Binding UsageText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+          <Button Classes="ghost" Command="{Binding ToggleOverridingRequestsCommand}" IsVisible="{Binding HasOverridingRequests}"
+                  Padding="6,1" FontSize="12" AutomationProperties.Name="Show which requests override these headers">
+            <TextBlock Text="{Binding ShowWhichText}" />
+          </Button>
+        </StackPanel>
+        <ItemsControl ItemsSource="{Binding OverridingRequests}" Margin="8,0,0,0"
+                      IsVisible="{Binding IsShowingOverridingRequests}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock Classes="mono tertiary" FontSize="12" Text="{Binding}" TextWrapping="Wrap" Margin="0,2" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <!-- inherited (folders only) -->
+      <v:HeaderListView Heading="Inherited" Hint="read-only here · edit at the source"
+                        Rows="{Binding InheritedRows}" IsVisible="{Binding HasInheritedRows}" />
+
+      <!-- where headers come from -->
+      <StackPanel Spacing="0" Margin="0,8,0,0" IsVisible="{Binding Chain.Count}">
+        <TextBlock Classes="section" Text="Where headers come from" Margin="0,0,0,8" />
+        <v:InheritanceChainView Nodes="{Binding Chain}" />
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

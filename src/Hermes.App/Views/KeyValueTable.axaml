@@ -11,13 +11,13 @@
         <!-- header -->
         <Border Classes="tableHeader">
           <Grid ColumnDefinitions="34,*,*,*,34">
-            <TextBlock Grid.Column="1" Classes="section" Text="Key" VerticalAlignment="Center" Margin="8,0" />
+            <TextBlock Grid.Column="1" Classes="section" Text="Key" />
             <Border Grid.Column="2" Classes="cellSep">
-              <TextBlock Classes="section" Text="Value" VerticalAlignment="Center" Margin="8,0" />
+              <TextBlock Classes="section" Text="Value" />
             </Border>
             <Border Grid.Column="3" Grid.ColumnSpan="2" Classes="cellSep">
               <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Classes="section" Text="Description" VerticalAlignment="Center" Margin="8,0" />
+                <TextBlock Classes="section" Text="Description" />
                 <Button Grid.Column="1" Classes="link" Content="Bulk Edit" FontSize="12" Margin="8,0"
                         Command="{Binding ToggleBulkEditCommand}" IsVisible="{Binding !KeysReadOnly}" />
               </Grid>
@@ -31,9 +31,28 @@
                 <Grid ColumnDefinitions="34,*,*,*,34" MinHeight="31">
                   <CheckBox IsChecked="{Binding Enabled}" IsVisible="{Binding ShowCheckBox}"
                             HorizontalAlignment="Center" MinWidth="0" Padding="0" />
-                  <Grid Grid.Column="1" ColumnDefinitions="*,Auto">
+                  <!-- a long tag trims; it must not widen the Key column and push the others out of line -->
+                  <c:ShrinkableCell Grid.Column="1">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <!-- the key always stays readable; what doesn't fit is clipped on the tag side -->
+                      <ColumnDefinition Width="*" MinWidth="90" />
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
                     <TextBox Classes="cell" Text="{Binding Key}" PlaceholderText="Key"
                              IsReadOnly="{Binding Owner.KeysReadOnly}" />
+                    <!-- trailing notes (headers only); empty ones take no space -->
+                    <Border Grid.Column="2" Classes="tag info" IsVisible="{Binding HasTag}" Margin="0,0,4,0">
+                      <TextBlock Text="{Binding TagText}" MaxWidth="200" TextTrimming="CharacterEllipsis" />
+                    </Border>
+                    <Border Grid.Column="3" Classes="tag warn" IsVisible="{Binding HasWarningTag}" Margin="0,0,4,0">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <PathIcon Width="11" Height="11" Data="{StaticResource IconAlert}" />
+                        <TextBlock Text="{Binding WarningTagText}" />
+                      </StackPanel>
+                    </Border>
                     <ComboBox Grid.Column="1" IsVisible="{Binding Owner.AllowFiles}" MinHeight="24" FontSize="11"
                               Padding="6,0" Margin="2,0,4,0" VerticalAlignment="Center" BorderThickness="0"
                               Background="Transparent"
@@ -42,10 +61,36 @@
                       <ComboBoxItem>File</ComboBoxItem>
                     </ComboBox>
                   </Grid>
+                  </c:ShrinkableCell>
                   <Border Grid.Column="2" Classes="cellSep">
                     <Panel>
-                      <c:VariableTextBox Text="{Binding Value}" PlaceholderText="Value" Margin="8,0" IsVisible="{Binding !IsFile}"
-                                         Variables="{Binding $parent[v:KeyValueTable].Variables}" />
+                      <!-- a sensitive value shows dots until it is revealed or has focus (to edit it) -->
+                      <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding !IsFile}">
+                        <Panel Classes="valueCell" Classes.masked="{Binding Sensitive.ShowMask}">
+                          <c:VariableTextBox Text="{Binding Value}" PlaceholderText="Value" Margin="8,0" />
+                          <TextBlock Classes="mono maskDots" Text="{Binding Sensitive.DisplayValue}" Margin="8,0"
+                                     VerticalAlignment="Center" IsHitTestVisible="False" />
+                        </Panel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" IsVisible="{Binding Sensitive.IsSensitive}">
+                          <Button Classes="icon" Command="{Binding Sensitive.ToggleRevealCommand}"
+                                  ToolTip.Tip="{Binding Sensitive.RevealToolTip}" AutomationProperties.Name="{Binding Sensitive.RevealToolTip}">
+                            <Panel>
+                              <PathIcon Data="{StaticResource IconEye}" IsVisible="{Binding !Sensitive.IsRevealed}" />
+                              <PathIcon Data="{StaticResource IconEyeOff}" IsVisible="{Binding Sensitive.IsRevealed}" />
+                            </Panel>
+                          </Button>
+                          <Button Classes="icon" Command="{Binding Sensitive.CopyCommand}"
+                                  ToolTip.Tip="Copy value" AutomationProperties.Name="Copy value">
+                            <Panel>
+                              <PathIcon Data="{StaticResource IconCopy}" IsVisible="{Binding !Sensitive.IsCopied}" />
+                              <PathIcon Data="{StaticResource IconCheck}" IsVisible="{Binding Sensitive.IsCopied}"
+                                        Foreground="{DynamicResource SuccessBrush}" />
+                            </Panel>
+                          </Button>
+                          <TextBlock Text="Copied" FontSize="11" Foreground="{DynamicResource SuccessBrush}"
+                                     VerticalAlignment="Center" Margin="2,0,4,0" IsVisible="{Binding Sensitive.IsCopied}" />
+                        </StackPanel>
+                      </Grid>
                       <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding IsFile}" Margin="4,0">
                         <Button Classes="ghost" Content="Select file" Command="{Binding PickFileCommand}" FontSize="12" />
                         <TextBlock Grid.Column="1" Text="{Binding Value}" VerticalAlignment="Center" Margin="6,0"

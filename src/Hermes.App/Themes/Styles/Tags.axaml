@@ -1,0 +1,49 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Small labelled tag: background + foreground set per use -->
+  <Style Selector="Border.tag">
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="Padding" Value="7,1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="{DynamicResource BgTertiaryBrush}" />
+  </Style>
+  <Style Selector="Border.tag TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <!-- Foreground is set through the inherited TextElement.Foreground so text and icons both pick it up -->
+  <Style Selector="Border.tag">
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="Border.tag.ok">
+    <Setter Property="Background" Value="{DynamicResource SuccessBgBrush}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource SuccessBrush}" />
+  </Style>
+  <Style Selector="Border.tag.info">
+    <Setter Property="Background" Value="{DynamicResource InfoBgBrush}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource InfoBrush}" />
+  </Style>
+  <Style Selector="Border.tag.warn">
+    <Setter Property="Background" Value="{DynamicResource WarningBgBrush}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <Style Selector="Border.tag.err">
+    <Setter Property="Background" Value="{DynamicResource ErrorBgBrush}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource ErrorBrush}" />
+  </Style>
+
+  <!-- Keyboard hint -->
+  <Style Selector="Border.kbd">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="Padding" Value="5,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.kbd TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+  </Style>
+</Styles>

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Services;
+using Hermes.Core.Headers;
 using Hermes.Core.Import;
 using Hermes.Core.Models;
 using Hermes.Core.Secrets;
@@ -51,7 +52,7 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         Collections.Clear();
         foreach (var collection in _workspace.Collections)
         {
-            var node = new CollectionNodeViewModel(collection);
+            var node = new CollectionNodeViewModel(collection) { RenameCommitter = CommitRename };
             foreach (var n in node.SelfAndDescendants())
                 n.IsExpanded = expanded.Contains(n.Id);
             Collections.Add(node);
@@ -266,6 +267,8 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     private async Task Export(TreeNodeViewModel? node)
     {
         if (node?.Root is not { } root)
+            return;
+        if (InheritedHeaderScan.HasTickedHeaders(root.Model) && !await _dialogs.ConfirmExportWithInheritedHeadersAsync())
             return;
         var model = ModelCloner.Clone(root.Model);
         if (SecretFields.Strip(model).Count > 0 && await _dialogs.AskIncludeSecretsAsync())
