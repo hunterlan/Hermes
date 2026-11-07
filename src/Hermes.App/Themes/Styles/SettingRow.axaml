@@ -1,0 +1,41 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Hermes.App.Controls">
+
+  <Styles.Resources>
+    <ResourceDictionary>
+      <ControlTheme x:Key="{x:Type c:SettingRow}" TargetType="c:SettingRow">
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
+              <ContentPresenter Name="PART_Leading" Content="{TemplateBinding Leading}"
+                                VerticalAlignment="Center" Margin="0,0,12,0"
+                                IsVisible="{TemplateBinding Leading, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Text="{TemplateBinding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Text="{TemplateBinding Hint}" FontSize="12" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           IsVisible="{TemplateBinding Hint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <ContentPresenter Content="{TemplateBinding Details}"
+                                  IsVisible="{TemplateBinding Details, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              </StackPanel>
+              <ContentPresenter Name="PART_ContentPresenter" Grid.Column="2" Margin="12,0,0,0"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+            </Grid>
+          </ControlTemplate>
+        </Setter>
+
+        <!-- Stacked: the control moves to its own row under the text and spans the full width -->
+        <Style Selector="^:stacked /template/ ContentPresenter#PART_ContentPresenter">
+          <Setter Property="Grid.Row" Value="1" />
+          <Setter Property="Grid.Column" Value="0" />
+          <Setter Property="Grid.ColumnSpan" Value="3" />
+          <Setter Property="Margin" Value="0,6,0,0" />
+        </Style>
+      </ControlTheme>
+    </ResourceDictionary>
+  </Styles.Resources>
+</Styles>
