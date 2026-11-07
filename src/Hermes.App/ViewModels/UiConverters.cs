@@ -11,6 +11,10 @@ public static class UiConverters
     /// <summary>Masks secret values in text boxes.</summary>
     public static readonly IValueConverter SecretChar = new FuncValueConverter<bool, char>(secret => secret ? '•' : '\0');
 
+    /// <summary>Summary of the request Settings section: says so when something overrides the app defaults, else nothing.</summary>
+    public static readonly IValueConverter OverridesSummary =
+        new FuncValueConverter<bool, string>(hasOverrides => hasOverrides ? "Overrides app defaults" : "");
+
     /// <summary>Upper-cases caption text (the design's text-transform: uppercase).</summary>
     public static readonly IValueConverter Upper = new FuncValueConverter<string?, string>(text => text?.ToUpperInvariant() ?? "");
 

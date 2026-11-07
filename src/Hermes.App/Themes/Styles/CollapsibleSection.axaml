@@ -1,0 +1,71 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Hermes.App.Controls">
+
+  <Styles.Resources>
+    <ResourceDictionary>
+      <ControlTheme x:Key="{x:Type c:CollapsibleSection}" TargetType="c:CollapsibleSection">
+        <Setter Property="SummaryForeground" Value="{DynamicResource TextTertiaryBrush}" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <StackPanel>
+              <Grid ColumnDefinitions="*,Auto">
+                <ToggleButton Classes="sectionHeader" IsChecked="{TemplateBinding IsExpanded, Mode=TwoWay}">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Classes="chevron" />
+                    <TextBlock Classes="title" Text="{TemplateBinding Header}" />
+                    <TextBlock Classes="summary" Text="{TemplateBinding Summary}" Foreground="{TemplateBinding SummaryForeground}"
+                               IsVisible="{TemplateBinding Summary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                  </StackPanel>
+                </ToggleButton>
+                <ContentPresenter Grid.Column="1" Content="{TemplateBinding HeaderActions}" VerticalAlignment="Center"
+                                  IsVisible="{TemplateBinding IsExpanded}" />
+              </Grid>
+              <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                IsVisible="{TemplateBinding IsExpanded}" />
+            </StackPanel>
+          </ControlTemplate>
+        </Setter>
+      </ControlTheme>
+    </ResourceDictionary>
+  </Styles.Resources>
+
+  <!-- Section header: chevron, title, quiet summary -->
+  <Style Selector="ToggleButton.sectionHeader">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.sectionHeader:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                   ToggleButton.sectionHeader:checked /template/ ContentPresenter#PART_ContentPresenter,
+                   ToggleButton.sectionHeader:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <!-- Fluent shrinks pressed buttons; a shrunken header moves the arrow out from under the pointer before release -->
+  <Style Selector="ToggleButton.sectionHeader:pressed">
+    <Setter Property="RenderTransform" Value="none" />
+  </Style>
+  <Style Selector="ToggleButton.sectionHeader PathIcon.chevron">
+    <Setter Property="Width" Value="12" />
+    <Setter Property="Height" Value="12" />
+    <Setter Property="Data" Value="{StaticResource IconChevronRight}" />
+  </Style>
+  <Style Selector="ToggleButton.sectionHeader:checked PathIcon.chevron">
+    <Setter Property="Data" Value="{StaticResource IconChevronDown}" />
+  </Style>
+  <Style Selector="ToggleButton.sectionHeader TextBlock.title">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ToggleButton.sectionHeader TextBlock.summary">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+</Styles>
