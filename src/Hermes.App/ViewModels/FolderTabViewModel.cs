@@ -34,7 +34,8 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
 
     public override SessionTabKind Kind => SessionTabKind.Folder;
     public override Guid EntityId => _folder.Id;
-    public override string KindLabel => "DIR";
+    public override string KindIconKey => "IconFolderOutline";
+    public override string KindName => "Folder";
 
     public AuthEditorViewModel Auth { get; }
 

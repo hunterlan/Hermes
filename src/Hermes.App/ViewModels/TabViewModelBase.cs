@@ -44,8 +44,11 @@ public abstract partial class TabViewModelBase(TabServices services) : Observabl
     /// <summary>HTTP method badge for request tabs; null for other tabs.</summary>
     public virtual string? Method => null;
 
-    /// <summary>Short label shown instead of a method for non-request tabs (e.g. "ENV").</summary>
-    public virtual string? KindLabel => null;
+    /// <summary>Resource key of the icon shown instead of a method for non-request tabs (e.g. "IconEnvironment").</summary>
+    public virtual string? KindIconKey => null;
+
+    /// <summary>Accessible name of <see cref="KindIconKey"/> (e.g. "Environment").</summary>
+    public virtual string? KindName => null;
 
     /// <summary>Saves the tab. Returns false when the user cancelled (e.g. closed the "Save as" dialog).</summary>
     public abstract Task<bool> SaveAsync();

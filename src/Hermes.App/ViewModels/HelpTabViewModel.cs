@@ -22,7 +22,8 @@ public sealed partial class HelpTabViewModel : TabViewModelBase
 
     public override SessionTabKind Kind => SessionTabKind.Help;
     public override Guid EntityId => HelpId;
-    public override string KindLabel => "HELP";
+    public override string KindIconKey => "IconHelp";
+    public override string KindName => "Manual";
 
     public IReadOnlyList<ManualPage> Pages => _manual.Pages;
 

@@ -53,7 +53,7 @@
     </Style>
   </UserControl.Styles>
   <Grid RowDefinitions="Auto,Auto,*" Margin="20,14,20,0">
-    <v:ContainerTabHeader Icon="{StaticResource IconEnvironment}" Title="{Binding Name}" IsTitleEditable="{Binding CanRename}"
+    <v:ContainerTabHeader Icon="{Binding KindIconKey, Converter={x:Static vm:UiConverters.IconFromKey}}" Title="{Binding Name}" IsTitleEditable="{Binding CanRename}"
                           ReadOnlyTitle="Globals" SaveCommand="{Binding SaveCommand}">
       <v:ContainerTabHeader.Actions>
         <Button Classes="ghost" Content="Set active" Command="{Binding SetActiveCommand}" IsVisible="{Binding CanRename}"

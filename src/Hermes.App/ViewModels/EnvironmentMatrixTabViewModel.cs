@@ -29,7 +29,8 @@ public sealed partial class EnvironmentMatrixTabViewModel : TabViewModelBase
 
     public override SessionTabKind Kind => SessionTabKind.EnvironmentMatrix;
     public override Guid EntityId => MatrixId;
-    public override string KindLabel => "ENV";
+    public override string KindIconKey => "IconTable";
+    public override string KindName => "Environment matrix";
 
     public ObservableCollection<MatrixColumn> Columns { get; } = [];
     public ObservableCollection<MatrixRow> Rows { get; } = [];

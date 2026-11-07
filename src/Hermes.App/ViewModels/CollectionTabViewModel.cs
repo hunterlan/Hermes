@@ -33,7 +33,8 @@ public sealed partial class CollectionTabViewModel : TabViewModelBase
 
     public override SessionTabKind Kind => SessionTabKind.Collection;
     public override Guid EntityId => _collection.Id;
-    public override string KindLabel => "COL";
+    public override string KindIconKey => "IconCollections";
+    public override string KindName => "Collection";
 
     public AuthEditorViewModel Auth { get; }
     public VariableListViewModel Variables { get; } = new();

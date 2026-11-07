@@ -21,7 +21,8 @@ public sealed partial class EnvironmentTabViewModel : TabViewModelBase
 
     public override SessionTabKind Kind => SessionTabKind.Environment;
     public override Guid EntityId => _environment.Id;
-    public override string KindLabel => IsGlobals ? "GLB" : "ENV";
+    public override string KindIconKey => IsGlobals ? "IconGlobals" : "IconEnvironment";
+    public override string KindName => IsGlobals ? "Globals" : "Environment";
 
     public bool IsGlobals => _environment == Services.Workspace.Globals;
     public bool CanRename => !IsGlobals;
