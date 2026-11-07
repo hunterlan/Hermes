@@ -15,6 +15,17 @@
     <Setter Property="Padding" Value="8,4" />
   </Style>
 
+  <!-- Compact filter box with a search icon on the left (sidebar panes) -->
+  <Style Selector="TextBox.search">
+    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="Padding" Value="8,3" />
+    <Setter Property="InnerLeftContent">
+      <Template>
+        <PathIcon Data="{StaticResource IconSearch}" Width="13" Height="13" Margin="8,0,0,0" Foreground="{DynamicResource TextTertiaryBrush}" />
+      </Template>
+    </Setter>
+  </Style>
+
   <!-- Borderless cell editor used in key/value tables -->
   <Style Selector="TextBox.cell">
     <Setter Property="Background" Value="Transparent" />

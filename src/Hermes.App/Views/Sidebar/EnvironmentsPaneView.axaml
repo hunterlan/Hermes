@@ -11,12 +11,6 @@
       <Setter Property="Padding" Value="8,0" />
       <Setter Property="MinHeight" Value="32" />
     </Style>
-    <Style Selector="Button.rowMenu">
-      <Setter Property="Opacity" Value="0" />
-    </Style>
-    <Style Selector="ListBoxItem:pointerover Button.rowMenu">
-      <Setter Property="Opacity" Value="1" />
-    </Style>
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*,Auto">
@@ -31,11 +25,7 @@
       <Button Classes="icon" Command="{Binding NewEnvironmentCommand}" ToolTip.Tip="Create new environment">
         <PathIcon Data="{StaticResource IconPlus}" />
       </Button>
-      <TextBox Grid.Column="1" Margin="6,0,0,0" Text="{Binding Filter}" PlaceholderText="Search environments" MinHeight="28" Padding="8,3">
-        <TextBox.InnerLeftContent>
-          <PathIcon Data="{StaticResource IconSearch}" Width="13" Height="13" Margin="8,0,0,0" Foreground="{DynamicResource TextTertiaryBrush}" />
-        </TextBox.InnerLeftContent>
-      </TextBox>
+      <TextBox Grid.Column="1" Classes="search" Margin="6,0,0,0" Text="{Binding Filter}" PlaceholderText="Search environments" />
     </Grid>
 
     <ListBox Grid.Row="1" Name="List" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" Background="Transparent" Padding="4,0">
