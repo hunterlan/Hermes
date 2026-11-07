@@ -22,6 +22,12 @@ public sealed class TabServices(
     public HttpClientProvider Http { get; } = http;
     public ManualService Manual { get; } = manual;
 
+    /// <summary>
+    /// Opens (or focuses) the tab of the folder or collection with the given id. Set by the main window, which owns
+    /// the tabs, so a tab can link to another without knowing about it; does nothing until then.
+    /// </summary>
+    public Func<Guid, Task>? OpenContainerAsync { get; set; }
+
     public AuthEditorViewModel CreateAuthEditor(bool allowInherit) =>
         new(OAuth, Dialogs.OpenUrlAsync, Dialogs.CopyTextAsync, allowInherit) { VerifySslProvider = () => Settings.Current.VerifySsl };
 }
