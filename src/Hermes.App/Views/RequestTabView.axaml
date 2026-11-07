@@ -158,7 +158,10 @@
             <c:CollapsibleSection Header="Headers" Summary="{Binding HeadersSummary}" IsExpanded="{Binding HeadersExpanded}">
               <StackPanel Spacing="8" Margin="0,0,0,12">
                 <v:KeyValueTable DataContext="{Binding Headers}" />
-                <v:HeaderListView Rows="{Binding HiddenHeaders}" IsVisible="{Binding HiddenHeaders.Count}" />
+                <v:HeaderListView Heading="Inherited" Hint="untick to skip one for this request only"
+                                  Rows="{Binding InheritedHeaders}" IsVisible="{Binding HasInheritedHeaders}" />
+                <v:HeaderListView Heading="Added automatically" Rows="{Binding AutomaticHeaders}"
+                                  IsVisible="{Binding HasAutomaticHeaders}" />
               </StackPanel>
             </c:CollapsibleSection>
           </Border>
