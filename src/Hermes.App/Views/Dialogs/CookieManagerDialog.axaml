@@ -1,18 +1,15 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Hermes.App.ViewModels"
+        xmlns:c="using:Hermes.App.Controls"
         x:Class="Hermes.App.Views.Dialogs.CookieManagerDialog"
         x:DataType="vm:CookieManagerViewModel"
         Title="Manage cookies" Width="760" Height="520"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
   <Grid RowDefinitions="Auto,*,Auto" Margin="20">
-    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,14">
-      <StackPanel Spacing="2">
-        <TextBlock Classes="h1" Text="Cookies" />
-        <TextBlock Classes="secondary" Text="Cookies set by servers are stored and sent with later requests to the same domain." />
-      </StackPanel>
-      <Button Grid.Column="1" Content="Clear all" Command="{Binding ClearAllCommand}" VerticalAlignment="Center" />
-    </Grid>
+    <c:DialogHeader Title="Cookies" Subtitle="Cookies set by servers are stored and sent with later requests to the same domain.">
+      <Button Content="Clear all" Command="{Binding ClearAllCommand}" />
+    </c:DialogHeader>
 
     <TextBlock Grid.Row="1" Classes="secondary" Text="No cookies yet." IsVisible="{Binding IsEmpty}"
                HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -49,6 +46,6 @@
       </ItemsControl>
     </ScrollViewer>
 
-    <Button Grid.Row="2" HorizontalAlignment="Right" Content="Close" Margin="0,14,0,0" IsCancel="True" Click="OnClose" />
+    <c:DialogFooter Grid.Row="2" CloseButtonText="Close" />
   </Grid>
 </Window>
