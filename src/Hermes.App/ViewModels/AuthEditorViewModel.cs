@@ -122,6 +122,15 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     [ObservableProperty] public partial string OAuthHeaderPrefix { get; set; } = "Bearer";
     [ObservableProperty] public partial string OAuthAccessToken { get; set; } = "";
 
+    /// <summary>Masks <see cref="BearerToken"/> in the form until revealed or focused.</summary>
+    public SensitiveValueViewModel BearerTokenSecret { get; } = CreateSecret();
+
+    /// <summary>Masks <see cref="ApiKeyValue"/> in the form until revealed or focused.</summary>
+    public SensitiveValueViewModel ApiKeyValueSecret { get; } = CreateSecret();
+
+    /// <summary>Masks <see cref="OAuthAccessToken"/> in the form until revealed or focused.</summary>
+    public SensitiveValueViewModel AccessTokenSecret { get; } = CreateSecret();
+
     [ObservableProperty] public partial string TokenStatus { get; set; } = "";
 
     /// <summary>The sign-in address, shown while waiting for authorization when no browser could be opened.</summary>
@@ -279,6 +288,32 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     public ICommand TokenButtonCommand => IsFetchingToken ? CancelTokenCommand : GetNewAccessTokenCommand;
 
     partial void OnIsFetchingTokenChanged(bool value) => OnPropertyChanged(nameof(TokenButtonCommand));
+
+    partial void OnBearerTokenChanged(string value) => UpdateSecret(BearerTokenSecret, value);
+
+    partial void OnApiKeyValueChanged(string value) => UpdateSecret(ApiKeyValueSecret, value);
+
+    partial void OnOAuthAccessTokenChanged(string value) => UpdateSecret(AccessTokenSecret, value);
+
+    /// <summary>Masks every revealed credential again, for when the user leaves the tab.</summary>
+    public void HideRevealedValues()
+    {
+        BearerTokenSecret.Hide();
+        ApiKeyValueSecret.Hide();
+        AccessTokenSecret.Hide();
+    }
+
+    private static SensitiveValueViewModel CreateSecret() => new("", isSensitive: false, copyText: null);
+
+    /// <summary>
+    /// A credential typed in is masked. One that only names variables (e.g. "{{token}}") shows no secret, so it stays
+    /// readable.
+    /// </summary>
+    private static void UpdateSecret(SensitiveValueViewModel secret, string value)
+    {
+        secret.Value = value;
+        secret.IsSensitive = !VariableResolver.IsOnlyVariables(value);
+    }
 
     [RelayCommand]
     private void CancelToken() => _tokenCts?.Cancel();

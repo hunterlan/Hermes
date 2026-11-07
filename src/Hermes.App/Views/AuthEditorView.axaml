@@ -65,7 +65,7 @@
         <!-- bearer -->
         <Grid Classes="form" IsVisible="{Binding IsBearer}" ColumnDefinitions="140,*">
           <TextBlock Classes="label" Text="Token" />
-          <c:VariableTextBox Grid.Column="1" Classes="bordered" Text="{Binding BearerToken}" PlaceholderText="Token" />
+          <v:SecretVariableField Grid.Column="1" Text="{Binding BearerToken}" PlaceholderText="Token" Secret="{Binding BearerTokenSecret}" />
         </Grid>
 
         <!-- api key -->
@@ -73,7 +73,7 @@
           <TextBlock Classes="label" Text="Key" />
           <c:VariableTextBox Grid.Column="1" Classes="bordered" Text="{Binding ApiKeyKey}" PlaceholderText="Key" />
           <TextBlock Grid.Row="1" Classes="label" Text="Value" />
-          <c:VariableTextBox Grid.Row="1" Grid.Column="1" Classes="bordered" Text="{Binding ApiKeyValue}" PlaceholderText="Value" />
+          <v:SecretVariableField Grid.Row="1" Grid.Column="1" Text="{Binding ApiKeyValue}" PlaceholderText="Value" Secret="{Binding ApiKeyValueSecret}" />
           <TextBlock Grid.Row="2" Classes="label" Text="Add to" />
           <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding ApiKeyLocations}" SelectedItem="{Binding SelectedApiKeyLocation}" HorizontalAlignment="Stretch" />
         </Grid>
@@ -86,7 +86,7 @@
               <Grid Classes="form" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto">
                 <TextBlock Classes="label" Text="Access Token" />
                 <Grid Grid.Column="1" ColumnDefinitions="*,Auto">
-                  <c:VariableTextBox Classes="bordered" Text="{Binding OAuthAccessToken}" PlaceholderText="Token" />
+                  <v:SecretVariableField Text="{Binding OAuthAccessToken}" PlaceholderText="Token" Secret="{Binding AccessTokenSecret}" />
                   <Button Grid.Column="1" Classes="ghost" Content="Clear" Margin="6,0,0,0" Command="{Binding ClearTokenCommand}" />
                 </Grid>
                 <TextBlock Grid.Row="1" Classes="label" Text="Header Prefix" />

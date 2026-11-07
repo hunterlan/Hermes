@@ -23,6 +23,11 @@ public abstract partial class TabViewModelBase(TabServices services) : Observabl
     /// <summary>Name of the collection the tab's entity lives in, used to tell same-named tabs apart.</summary>
     public virtual string? CollectionName => null;
 
+    partial void OnIsActiveChanged(bool value) => OnActiveChanged(value);
+
+    /// <summary>Called when the tab is shown or left. A tab uses it to mask what the user revealed.</summary>
+    protected virtual void OnActiveChanged(bool isActive) { }
+
     // Editing a preview tab keeps it.
     partial void OnIsDirtyChanged(bool value)
     {

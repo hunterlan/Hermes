@@ -2,6 +2,10 @@
 
 Set the authorization on a request, folder or collection. Auth fields accept [variables](03-variables.md).
 
+Passwords and client secrets show as dots. Tokens and API key values show as dots too, until you click into the field
+to edit them; the eye button keeps one shown until you leave the tab. A token that holds only variables, such as
+`{{token}}`, isn't masked, because it shows no secret.
+
 ## Types
 
 | Type | What it does |

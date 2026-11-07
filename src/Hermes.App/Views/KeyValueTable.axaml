@@ -64,7 +64,33 @@
                   </c:ShrinkableCell>
                   <Border Grid.Column="2" Classes="cellSep">
                     <Panel>
-                      <c:VariableTextBox Text="{Binding Value}" PlaceholderText="Value" Margin="8,0" IsVisible="{Binding !IsFile}" />
+                      <!-- a sensitive value shows dots until it is revealed or has focus (to edit it) -->
+                      <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding !IsFile}">
+                        <Panel Classes="valueCell" Classes.masked="{Binding Sensitive.ShowMask}">
+                          <c:VariableTextBox Text="{Binding Value}" PlaceholderText="Value" Margin="8,0" />
+                          <TextBlock Classes="mono maskDots" Text="{Binding Sensitive.DisplayValue}" Margin="8,0"
+                                     VerticalAlignment="Center" IsHitTestVisible="False" />
+                        </Panel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" IsVisible="{Binding Sensitive.IsSensitive}">
+                          <Button Classes="icon" Command="{Binding Sensitive.ToggleRevealCommand}"
+                                  ToolTip.Tip="{Binding Sensitive.RevealToolTip}" AutomationProperties.Name="{Binding Sensitive.RevealToolTip}">
+                            <Panel>
+                              <PathIcon Data="{StaticResource IconEye}" IsVisible="{Binding !Sensitive.IsRevealed}" />
+                              <PathIcon Data="{StaticResource IconEyeOff}" IsVisible="{Binding Sensitive.IsRevealed}" />
+                            </Panel>
+                          </Button>
+                          <Button Classes="icon" Command="{Binding Sensitive.CopyCommand}"
+                                  ToolTip.Tip="Copy value" AutomationProperties.Name="Copy value">
+                            <Panel>
+                              <PathIcon Data="{StaticResource IconCopy}" IsVisible="{Binding !Sensitive.IsCopied}" />
+                              <PathIcon Data="{StaticResource IconCheck}" IsVisible="{Binding Sensitive.IsCopied}"
+                                        Foreground="{DynamicResource SuccessBrush}" />
+                            </Panel>
+                          </Button>
+                          <TextBlock Text="Copied" FontSize="11" Foreground="{DynamicResource SuccessBrush}"
+                                     VerticalAlignment="Center" Margin="2,0,4,0" IsVisible="{Binding Sensitive.IsCopied}" />
+                        </StackPanel>
+                      </Grid>
                       <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding IsFile}" Margin="4,0">
                         <Button Classes="ghost" Content="Select file" Command="{Binding PickFileCommand}" FontSize="12" />
                         <TextBlock Grid.Column="1" Text="{Binding Value}" VerticalAlignment="Center" Margin="6,0"

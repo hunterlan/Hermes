@@ -14,9 +14,11 @@ public sealed partial class ContainerHeadersViewModel : ObservableObject
     private const string OverridesTagPrefix = "Overrides";
     private const string OffTagText = "Off: not sent, not passed down";
     private const string OverriddenHereTagText = "overridden here";
+    private const string InheritedSection = "inherited";
 
     private readonly TabServices _services;
     private readonly Guid _containerId;
+    private readonly HeaderRevealState _revealState;
 
     /// <summary>Where the container sits. <c>OuterCollection</c> is the collection above a folder, null for a collection.</summary>
     private sealed record ContainerLocation(CollectionModel Collection, CollectionModel? OuterCollection,
@@ -27,13 +29,24 @@ public sealed partial class ContainerHeadersViewModel : ObservableObject
         _services = services;
         _containerId = containerId;
         IsFolder = isFolder;
+        _revealState = new HeaderRevealState(services.Dialogs.CopyTextAsync);
+        Headers.CopyText = services.Dialogs.CopyTextAsync;
         Headers.Changed += Refresh;
     }
 
     public bool IsFolder { get; }
 
     /// <summary>The headers defined on this collection or folder.</summary>
-    public KeyValueListViewModel Headers { get; } = new();
+    public KeyValueListViewModel Headers { get; } = new() { MasksSensitiveKeys = true };
+
+    /// <summary>Masks every revealed value again, for when the user leaves the tab.</summary>
+    public void HideRevealedValues()
+    {
+        _revealState.Clear();
+        foreach (var row in InheritedRows)
+            row.Sensitive.Hide();
+        Headers.HideRevealedValues();
+    }
 
     /// <summary>Read-only rows from the levels above, outermost first. Always empty for a collection.</summary>
     public List<HeaderRowViewModel> InheritedRows { get; private set; } = [];
@@ -156,6 +169,8 @@ public sealed partial class ContainerHeadersViewModel : ObservableObject
         var source = header.Source;
         return new HeaderRowViewModel(header.Key, header.Value, "")
         {
+            Sensitive = _revealState.CreateValue(InheritedSection, header.Key, header.Value,
+                SensitiveHeaders.IsSensitiveName(header.Key)),
             OverriddenTagText = OverriddenHereTagText,
             SourceName = source.Name,
             IsSourceCollection = source.Kind == HeaderSourceKind.Collection,

@@ -19,27 +19,33 @@ public sealed class RequestHeadersViewModel : ObservableObject
     private const string OverridesTagPrefix = "Overrides";
     private const string ReplacesAuthTag = "Replaces auth header";
     private const string ReplacedByBodyTag = "replaced by body";
+    private const string InheritedSection = "inherited";
+    private const string AutomaticSection = "automatic";
 
     private readonly Func<HttpRequestModel> _buildModel;
     private readonly Func<RequestContext> _createContext;
     private readonly Func<Guid, Task> _openContainerAsync;
+    private readonly HeaderRevealState _revealState;
     private List<string> _skippedInheritedHeaders = [];
 
     public RequestHeadersViewModel(
         Func<HttpRequestModel> buildModel,
         Func<RequestContext> createContext,
-        Func<Guid, Task> openContainerAsync)
+        Func<Guid, Task> openContainerAsync,
+        Func<string, Task> copyText)
     {
         _buildModel = buildModel;
         _createContext = createContext;
         _openContainerAsync = openContainerAsync;
+        _revealState = new HeaderRevealState(copyText);
+        Headers.CopyText = copyText;
     }
 
     /// <summary>Raised when the user skips or unskips an inherited header, so the owner can update its dirty state.</summary>
     public event Action? Changed;
 
     /// <summary>The request's own headers.</summary>
-    public KeyValueListViewModel Headers { get; } = new();
+    public KeyValueListViewModel Headers { get; } = new() { MasksSensitiveKeys = true };
 
     /// <summary>Headers of the folders and collection, outermost first; the ones sent come in the Sent request's order.</summary>
     public List<HeaderRowViewModel> InheritedRows { get; private set; } = [];
@@ -92,6 +98,15 @@ public sealed class RequestHeadersViewModel : ObservableObject
         NotifyRowsChanged();
     }
 
+    /// <summary>Masks every revealed value again, for when the user leaves the tab.</summary>
+    public void HideRevealedValues()
+    {
+        _revealState.Clear();
+        foreach (var row in InheritedRows.Concat(AutomaticRows))
+            row.Sensitive.Hide();
+        Headers.HideRevealedValues();
+    }
+
     /// <summary>Drops the notes and the rows, for when the request can't be previewed.</summary>
     public void Clear()
     {
@@ -138,6 +153,7 @@ public sealed class RequestHeadersViewModel : ObservableObject
             : "overridden above";
         return new HeaderRowViewModel(header.Key, header.Value, header.ReplacesAuthHeader ? ReplacesAuthTag : "")
         {
+            Sensitive = _revealState.CreateValue(InheritedSection, header.Key, header.Value, SensitiveHeaders.IsSensitiveName(header.Key)),
             OverriddenTagText = overriddenText,
             IsTagWarning = header.ReplacesAuthHeader,
             SourceName = source.Name,
@@ -200,7 +216,7 @@ public sealed class RequestHeadersViewModel : ObservableObject
     /// nothing is guessed from header names. Host and the multipart content type are not part of the prepared
     /// request, and are added here.
     /// </summary>
-    private static List<HeaderRowViewModel> CreateAutomaticRows(HttpRequestModel model, PreparedRequest prepared, EffectiveAuth auth)
+    private List<HeaderRowViewModel> CreateAutomaticRows(HttpRequestModel model, PreparedRequest prepared, EffectiveAuth auth)
     {
         var authTag = auth.InheritedFrom is { } source ? $"from auth · {source}" : "from auth";
         var rows = new List<HeaderRowViewModel>();
@@ -216,8 +232,14 @@ public sealed class RequestHeadersViewModel : ObservableObject
                 PreparedHeaderOrigin.Default => AutomaticHeaderTag,
                 _ => null,
             };
-            if (tag is not null)
-                rows.Add(new HeaderRowViewModel(header.Key, header.Value, tag));
+            if (tag is null)
+                continue;
+            // Auth headers are credentials whatever their name (an API key may use any header).
+            var isSensitive = prepared.OriginOf(header) == PreparedHeaderOrigin.Auth || SensitiveHeaders.IsSensitiveName(header.Key);
+            rows.Add(new HeaderRowViewModel(header.Key, header.Value, tag)
+            {
+                Sensitive = _revealState.CreateValue(AutomaticSection, header.Key, header.Value, isSensitive),
+            });
         }
         if (model.Body.Mode is BodyMode.FormData)
             rows.Add(new HeaderRowViewModel("Content-Type", "multipart/form-data; boundary=<calculated when request is sent>", BodyHeaderTag));

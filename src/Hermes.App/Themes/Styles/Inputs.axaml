@@ -58,4 +58,24 @@
     <Setter Property="MinHeight" Value="30" />
     <Setter Property="Background" Value="{DynamicResource BgInputBrush}" />
   </Style>
+
+  <!-- Masked values: a Panel.valueCell holds the input and a TextBlock.maskDots; with .masked the dots show until
+       the input has focus (to edit it). The input stays in place under the dots, so Tab and clicks still reach it. -->
+  <Style Selector="Panel.valueCell > TextBlock.maskDots">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="Panel.valueCell.masked:not(:focus-within) > TextBlock.maskDots">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector="Panel.valueCell.masked:not(:focus-within) > c|VariableTextBox">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <!-- the frame of a masked field, drawn outside the input so the border stays while the input is hidden -->
+  <Style Selector="Border.inputFrame">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Background" Value="{DynamicResource BgInputBrush}" />
+  </Style>
 </Styles>
