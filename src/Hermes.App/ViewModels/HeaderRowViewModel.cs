@@ -19,6 +19,12 @@ public sealed partial class HeaderRowViewModel(string key, string value, string 
     public string Key { get; } = key;
     public string Value { get; } = value;
 
+    /// <summary>
+    /// Masking, reveal, expand and copy of the value. Set it to make the row sensitive; a plain row shows its value
+    /// as it is.
+    /// </summary>
+    public SensitiveValueViewModel Sensitive { get; init; } = new(value, isSensitive: false, copyText: null);
+
     /// <summary>Where the header comes from, or a warning about it. Empty for none.</summary>
     public string TagText
     {
@@ -76,6 +82,8 @@ public sealed partial class HeaderRowViewModel(string key, string value, string 
             OnPropertyChanged(nameof(IsSkipped));
             OnPropertyChanged(nameof(StatusText));
             OnPropertyChanged(nameof(HasStatus));
+            OnPropertyChanged(nameof(ShowTag));
+            OnPropertyChanged(nameof(KeyToolTip));
             OnPropertyChanged(nameof(ShowWarning));
             SentChanged?.Invoke(this, value);
         }
@@ -96,6 +104,8 @@ public sealed partial class HeaderRowViewModel(string key, string value, string 
         OnPropertyChanged(nameof(IsTagWarning));
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(HasStatus));
+        OnPropertyChanged(nameof(ShowTag));
+        OnPropertyChanged(nameof(KeyToolTip));
         OnPropertyChanged(nameof(ShowWarning));
     }
 
@@ -108,6 +118,11 @@ public sealed partial class HeaderRowViewModel(string key, string value, string 
 
     /// <summary>The warning icon is only for the row's own tag, not for the overridden or skipped state.</summary>
     public bool ShowWarning => IsTagWarning && !IsOverridden && !IsSkipped;
+
+    /// <summary>The tag moves to the key's tooltip on a sensitive row, whose space goes to the buttons.</summary>
+    public bool ShowTag => HasStatus && !Sensitive.IsSensitive;
+
+    public string? KeyToolTip => Sensitive.IsSensitive && HasStatus ? StatusText : null;
 
     public string SourceToolTip => HasSource ? $"Open {SourceName}" : "";
 

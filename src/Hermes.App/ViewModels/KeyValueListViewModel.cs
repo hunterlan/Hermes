@@ -25,6 +25,22 @@ public sealed partial class KeyValueListViewModel : ObservableObject
 
     public Func<Task<string?>>? PickFile { get; set; }
 
+    /// <summary>
+    /// Opt-in for header tables: a row whose key is a sensitive header name (Authorization, Cookie, ...) shows its
+    /// value masked until revealed. Params and form tables leave it off.
+    /// </summary>
+    public bool MasksSensitiveKeys { get; init; }
+
+    /// <summary>Copies text to the clipboard, for the copy button of a sensitive row.</summary>
+    public Func<string, Task>? CopyText { get; set; }
+
+    /// <summary>Masks every revealed value again.</summary>
+    public void HideRevealedValues()
+    {
+        foreach (var row in Rows)
+            row.Sensitive.Hide();
+    }
+
     [ObservableProperty] public partial bool IsBulkEdit { get; set; }
     [ObservableProperty] public partial string BulkText { get; set; } = "";
 

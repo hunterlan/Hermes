@@ -32,10 +32,10 @@ written, and the value comes from the variable. That is why the data folder is s
 
 ## Where secrets are hidden
 
-- Saved responses show credentials in the sent request as masked values. The `Authorization` and
-  `Proxy-Authorization` headers are always masked. Hermes also masks a secret wherever the same text shows up in the
-  URL, headers or body (also URL-encoded), but only for secrets of 4 or more characters, because a shorter one would
-  hide unrelated text.
+- Saved responses show credentials in the sent request as masked values. The `Authorization`,
+  `Proxy-Authorization`, `Cookie` and `X-Api-Key` headers are always masked. Hermes also masks a secret wherever the
+  same text shows up in the URL, headers or body (also URL-encoded), but only for secrets of 4 or more characters,
+  because a shorter one would hide unrelated text.
 - History does not keep literal auth credentials.
 - When an export contains secrets, Hermes asks whether to include them. Closing the dialog leaves them out, and they
   are exported blank.

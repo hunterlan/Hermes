@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hermes.App.ViewModels"
              xmlns:c="using:Hermes.App.Controls"
+             xmlns:v="using:Hermes.App.Views"
              xmlns:core="using:Hermes.Core.Models"
              x:Class="Hermes.App.Views.ResponseView"
              x:DataType="vm:ResponseViewModel">
@@ -207,7 +208,18 @@
             </StackPanel>
           </TabItem.Header>
           <Border Classes="table" Margin="0,6,0,0" Background="{DynamicResource BgCodeBrush}">
-            <c:CodeEditor Text="{Binding SentRequestText, Mode=OneWay}" Language="text" IsReadOnly="True" />
+            <!-- request line and headers (credentials masked until revealed), then the body in the editor -->
+            <Grid RowDefinitions="Auto,*">
+              <ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="0,8">
+                  <TextBlock Name="SentRequestLineText" Classes="mono" Text="{Binding SentRequestLine}" FontSize="12.5" FontWeight="SemiBold"
+                             Margin="16,0,16,6" TextTrimming="CharacterEllipsis" />
+                  <v:HeaderListView Rows="{Binding SentHeaderRows}" />
+                </StackPanel>
+              </ScrollViewer>
+              <c:CodeEditor Grid.Row="1" Text="{Binding SentBodyText, Mode=OneWay}" Language="text" IsReadOnly="True"
+                            IsVisible="{Binding HasSentBody}" />
+            </Grid>
           </Border>
         </TabItem>
       </TabControl>

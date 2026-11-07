@@ -56,7 +56,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         Params.Changed += OnParamsChanged;
         PathVariables.Changed += OnAnyChanged;
         HeadersEditor = new RequestHeadersViewModel(BuildModel, CreateContext,
-            id => Services.OpenContainerAsync?.Invoke(id) ?? Task.CompletedTask);
+            id => Services.OpenContainerAsync?.Invoke(id) ?? Task.CompletedTask, services.Dialogs.CopyTextAsync);
         HeadersEditor.Headers.Changed += OnAnyChanged;
         HeadersEditor.Changed += UpdateDirty;
         FormData.Changed += OnAnyChanged;
@@ -600,6 +600,15 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
                 $"Send to {environment.Name}");
         }
         return true;
+    }
+
+    protected override void OnActiveChanged(bool isActive)
+    {
+        if (isActive)
+            return;
+        HeadersEditor.HideRevealedValues();
+        Auth.HideRevealedValues();
+        Response.HideRevealedValues();
     }
 
     public override async Task<bool> SaveAsync()

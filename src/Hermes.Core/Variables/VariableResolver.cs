@@ -18,6 +18,13 @@ public static partial class VariableResolver
             yield return new VariableMatch(m.Index, m.Length, m.Groups[1].Value.Trim());
     }
 
+    /// <summary>
+    /// Whether <paramref name="text"/> is nothing but <c>{{name}}</c> references and whitespace, e.g. "{{token}}".
+    /// Such text shows no secret itself, only where the value comes from.
+    /// </summary>
+    public static bool IsOnlyVariables(string? text) =>
+        !string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(VariablePattern().Replace(text, ""));
+
     public static bool IsDynamic(string name) => name.StartsWith('$');
 
     /// <summary>Whether <paramref name="name"/> can be resolved, either from the scope or as a dynamic variable.</summary>

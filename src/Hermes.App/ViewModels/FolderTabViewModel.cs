@@ -94,6 +94,14 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
 
     partial void OnDescriptionChanged(string value) => UpdateDirty();
 
+    protected override void OnActiveChanged(bool isActive)
+    {
+        if (isActive)
+            return;
+        HeadersEditor.HideRevealedValues();
+        Auth.HideRevealedValues();
+    }
+
     public override Task<bool> SaveAsync()
     {
         if (Services.Workspace.Find(_folder.Id) is not { } location)

@@ -93,6 +93,14 @@ public sealed partial class CollectionTabViewModel : TabViewModelBase
 
     partial void OnDescriptionChanged(string value) => UpdateDirty();
 
+    protected override void OnActiveChanged(bool isActive)
+    {
+        if (isActive)
+            return;
+        HeadersEditor.HideRevealedValues();
+        Auth.HideRevealedValues();
+    }
+
     public override Task<bool> SaveAsync()
     {
         _collection.Name = string.IsNullOrWhiteSpace(Name) ? "New Collection" : Name.Trim();

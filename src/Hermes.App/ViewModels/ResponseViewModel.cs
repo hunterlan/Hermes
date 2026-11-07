@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Services;
 using Hermes.Core.Formatting;
+using Hermes.Core.Headers;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
 using Hermes.Core.Storage;
@@ -14,6 +15,9 @@ namespace Hermes.App.ViewModels;
 
 public sealed partial class ResponseViewModel(DialogService dialogs, SettingsService settings) : ObservableObject
 {
+    private const string SentSection = "sent";
+
+    private readonly HeaderRevealState _revealState = new(dialogs.CopyTextAsync);
     private ResponseModel? _response;
 
     [ObservableProperty] public partial bool IsLoading { get; set; }
@@ -36,8 +40,16 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     [ObservableProperty] public partial string? SentWithEnvironmentName { get; set; }
     [ObservableProperty] public partial EnvironmentColor SentWithEnvironmentColor { get; set; }
 
-    /// <summary>The exact request that went out (after variables and auth), shown in the "Sent request" tab.</summary>
-    [ObservableProperty] public partial string SentRequestText { get; set; } = "";
+    /// <summary>The first line of the request that went out, e.g. "GET /users HTTP/1.1", shown in the "Sent request" tab.</summary>
+    [ObservableProperty] public partial string SentRequestLine { get; set; } = "";
+
+    /// <summary>The headers that went out, sensitive ones masked until revealed.</summary>
+    [ObservableProperty] public partial List<HeaderRowViewModel> SentHeaderRows { get; set; } = [];
+
+    /// <summary>The body that went out; empty for none.</summary>
+    [ObservableProperty] public partial string SentBodyText { get; set; } = "";
+
+    public bool HasSentBody => SentBodyText.Length > 0;
 
     // Timing bar: time to first byte vs download.
     [ObservableProperty] public partial double WaitMs { get; set; }
@@ -89,7 +101,10 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     private void Show(SavedResponse saved)
     {
         SetResponse(saved.Response);
-        SentRequestText = saved.SentRequest;
+        // A saved request is only text, already masked where it was saved: its rows show that text.
+        var parsed = RawRequestParser.Parse(saved.SentRequest);
+        ShowSentRequest(parsed.RequestLine, parsed.Headers.Select(header =>
+            CreateSentRow(header.Name, header.Value, isAuthHeader: false)), parsed.Body);
         if (saved.BodyOmitted)
             RawText = PrettyText = "[Body not saved: larger than 2 MB. Send again to see it.]";
         OnPropertyChanged(nameof(DisplayText));
@@ -167,7 +182,41 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         OnPropertyChanged(nameof(IsSideBySide));
     }
 
-    public void SetSentRequest(PreparedRequest request) => SentRequestText = RawRequestFormatter.Format(request);
+    /// <summary>Shows the request as it goes out, with its real values so they can be revealed and copied.</summary>
+    public void SetSentRequest(PreparedRequest request)
+    {
+        // The text gives the request line and the body, in the same form as the wire text and the saved copy.
+        var parsed = RawRequestParser.Parse(RawRequestFormatter.Format(request));
+        var rows = new List<HeaderRowViewModel>();
+        // Host is added when the request has none of its own, as the formatter does.
+        if (request.GetHeader("Host") is null && parsed.Headers.FirstOrDefault(header => header.Name == "Host") is { } host)
+            rows.Add(CreateSentRow(host.Name, host.Value, isAuthHeader: false));
+        rows.AddRange(request.Headers.Select(header =>
+            CreateSentRow(header.Key, header.Value, request.OriginOf(header) == PreparedHeaderOrigin.Auth)));
+        ShowSentRequest(parsed.RequestLine, rows, parsed.Body);
+    }
+
+    /// <summary>Masks the revealed values of the Sent request again, for when the user leaves the tab.</summary>
+    public void HideRevealedValues()
+    {
+        _revealState.Clear();
+        foreach (var row in SentHeaderRows)
+            row.Sensitive.Hide();
+    }
+
+    private HeaderRowViewModel CreateSentRow(string name, string value, bool isAuthHeader) => new(name, value, "")
+    {
+        // Auth headers are credentials whatever their name (an API key may use any header).
+        Sensitive = _revealState.CreateValue(SentSection, name, value, isAuthHeader || SensitiveHeaders.IsSensitiveName(name)),
+    };
+
+    private void ShowSentRequest(string requestLine, IEnumerable<HeaderRowViewModel> headerRows, string body)
+    {
+        SentRequestLine = requestLine;
+        SentHeaderRows = headerRows.ToList();
+        SentBodyText = body;
+        OnPropertyChanged(nameof(HasSentBody));
+    }
 
     public void BeginLoading()
     {

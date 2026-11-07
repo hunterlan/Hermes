@@ -7,7 +7,10 @@ The response body can be shown prettified (highlighted) or as raw text. Response
 
 ## The exact sent request
 
-Each response shows the request as it was sent, after variables were resolved. Credentials are masked. See
+Each response shows the request as it was sent, after variables were resolved: the request line, one row per header
+and the body. Credentials (headers set by auth, `Authorization`, `Proxy-Authorization`, `Cookie` and `X-Api-Key`) show
+as dots. The eye reveals a value and the copy button copies the real one, also while it is masked. Values stay on one
+line; the expand button shows a long one in full. The same buttons are on the header lists of a request. See
 [Secrets](secrets.md).
 
 ## Saved responses
