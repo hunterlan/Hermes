@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Services;
+using Hermes.Core.Headers;
 using Hermes.Core.Import;
 using Hermes.Core.Models;
 using Hermes.Core.Secrets;
@@ -266,6 +267,8 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     private async Task Export(TreeNodeViewModel? node)
     {
         if (node?.Root is not { } root)
+            return;
+        if (InheritedHeaderScan.HasTickedHeaders(root.Model) && !await _dialogs.ConfirmExportWithInheritedHeadersAsync())
             return;
         var model = ModelCloner.Clone(root.Model);
         if (SecretFields.Strip(model).Count > 0 && await _dialogs.AskIncludeSecretsAsync())
