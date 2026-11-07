@@ -13,8 +13,6 @@ namespace Hermes.App.Tests;
 /// <summary>The Headers tab of collections and folders.</summary>
 public class ContainerHeadersTabTests
 {
-    private const string ShotDirectory = "/tmp/claude-1000/-home-hunterlan-MyGithubProjects-Hermes/183c27e7-8fa5-40fc-9385-8a94263d8187/scratchpad/shots";
-
     private static WorkspaceService Workspace => App.Services.GetRequiredService<WorkspaceService>();
 
     private static void AddHeader(KeyValueListViewModel headers, string key, string value, bool enabled = true)
@@ -247,15 +245,14 @@ public class ContainerHeadersTabTests
         Workspace.SaveCollection(collection);
         try
         {
-            Directory.CreateDirectory(ShotDirectory);
             await vm.OpenFolderAsync(inner);
             SelectHeadersTab(window);
             Assert.Contains(window.GetVisualDescendants().OfType<ContainerHeadersSection>(), s => s.IsEffectivelyVisible);
-            Shoot(window, $"folder-headers-{themeName}");
+            UiTestHelpers.Screenshot(window, $"folder-headers-{themeName}");
 
             await vm.OpenCollectionAsync(collection);
             SelectHeadersTab(window);
-            Shoot(window, $"collection-headers-{themeName}");
+            UiTestHelpers.Screenshot(window, $"collection-headers-{themeName}");
         }
         finally
         {
@@ -286,16 +283,15 @@ public class ContainerHeadersTabTests
         Workspace.SaveCollection(collection);
         try
         {
-            Directory.CreateDirectory(ShotDirectory);
             await vm.OpenFolderAsync(folder);
             SelectHeadersTab(window);
             AssertValueColumnsAligned(window);
-            Shoot(window, $"folder-headers-long-tag-{themeName}-{windowWidth}");
+            UiTestHelpers.Screenshot(window, $"folder-headers-long-tag-{themeName}-{windowWidth}");
 
             await vm.OpenRequestAsync(request);
             UiTestHelpers.Pump();
             AssertValueColumnsAligned(window);
-            Shoot(window, $"request-headers-long-tag-{themeName}-{windowWidth}");
+            UiTestHelpers.Screenshot(window, $"request-headers-long-tag-{themeName}-{windowWidth}");
         }
         finally
         {
@@ -326,11 +322,5 @@ public class ContainerHeadersTabTests
             .First(t => t.IsEffectivelyVisible && t.Items.OfType<TabItem>().Any(i => i.Header is string s && s.StartsWith("Headers")));
         tabs.SelectedItem = tabs.Items.OfType<TabItem>().First(i => i.Header is string s && s.StartsWith("Headers"));
         UiTestHelpers.Pump();
-    }
-
-    private static void Shoot(Window window, string name)
-    {
-        var path = UiTestHelpers.Screenshot(window, name);
-        File.Copy(path, Path.Combine(ShotDirectory, name + ".png"), overwrite: true);
     }
 }
