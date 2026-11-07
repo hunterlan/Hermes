@@ -28,6 +28,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     private string? _description;
     private string? _eventsJson;
     private string? _unsupportedBodyJson;
+    private List<string> _skippedInheritedHeaders = [];
 
     public static IReadOnlyList<string> Methods { get; } = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
 
@@ -207,6 +208,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         _description = model.Description;
         _eventsJson = model.EventsJson;
         _unsupportedBodyJson = model.Body.UnsupportedJson;
+        _skippedInheritedHeaders = [.. model.SkippedInheritedHeaders];
         _syncingUrl = false;
         _loading = false;
         OnPropertyChanged(nameof(HasPathVariables));
@@ -229,6 +231,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             QueryParams = Params.ToModels(),
             PathVariables = PathVariables.ToModels(),
             Headers = Headers.ToModels(),
+            SkippedInheritedHeaders = [.. _skippedInheritedHeaders],
             Body = new RequestBody
             {
                 Mode = SelectedBodyMode.Value,
@@ -568,12 +571,13 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     public IReadOnlyList<string> FindUnresolvedVariables()
     {
         var model = BuildModel();
-        var scope = CreateContext().BuildScope();
+        var context = CreateContext();
+        var scope = context.BuildScope();
         IEnumerable<string?> texts =
         [
             model.Url,
             .. model.PathVariables.Select(p => p.Value),
-            .. model.Headers.Where(h => h.Enabled).SelectMany(h => new[] { h.Key, h.Value }),
+            .. context.ResolveHeaders(model).HeadersToSend.SelectMany(h => new[] { h.Key, h.Value }),
             .. model.Body.Mode switch
             {
                 BodyMode.Raw => [model.Body.Raw],
