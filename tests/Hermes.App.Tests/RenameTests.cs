@@ -18,6 +18,85 @@ public class RenameTests
     private static InlineRenameBox VisibleRenameBox(Window window) =>
         window.GetVisualDescendants().OfType<InlineRenameBox>().Single(box => box.IsEffectivelyVisible);
 
+    private static void TypeRequestName(Window window, RequestTabViewModel tab, string name)
+    {
+        tab.StartRenameCommand.Execute(null);
+        UiTestHelpers.Pump();
+        UiTestHelpers.Pump();
+        Assert.True(VisibleRenameBox(window).IsFocused);
+        window.KeyTextInput(name);
+    }
+
+    [AvaloniaFact]
+    public void Enter_commits_the_request_name_edit()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+
+        TypeRequestName(window, tab, "Get users");
+        window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        UiTestHelpers.Pump();
+
+        Assert.False(tab.IsRenaming);
+        Assert.Equal("Get users", tab.Name);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Losing_focus_commits_the_request_name_edit()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+
+        TypeRequestName(window, tab, "Get orders");
+        window.GetVisualDescendants().OfType<Button>().First(button => button.Focusable && button.IsEffectivelyVisible).Focus();
+        UiTestHelpers.Pump();
+
+        Assert.False(tab.IsRenaming);
+        Assert.Equal("Get orders", tab.Name);
+        window.Close();
+    }
+
+    [AvaloniaTheory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void A_blank_request_name_becomes_untitled(string blankName)
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+
+        tab.StartRenameCommand.Execute(null);
+        UiTestHelpers.Pump();
+        UiTestHelpers.Pump();
+        var box = VisibleRenameBox(window);
+        box.Text = blankName;
+        window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        UiTestHelpers.Pump();
+
+        Assert.Equal("Untitled Request", tab.Name);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void Escape_cancels_the_request_name_edit()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+        var originalName = tab.Name;
+
+        tab.StartRenameCommand.Execute(null);
+        UiTestHelpers.Pump();
+        UiTestHelpers.Pump();
+        Assert.True(VisibleRenameBox(window).IsFocused);
+        window.KeyTextInput("Discarded");
+        window.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+        UiTestHelpers.Pump();
+
+        Assert.False(tab.IsRenaming);
+        Assert.Equal(originalName, tab.Name);
+        window.Close();
+    }
+
     [AvaloniaFact]
     public void Collection_rename_commits_on_Enter_and_cancels_on_Escape()
     {
