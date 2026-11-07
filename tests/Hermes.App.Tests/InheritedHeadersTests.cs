@@ -71,10 +71,10 @@ public class InheritedHeadersTests
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
 
-            Assert.Equal(["X-Api-Version", "X-Tenant", "X-Tenant", "X-Trace"], tab.InheritedHeaders.Select(h => h.Key));
-            Assert.Equal([setup.Collection.Name, setup.Collection.Name, "Users", "Users"], tab.InheritedHeaders.Select(h => h.SourceName));
+            Assert.Equal(["X-Api-Version", "X-Tenant", "X-Tenant", "X-Trace"], tab.HeadersEditor.InheritedRows.Select(h => h.Key));
+            Assert.Equal([setup.Collection.Name, setup.Collection.Name, "Users", "Users"], tab.HeadersEditor.InheritedRows.Select(h => h.SourceName));
 
-            var sentInherited = tab.InheritedHeaders.Where(h => h.IsSent && !h.IsOverridden).Select(h => h.Key);
+            var sentInherited = tab.HeadersEditor.InheritedRows.Where(h => h.IsSent && !h.IsOverridden).Select(h => h.Key);
             Assert.Equal(["X-Trace", "X-Mine", .. sentInherited], ConfiguredHeaderNamesInSentOrder(tab));
         }
         finally
@@ -94,13 +94,13 @@ public class InheritedHeadersTests
             var tab = await OpenRequestAsync(vm, setup.Request);
 
             // own: X-Trace, X-Mine. Sent inherited: X-Api-Version, X-Tenant (Users). Automatic: Host + 4 defaults.
-            Assert.Equal("2 own · 2 inherited · 5 added automatically", tab.HeadersSummary);
+            Assert.Equal("2 own · 2 inherited · 5 added automatically", tab.HeadersEditor.Summary);
 
-            tab.InheritedHeaders.Single(h => h.Key == "X-Api-Version").IsSent = false;
-            Assert.Equal("2 own · 1 inherited · 5 added automatically", tab.HeadersSummary);
+            tab.HeadersEditor.InheritedRows.Single(h => h.Key == "X-Api-Version").IsSent = false;
+            Assert.Equal("2 own · 1 inherited · 5 added automatically", tab.HeadersEditor.Summary);
 
             var bare = await OpenRequestAsync(vm, new HttpRequestModel { Name = "Loose", Url = "https://example.test" });
-            Assert.Equal("5 added automatically", bare.HeadersSummary);
+            Assert.Equal("5 added automatically", bare.HeadersEditor.Summary);
         }
         finally
         {
@@ -120,11 +120,11 @@ public class InheritedHeadersTests
             Assert.False(tab.IsDirty);
             Assert.Contains("X-Api-Version", ConfiguredHeaderNamesInSentOrder(tab));
 
-            tab.InheritedHeaders.Single(h => h.Key == "X-Api-Version").IsSent = false;
+            tab.HeadersEditor.InheritedRows.Single(h => h.Key == "X-Api-Version").IsSent = false;
 
             Assert.True(tab.IsDirty);
             Assert.DoesNotContain("X-Api-Version", ConfiguredHeaderNamesInSentOrder(tab));
-            var skippedRow = tab.InheritedHeaders.Single(h => h.Key == "X-Api-Version");
+            var skippedRow = tab.HeadersEditor.InheritedRows.Single(h => h.Key == "X-Api-Version");
             Assert.True(skippedRow.IsSkipped);
             Assert.Equal("skipped here", skippedRow.StatusText);
 
@@ -134,7 +134,7 @@ public class InheritedHeadersTests
             Assert.Equal(["X-Api-Version"], saved.SkippedInheritedHeaders);
 
             // Unskipping goes back to the saved state, so the tab is clean again.
-            tab.InheritedHeaders.Single(h => h.Key == "X-Api-Version").IsSent = true;
+            tab.HeadersEditor.InheritedRows.Single(h => h.Key == "X-Api-Version").IsSent = true;
             Assert.True(tab.IsDirty);
             Assert.Contains("X-Api-Version", ConfiguredHeaderNamesInSentOrder(tab));
             Assert.Empty(tab.BuildModel().SkippedInheritedHeaders);
@@ -154,7 +154,7 @@ public class InheritedHeadersTests
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
-            var rowsBefore = tab.InheritedHeaders.ToList();
+            var rowsBefore = tab.HeadersEditor.InheritedRows.ToList();
             var checkBox = window.GetVisualDescendants().OfType<CheckBox>()
                 .Single(c => c.IsVisible && AutomationProperties.GetName(c) == "Send X-Api-Version header");
             Assert.True(checkBox.Focus());
@@ -164,12 +164,12 @@ public class InheritedHeadersTests
             UiTestHelpers.Pump();
 
             Assert.True(tab.IsDirty);
-            Assert.True(tab.InheritedHeaders.Single(h => h.Key == "X-Api-Version").IsSkipped);
+            Assert.True(tab.HeadersEditor.InheritedRows.Single(h => h.Key == "X-Api-Version").IsSkipped);
             // The rows are the same instances, so the checkbox is still in the tree and focused.
-            Assert.Equal(rowsBefore, tab.InheritedHeaders);
+            Assert.Equal(rowsBefore, tab.HeadersEditor.InheritedRows);
             Assert.True(checkBox.IsFocused);
             Assert.True(checkBox.IsAttachedToVisualTree());
-            Assert.Equal("2 own · 1 inherited · 5 added automatically", tab.HeadersSummary);
+            Assert.Equal("2 own · 1 inherited · 5 added automatically", tab.HeadersEditor.Summary);
         }
         finally
         {
@@ -190,16 +190,16 @@ public class InheritedHeadersTests
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
-            var row = tab.InheritedHeaders.Single(h => h.Key == "Authorization");
-            Assert.DoesNotContain(tab.AutomaticHeaders, h => h.Key == "Authorization");
+            var row = tab.HeadersEditor.InheritedRows.Single(h => h.Key == "Authorization");
+            Assert.DoesNotContain(tab.HeadersEditor.AutomaticRows, h => h.Key == "Authorization");
             Assert.True(row.ShowWarning);
 
             row.IsSent = false;
-            Assert.Contains(tab.AutomaticHeaders, h => h.Key == "Authorization" && h.TagText == "from auth");
+            Assert.Contains(tab.HeadersEditor.AutomaticRows, h => h.Key == "Authorization" && h.TagText == "from auth");
             Assert.False(row.ShowWarning);
 
             row.IsSent = true;
-            Assert.DoesNotContain(tab.AutomaticHeaders, h => h.Key == "Authorization");
+            Assert.DoesNotContain(tab.HeadersEditor.AutomaticRows, h => h.Key == "Authorization");
             Assert.True(row.ShowWarning);
         }
         finally
@@ -222,11 +222,11 @@ public class InheritedHeadersTests
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
 
-            var row = tab.InheritedHeaders.Single(h => h.Key == "Content-Type");
+            var row = tab.HeadersEditor.InheritedRows.Single(h => h.Key == "Content-Type");
             Assert.True(row.IsOverridden);
             Assert.Equal("replaced by body", row.StatusText);
             // Not counted: 2 own, 2 inherited (X-Api-Version, X-Tenant), Host + 4 defaults + multipart type + length.
-            Assert.Equal("2 own · 2 inherited · 7 added automatically", tab.HeadersSummary);
+            Assert.Equal("2 own · 2 inherited · 7 added automatically", tab.HeadersEditor.Summary);
             Assert.DoesNotContain("Content-Type", ConfiguredHeaderNamesInSentOrder(tab));
         }
         finally
@@ -244,7 +244,7 @@ public class InheritedHeadersTests
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
-            var row = tab.InheritedHeaders.Single(h => h.Key == "X-Api-Version");
+            var row = tab.HeadersEditor.InheritedRows.Single(h => h.Key == "X-Api-Version");
             Assert.False(row.IsSent);
             Assert.True(row.IsSkipped);
             Assert.False(tab.IsDirty);
@@ -265,7 +265,7 @@ public class InheritedHeadersTests
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
 
-            var overridden = tab.InheritedHeaders.Where(h => h.IsOverridden).ToList();
+            var overridden = tab.HeadersEditor.InheritedRows.Where(h => h.IsOverridden).ToList();
             Assert.Equal(["X-Tenant", "X-Trace"], overridden.Select(h => h.Key));
             // Shop's X-Tenant is won by the Users folder (below the table); Users' X-Trace by the request (above).
             Assert.Equal(["overridden by Users", "overridden above"], overridden.Select(h => h.StatusText));
@@ -273,7 +273,7 @@ public class InheritedHeadersTests
             Assert.Equal(setup.Collection.Name, overridden[0].SourceName);
 
             // X-Trace is set by the request over the folder; X-Mine overrides nothing.
-            var rows = tab.Headers.Rows.Where(r => !r.IsPlaceholder).ToList();
+            var rows = tab.HeadersEditor.Headers.Rows.Where(r => !r.IsPlaceholder).ToList();
             Assert.Equal("Overrides Users", rows.Single(r => r.Key == "X-Trace").TagText);
             Assert.Equal("", rows.Single(r => r.Key == "X-Mine").TagText);
         }
@@ -297,10 +297,10 @@ public class InheritedHeadersTests
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
 
-            var rows = tab.Headers.Rows.Where(r => !r.IsPlaceholder).ToList();
+            var rows = tab.HeadersEditor.Headers.Rows.Where(r => !r.IsPlaceholder).ToList();
             Assert.Equal("Replaces auth header", rows.Single(r => r.Key == "authorization").WarningTagText);
             Assert.All(rows.Where(r => r.Key != "authorization"), r => Assert.Equal("", r.WarningTagText));
-            Assert.DoesNotContain(tab.AutomaticHeaders, h => h.TagText == "from auth");
+            Assert.DoesNotContain(tab.HeadersEditor.AutomaticRows, h => h.TagText == "from auth");
 
             // An inherited header that replaces the auth header is warned about on its own row.
             var inheritedSetup = CreateSetup(s => s.Collection.Headers.Add(new("Authorization", "Token x")));
@@ -309,7 +309,7 @@ public class InheritedHeadersTests
                 inheritedSetup.Request.Auth = new AuthConfig { Type = AuthType.Bearer, Bearer = new BearerAuth { Token = "t" } };
                 Workspace.SaveCollection(inheritedSetup.Collection);
                 var inheritedTab = await OpenRequestAsync(vm, inheritedSetup.Request);
-                var row = inheritedTab.InheritedHeaders.Single(h => h.Key == "Authorization");
+                var row = inheritedTab.HeadersEditor.InheritedRows.Single(h => h.Key == "Authorization");
                 Assert.True(row.IsTagWarning);
                 Assert.Equal("Replaces auth header", row.StatusText);
             }
@@ -334,11 +334,11 @@ public class InheritedHeadersTests
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
 
-            tab.InheritedHeaders.First(h => h.SourceName == "Users").OpenSourceTabCommand.Execute(null);
+            tab.HeadersEditor.InheritedRows.First(h => h.SourceName == "Users").OpenSourceTabCommand.Execute(null);
             await UiTestHelpers.WaitUntil(() => vm.ActiveTab is FolderTabViewModel);
             Assert.Equal(setup.Folder.Id, vm.ActiveTab!.EntityId);
 
-            tab.InheritedHeaders.First(h => h.IsSourceCollection).OpenSourceTabCommand.Execute(null);
+            tab.HeadersEditor.InheritedRows.First(h => h.IsSourceCollection).OpenSourceTabCommand.Execute(null);
             await UiTestHelpers.WaitUntil(() => vm.ActiveTab is CollectionTabViewModel);
             Assert.Equal(setup.Collection.Id, vm.ActiveTab!.EntityId);
         }
@@ -357,12 +357,12 @@ public class InheritedHeadersTests
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
-            Assert.DoesNotContain(tab.InheritedHeaders, h => h.Key == "X-New");
+            Assert.DoesNotContain(tab.HeadersEditor.InheritedRows, h => h.Key == "X-New");
 
             setup.Collection.Headers.Add(new("X-New", "1"));
             Workspace.SaveCollection(setup.Collection);
 
-            Assert.Contains(tab.InheritedHeaders, h => h.Key == "X-New");
+            Assert.Contains(tab.HeadersEditor.InheritedRows, h => h.Key == "X-New");
             Assert.False(tab.IsDirty);
         }
         finally
@@ -386,14 +386,14 @@ public class InheritedHeadersTests
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
 
-            string TagOf(string key) => tab.AutomaticHeaders.Single(h => h.Key == key).TagText;
+            string TagOf(string key) => tab.HeadersEditor.AutomaticRows.Single(h => h.Key == key).TagText;
             Assert.Equal($"from auth · {setup.Collection.Name}", TagOf("Authorization"));
             Assert.Equal("from body", TagOf("Content-Type"));
             Assert.Equal("from body", TagOf("Content-Length"));
             Assert.Equal("added automatically", TagOf("Host"));
             Assert.Equal("added automatically", TagOf("User-Agent"));
             // Inherited and own headers never show up as automatic.
-            Assert.DoesNotContain(tab.AutomaticHeaders, h => h.Key is "X-Api-Version" or "X-Mine");
+            Assert.DoesNotContain(tab.HeadersEditor.AutomaticRows, h => h.Key is "X-Api-Version" or "X-Mine");
 
             tab.Auth.SelectedType = tab.Auth.Types.Single(t => t.Value == AuthType.Bearer);
             tab.Auth.BearerToken = "own";
@@ -418,7 +418,7 @@ public class InheritedHeadersTests
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
-            Assert.DoesNotContain(tab.AutomaticHeaders, h => h.Key == "Content-Type");
+            Assert.DoesNotContain(tab.HeadersEditor.AutomaticRows, h => h.Key == "Content-Type");
         }
         finally
         {
@@ -507,7 +507,7 @@ public class InheritedHeadersTests
             tab.HeadersExpanded = true;
             UiTestHelpers.Pump();
             var lists = window.GetVisualDescendants().OfType<HeaderListView>()
-                .Where(list => ReferenceEquals(list.Rows, tab.InheritedHeaders) || ReferenceEquals(list.Rows, tab.AutomaticHeaders))
+                .Where(list => ReferenceEquals(list.Rows, tab.HeadersEditor.InheritedRows) || ReferenceEquals(list.Rows, tab.HeadersEditor.AutomaticRows))
                 .ToList();
             Assert.Equal(2, lists.Count);
             UiTestHelpers.Screenshot(window, "63-request-headers-" + themeName.ToLowerInvariant());

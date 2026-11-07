@@ -24,17 +24,11 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     private bool _loading;
     private bool _syncingUrl;
     private CancellationTokenSource? _sendCts;
-    private const string AutomaticHeaderTag = "added automatically";
-    private const string BodyHeaderTag = "from body";
-    private const string OverridesTagPrefix = "Overrides";
-    private const string ReplacesAuthTag = "Replaces auth header";
-    private const string ReplacedByBodyTag = "replaced by body";
 
     // Preserved, not editable in the UI.
     private string? _description;
     private string? _eventsJson;
     private string? _unsupportedBodyJson;
-    private List<string> _skippedInheritedHeaders = [];
 
     public static IReadOnlyList<string> Methods { get; } = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
 
@@ -61,7 +55,10 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         RequestId = model.Id;
         Params.Changed += OnParamsChanged;
         PathVariables.Changed += OnAnyChanged;
-        Headers.Changed += OnAnyChanged;
+        HeadersEditor = new RequestHeadersViewModel(BuildModel, CreateContext,
+            id => Services.OpenContainerAsync?.Invoke(id) ?? Task.CompletedTask);
+        HeadersEditor.Headers.Changed += OnAnyChanged;
+        HeadersEditor.Changed += UpdateDirty;
         FormData.Changed += OnAnyChanged;
         UrlEncoded.Changed += OnAnyChanged;
         FormData.PickFile = () => services.Dialogs.PickFileAsync("Select file");
@@ -92,7 +89,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 
     public KeyValueListViewModel Params { get; } = new();
     public KeyValueListViewModel PathVariables { get; } = new(keysReadOnly: true);
-    public KeyValueListViewModel Headers { get; } = new();
+    public RequestHeadersViewModel HeadersEditor { get; }
     public KeyValueListViewModel FormData { get; } = new(allowFiles: true);
     public KeyValueListViewModel UrlEncoded { get; } = new();
     public AuthEditorViewModel Auth { get; }
@@ -154,32 +151,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 
     public string? ActiveEnvironmentName => Services.Workspace.ActiveEnvironment?.Name;
 
-    /// <summary>Headers of the folders and collection, outermost first; the ones sent come in the Sent request's order.</summary>
-    public List<HeaderRowViewModel> InheritedHeaders { get; private set; } = [];
-
-    /// <summary>Headers Hermes adds itself (Host, defaults, body and auth headers).</summary>
-    public List<HeaderRowViewModel> AutomaticHeaders { get; private set; } = [];
-
-    public bool HasInheritedHeaders => InheritedHeaders.Count > 0;
-    public bool HasAutomaticHeaders => AutomaticHeaders.Count > 0;
-
-    public string HeadersSummary
-    {
-        get
-        {
-            var parts = new List<string>();
-            AddPart(Headers.ActiveCount, "own");
-            AddPart(InheritedHeaders.Count(row => row.IsSent && !row.IsOverridden), "inherited");
-            AddPart(AutomaticHeaders.Count, "added automatically");
-            return string.Join(" · ", parts);
-
-            void AddPart(int count, string label)
-            {
-                if (count > 0)
-                    parts.Add($"{count} {label}");
-            }
-        }
-    }
     public string ParamsSummary => Params.ActiveCount is var n and > 0 ? $"{n} active" : "";
     public string BodySummary => SelectedBodyMode.Value == BodyMode.Raw ? SelectedRawLanguage.Label : SelectedBodyMode.Label;
     /// <summary>Whether the URL has <c>{{variables}}</c> (including dynamic ones) or <c>:path</c> variables, i.e. whether "Sends to" adds information.</summary>
@@ -217,7 +188,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         Url = model.Url;
         Params.Load(model.QueryParams.Count > 0 ? model.QueryParams : UrlUtilities.ParseQuery(UrlUtilities.Split(model.Url).Query));
         PathVariables.Load(MergePathVariables(model.Url, model.PathVariables));
-        Headers.Load(model.Headers);
+        HeadersEditor.Load(model.Headers, model.SkippedInheritedHeaders);
         SelectedBodyMode = BodyModes.First(m => m.Value == model.Body.Mode);
         SelectedRawLanguage = RawLanguages.First(l => l.Value == model.Body.RawLanguage);
         RawBody = model.Body.Raw;
@@ -231,13 +202,12 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         _description = model.Description;
         _eventsJson = model.EventsJson;
         _unsupportedBodyJson = model.Body.UnsupportedJson;
-        _skippedInheritedHeaders = [.. model.SkippedInheritedHeaders];
         _syncingUrl = false;
         _loading = false;
         OnPropertyChanged(nameof(HasPathVariables));
         OnPropertyChanged(nameof(HasUnsupportedBody));
         OnPropertyChanged(nameof(Method));
-        RefreshHeaderRows();
+        RefreshPreview();
         NotifySections();
     }
 
@@ -253,8 +223,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             Url = Url,
             QueryParams = Params.ToModels(),
             PathVariables = PathVariables.ToModels(),
-            Headers = Headers.ToModels(),
-            SkippedInheritedHeaders = [.. _skippedInheritedHeaders],
+            Headers = HeadersEditor.Headers.ToModels(),
+            SkippedInheritedHeaders = [.. HeadersEditor.SkippedInheritedHeaders],
             Body = new RequestBody
             {
                 Mode = SelectedBodyMode.Value,
@@ -342,7 +312,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     {
         if (_loading)
             return;
-        RefreshHeaderRows();
+        RefreshPreview();
         UpdateDirty();
         NotifySections();
     }
@@ -458,10 +428,10 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     }
 
     /// <summary>
-    /// Rebuilds what the Headers section shows besides the editable table: the notes on the request's own rows, the
-    /// inherited rows, and the headers Hermes adds itself. Also updates the resolved URL.
+    /// Updates the resolved URL and the Headers section from one preview of the request, so the preview is computed
+    /// once per change.
     /// </summary>
-    private void RefreshHeaderRows()
+    private void RefreshPreview()
     {
         try
         {
@@ -469,143 +439,14 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             var context = CreateContext();
             var prepared = RequestPreparer.Preview(model, context);
             ResolvedUrl = prepared.Url;
-            var effective = context.ResolveHeaders(model);
-
-            ShowOwnHeaderNotes(model, effective);
-            InheritedHeaders = effective.Inherited.Select(header => CreateInheritedRow(header, prepared)).ToList();
-            AutomaticHeaders = CreateAutomaticRows(model, prepared, context.ResolveAuth(model.Auth));
+            HeadersEditor.Refresh(model, context, prepared);
         }
         catch (Exception)
         {
-            Headers.SetRowTags([]);
-            InheritedHeaders = [];
-            AutomaticHeaders = [];
+            HeadersEditor.Clear();
             ResolvedUrl = Url;
         }
-        OnPropertyChanged(nameof(InheritedHeaders));
-        OnPropertyChanged(nameof(AutomaticHeaders));
-        OnPropertyChanged(nameof(HasInheritedHeaders));
-        OnPropertyChanged(nameof(HasAutomaticHeaders));
-        OnPropertyChanged(nameof(HeadersSummary));
         OnPropertyChanged(nameof(ActiveEnvironmentName));
-    }
-
-    /// <summary>"Overrides X" on a row that replaces an inherited header, and a warning on one that replaces the auth header.</summary>
-    private void ShowOwnHeaderNotes(HttpRequestModel model, EffectiveHeaders effective)
-    {
-        // The resolved rows are the model's own row instances, so rows are matched by reference.
-        var resolvedByRow = effective.Own.ToDictionary<ResolvedHeader, KeyValueItem>(header => header.Item, ReferenceEqualityComparer.Instance);
-        Headers.SetRowTags(model.Headers.Select(row =>
-        {
-            if (!resolvedByRow.TryGetValue(row, out var header))
-                return ("", "");
-            // The nearest level that sets the name is the last inherited row of it (outermost first).
-            var overridden = header.OverridesOuter
-                ? effective.Inherited.LastOrDefault(inherited => string.Equals(inherited.Key, header.Key, StringComparison.OrdinalIgnoreCase))
-                : null;
-            return (overridden is null ? "" : $"{OverridesTagPrefix} {overridden.Source.Name}",
-                header.ReplacesAuthHeader ? ReplacesAuthTag : "");
-        }).ToList());
-    }
-
-    private HeaderRowViewModel CreateInheritedRow(ResolvedHeader header, PreparedRequest prepared)
-    {
-        var source = header.Source;
-        // Overridden by the request (its table is above) or by an inner folder; or left out by the body itself.
-        var replacedByBody = header.State == HeaderState.Sent && prepared.RowsReplacedByBody.Contains(header.Item);
-        var overriddenText = replacedByBody ? ReplacedByBodyTag
-            : header.OverriddenBy is { Kind: not HeaderSourceKind.Request } folder ? $"overridden by {folder.Name}"
-            : "overridden above";
-        return new HeaderRowViewModel(header.Key, header.Value, header.ReplacesAuthHeader ? ReplacesAuthTag : "")
-        {
-            OverriddenTagText = overriddenText,
-            IsTagWarning = header.ReplacesAuthHeader,
-            SourceName = source.Name,
-            IsSourceCollection = source.Kind == HeaderSourceKind.Collection,
-            OpenSource = () => _ = Services.OpenContainerAsync?.Invoke(source.Id),
-            CanSkip = true,
-            InitiallySent = header.State != HeaderState.Skipped,
-            IsOverridden = header.State == HeaderState.Overridden || replacedByBody,
-            SentChanged = OnInheritedHeaderSentChanged,
-        };
-    }
-
-    /// <summary>
-    /// Skips (or unskips) every inherited header of that name. The rows are updated in place rather than rebuilt, so
-    /// the checkbox the user just used keeps keyboard focus.
-    /// </summary>
-    private void OnInheritedHeaderSentChanged(HeaderRowViewModel row, bool isSent)
-    {
-        var name = row.Key.Trim();
-        _skippedInheritedHeaders.RemoveAll(skipped => string.Equals(skipped.Trim(), name, StringComparison.OrdinalIgnoreCase));
-        if (!isSent)
-            _skippedInheritedHeaders.Add(name);
-        if (_loading)
-            return;
-
-        try
-        {
-            var model = BuildModel();
-            var context = CreateContext();
-            var prepared = RequestPreparer.Preview(model, context);
-            var effective = context.ResolveHeaders(model);
-            // Same rows as before: skipping changes states, not which rows there are.
-            if (effective.Inherited.Count == InheritedHeaders.Count)
-            {
-                for (var i = 0; i < InheritedHeaders.Count; i++)
-                {
-                    var resolved = effective.Inherited[i];
-                    if (InheritedHeaders[i].IsOverridden)
-                        continue;
-                    InheritedHeaders[i].Update(resolved.State != HeaderState.Skipped, resolved.ReplacesAuthHeader ? ReplacesAuthTag : "",
-                        resolved.ReplacesAuthHeader);
-                }
-                AutomaticHeaders = CreateAutomaticRows(model, prepared, context.ResolveAuth(model.Auth));
-                OnPropertyChanged(nameof(AutomaticHeaders));
-                OnPropertyChanged(nameof(HasAutomaticHeaders));
-                OnPropertyChanged(nameof(HeadersSummary));
-            }
-            else
-            {
-                RefreshHeaderRows();
-            }
-        }
-        catch (Exception)
-        {
-            RefreshHeaderRows();
-        }
-        UpdateDirty();
-    }
-
-    /// <summary>
-    /// The headers that aren't set by the user. Where each comes from is recorded when the request is prepared, so
-    /// nothing is guessed from header names. Host and the multipart content type are not part of the prepared
-    /// request, and are added here.
-    /// </summary>
-    private static List<HeaderRowViewModel> CreateAutomaticRows(HttpRequestModel model, PreparedRequest prepared, EffectiveAuth auth)
-    {
-        var authTag = auth.InheritedFrom is { } source ? $"from auth · {source}" : "from auth";
-        var rows = new List<HeaderRowViewModel>();
-
-        if (Uri.TryCreate(prepared.Url, UriKind.Absolute, out var uri))
-            rows.Add(new HeaderRowViewModel("Host", uri.IsDefaultPort ? uri.Host : $"{uri.Host}:{uri.Port}", AutomaticHeaderTag));
-        foreach (var header in prepared.Headers)
-        {
-            var tag = prepared.OriginOf(header) switch
-            {
-                PreparedHeaderOrigin.Auth => authTag,
-                PreparedHeaderOrigin.Body => BodyHeaderTag,
-                PreparedHeaderOrigin.Default => AutomaticHeaderTag,
-                _ => null,
-            };
-            if (tag is not null)
-                rows.Add(new HeaderRowViewModel(header.Key, header.Value, tag));
-        }
-        if (model.Body.Mode is BodyMode.FormData)
-            rows.Add(new HeaderRowViewModel("Content-Type", "multipart/form-data; boundary=<calculated when request is sent>", BodyHeaderTag));
-        if (model.Body.Mode != BodyMode.None)
-            rows.Add(new HeaderRowViewModel("Content-Length", "<calculated when request is sent>", BodyHeaderTag));
-        return rows;
     }
 
     // ---- variables / workspace ----
@@ -620,7 +461,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     public override void OnVariablesChanged()
     {
         RefreshVariables();
-        RefreshHeaderRows();
+        RefreshPreview();
         Auth.RefreshInherited();
     }
 
@@ -629,7 +470,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         RefreshBreadcrumb();
         Auth.RefreshInherited();
         RefreshVariables();
-        RefreshHeaderRows();
+        RefreshPreview();
     }
 
     private void RefreshVariables() => Variables = CreateContext().BuildScope();
