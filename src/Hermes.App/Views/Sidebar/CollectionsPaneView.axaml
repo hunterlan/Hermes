@@ -24,7 +24,7 @@
       <TextBox Grid.Column="1" Classes="search" Margin="6,0,0,0" Text="{Binding Filter}" PlaceholderText="Search collections" />
     </Grid>
 
-    <StackPanel Grid.Row="1" IsVisible="{Binding IsEmpty}" Margin="24,40" Spacing="10">
+    <StackPanel Grid.Row="1" IsVisible="{Binding IsEmpty}" Margin="24,40" Spacing="{StaticResource Spacing10}">
       <TextBlock Text="Create a collection for your requests" FontWeight="SemiBold" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
       <TextBlock Classes="secondary" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap" TextAlignment="Center"
                  Text="A collection lets you group related requests and easily set common authorization and variables for all requests in it." />
@@ -37,7 +37,7 @@
               ScrollViewer.HorizontalScrollBarVisibility="Disabled">
       <TreeView.ItemTemplate>
         <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="sb:TreeNodeViewModel">
-          <Border Classes.dropTarget="{Binding IsDropTarget}" CornerRadius="3" Background="Transparent"
+          <Border Classes.dropTarget="{Binding IsDropTarget}" CornerRadius="{StaticResource RadiusXSmall}" Background="Transparent"
                   PointerPressed="OnRowPointerPressed" PointerMoved="OnRowPointerMoved" PointerReleased="OnRowPointerReleased"
                   ContextRequested="OnRowContextRequested">
             <Grid Classes="row rowHost" ColumnDefinitions="Auto,*,Auto" MinHeight="28" Background="Transparent">

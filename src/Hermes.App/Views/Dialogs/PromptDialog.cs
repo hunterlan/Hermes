@@ -32,25 +32,28 @@ public sealed class PromptDialog : Window
         var titleText = new TextBlock { Text = title, FontWeight = FontWeight.SemiBold };
         titleText.Bind(TextBlock.FontSizeProperty, this.GetResourceObservable("FontSizeTitle"));
 
-        Content = new StackPanel
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 6, 0, 0),
+            Children = { cancel, ok },
+        };
+        buttonPanel.Bind(StackPanel.SpacingProperty, this.GetResourceObservable("Spacing8"));
+
+        var layout = new StackPanel
         {
             Margin = new Thickness(20),
-            Spacing = 10,
             Children =
             {
                 titleText,
                 new TextBlock { Text = label, Classes = { "secondary" } },
                 _input,
-                new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    Spacing = 8,
-                    Margin = new Thickness(0, 6, 0, 0),
-                    Children = { cancel, ok },
-                },
+                buttonPanel,
             },
         };
+        layout.Bind(StackPanel.SpacingProperty, this.GetResourceObservable("Spacing10"));
+        Content = layout;
         _input.KeyDown += (_, e) =>
         {
             if (e.Key == Key.Enter)

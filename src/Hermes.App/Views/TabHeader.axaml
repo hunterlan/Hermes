@@ -41,7 +41,7 @@
   </UserControl.Styles>
 
   <Border Name="Root" Classes.active="{Binding IsActive}" Classes.dirty="{Binding IsDirty}" Classes.preview="{Binding IsPreview}"
-          Classes.pinned="{Binding IsPinned}" BorderThickness="0,0,0,2" Height="32" CornerRadius="8,8,0,0"
+          Classes.pinned="{Binding IsPinned}" BorderThickness="0,0,0,2" Height="32" CornerRadius="{StaticResource RadiusTabTop}"
           MinWidth="100" MaxWidth="300" Padding="10,0,4,0" PointerPressed="OnPointerPressed" PointerReleased="OnPointerReleased"
           ToolTip.Tip="{Binding Title}">
     <Border.ContextMenu>

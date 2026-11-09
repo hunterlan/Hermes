@@ -112,9 +112,9 @@ public sealed class VariableTextBox : UserControl
         {
             Child = _suggestionList,
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(6),
             Padding = new Thickness(4),
         };
+        suggestionBorder.Bind(Border.CornerRadiusProperty, this.GetResourceObservable("RadiusMedium"));
         suggestionBorder.Bind(Border.BackgroundProperty, this.GetResourceObservable("BgPrimaryBrush"));
         suggestionBorder.Bind(Border.BorderBrushProperty, this.GetResourceObservable("BorderStrongBrush"));
         _suggestionPopup = new Popup

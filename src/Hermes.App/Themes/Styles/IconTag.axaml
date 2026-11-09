@@ -6,7 +6,7 @@
     <ResourceDictionary>
       <!-- Same look as Border.tag plus ok/info/warn/err; the .status class is the larger response-status variant -->
       <ControlTheme x:Key="{x:Type c:IconTag}" TargetType="c:IconTag">
-        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
         <Setter Property="Padding" Value="7,1" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
@@ -18,7 +18,7 @@
             <Border Background="{TemplateBinding Background}"
                     CornerRadius="{TemplateBinding CornerRadius}"
                     Padding="{TemplateBinding Padding}">
-              <StackPanel Name="PART_Content" Orientation="Horizontal" Spacing="5">
+              <StackPanel Name="PART_Content" Orientation="Horizontal" Spacing="{StaticResource Spacing4}">
                 <PathIcon Name="PART_Icon" Data="{TemplateBinding Icon}" Width="11" Height="11"
                           IsVisible="{TemplateBinding Icon, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock Text="{TemplateBinding Text}" />
@@ -44,12 +44,12 @@
           <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
         </Style>
         <Style Selector="^.status">
-          <Setter Property="CornerRadius" Value="6" />
+          <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
           <Setter Property="Padding" Value="9,3" />
           <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
         </Style>
         <Style Selector="^.status /template/ StackPanel#PART_Content">
-          <Setter Property="Spacing" Value="6" />
+          <Setter Property="Spacing" Value="{StaticResource Spacing6}" />
         </Style>
         <Style Selector="^.status /template/ PathIcon#PART_Icon">
           <Setter Property="Width" Value="13" />

@@ -10,9 +10,9 @@
     <c:DialogHeader Title="Import" Subtitle="Postman Collection v2.0 / v2.1, Postman environment or globals, or a cURL command." />
 
     <!-- drop zone -->
-    <Border Grid.Row="1" Name="DropZone" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1" CornerRadius="6"
+    <Border Grid.Row="1" Name="DropZone" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusMedium}"
             Padding="16" Background="{DynamicResource BgSecondaryBrush}" DragDrop.AllowDrop="True">
-      <StackPanel Spacing="8" HorizontalAlignment="Center">
+      <StackPanel Spacing="{StaticResource Spacing8}" HorizontalAlignment="Center">
         <PathIcon Data="{StaticResource IconImport}" Width="28" Height="28" Foreground="{DynamicResource TextSecondaryBrush}" />
         <TextBlock HorizontalAlignment="Center" Text="Drop files here" />
         <Button HorizontalAlignment="Center" Classes="link" Content="or choose files" Command="{Binding ChooseFilesCommand}" />
@@ -43,7 +43,7 @@
                IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
     <c:DialogFooter Grid.Row="5">
-      <StackPanel Orientation="Horizontal" Spacing="8">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
         <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True" />
         <Button Classes="accent" Content="Import" Command="{Binding ImportCommand}" />
       </StackPanel>

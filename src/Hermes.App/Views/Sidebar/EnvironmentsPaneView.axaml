@@ -16,7 +16,7 @@
   <Grid RowDefinitions="Auto,*,Auto">
     <Button Grid.Row="2" Classes="outline" Margin="12,6,12,10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
             Command="{Binding OpenMatrixCommand}" ToolTip.Tip="Every variable in every environment, side by side">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
         <PathIcon Data="{StaticResource IconTable}" Width="13" Height="13" />
         <TextBlock Text="Compare all environments" />
       </StackPanel>
@@ -41,7 +41,7 @@
             <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                        IsVisible="{Binding !IsRenaming}" FontWeight="{Binding IsGlobals, Converter={x:Static sbv:EnvironmentsPaneView.BoldIf}}" />
             <c:InlineRenameBox Grid.Column="1" IsVisible="{Binding IsRenaming}" MinHeight="24" Padding="4,1" />
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="6,0">
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource Spacing4}" Margin="6,0">
               <c:IconTag Kind="Err" Icon="{StaticResource IconLock}" Text="Confirm" IsVisible="{Binding ConfirmBeforeSend}"
                          ToolTip.Tip="Asks before sending" />
               <Border Classes="tag warn" IsVisible="{Binding IsActive}" ToolTip.Tip="Active environment">

@@ -6,7 +6,7 @@
     <Setter Property="Background" Value="{DynamicResource BgPrimaryBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
     <Setter Property="Padding" Value="12,10" />
   </Style>
   <Style Selector="Border.chainNode.source">

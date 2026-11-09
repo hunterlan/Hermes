@@ -11,7 +11,7 @@
             <StackPanel>
               <Grid ColumnDefinitions="*,Auto">
                 <ToggleButton Classes="sectionHeader" IsChecked="{TemplateBinding IsExpanded, Mode=TwoWay}">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
                     <PathIcon Classes="chevron" />
                     <TextBlock Classes="title" Text="{TemplateBinding Header}" />
                     <TextBlock Classes="summary" Text="{TemplateBinding Summary}" Foreground="{TemplateBinding SummaryForeground}"

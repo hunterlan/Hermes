@@ -76,7 +76,7 @@
       </StackPanel>
     </ScrollViewer>
     <c:DialogFooter Grid.Row="2">
-      <StackPanel Orientation="Horizontal" Spacing="8">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
         <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True" />
         <Button Classes="accent" Content="Save" Command="{Binding SaveCommand}" IsDefault="True" />
       </StackPanel>

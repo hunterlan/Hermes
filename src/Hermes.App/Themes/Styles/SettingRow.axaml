@@ -11,7 +11,7 @@
               <ContentPresenter Name="PART_Leading" Content="{TemplateBinding Leading}"
                                 VerticalAlignment="Center" Margin="0,0,12,0"
                                 IsVisible="{TemplateBinding Leading, Converter={x:Static ObjectConverters.IsNotNull}}" />
-              <StackPanel Grid.Column="1" Spacing="2">
+              <StackPanel Grid.Column="1" Spacing="{StaticResource Spacing2}">
                 <TextBlock Text="{TemplateBinding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
                 <TextBlock Text="{TemplateBinding Hint}" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap"
                            Foreground="{DynamicResource TextSecondaryBrush}"
