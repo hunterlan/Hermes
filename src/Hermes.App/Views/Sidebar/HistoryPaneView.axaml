@@ -37,9 +37,9 @@
                   <DataTemplate x:DataType="sb:HistoryItemViewModel">
                     <Border Classes="historyRow rowHost" Tapped="OnItemTapped" ToolTip.Tip="{Binding Tooltip}" ContextRequested="OnContextRequested">
                       <Grid ColumnDefinitions="44,*,Auto,Auto" MinHeight="30">
-                        <c:MethodBadge Method="{Binding Method}" Compact="True" FontSize="10" HorizontalAlignment="Left" />
+                        <c:MethodBadge Method="{Binding Method}" Compact="True" FontSize="{StaticResource FontSizeMicro}" HorizontalAlignment="Left" />
                         <TextBlock Grid.Column="1" Text="{Binding Url}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,5" />
-                        <TextBlock Grid.Column="2" Text="{Binding Status}" FontSize="11" VerticalAlignment="Center" Margin="6,0,0,0"
+                        <TextBlock Grid.Column="2" Text="{Binding Status}" FontSize="{StaticResource FontSizeCaption}" VerticalAlignment="Center" Margin="6,0,0,0"
                                    Classes.success="{Binding IsSuccess}" Classes.error="{Binding IsError}" />
                         <Button Grid.Column="3" Classes="icon rowMenu" Width="22" Height="22" Padding="3" Click="OnDeleteClick" ToolTip.Tip="Delete">
                           <PathIcon Data="{StaticResource IconClose}" Width="11" Height="11" />

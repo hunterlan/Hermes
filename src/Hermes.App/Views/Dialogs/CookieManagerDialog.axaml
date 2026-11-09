@@ -29,7 +29,7 @@
                           <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" Margin="8,6" TextWrapping="Wrap" />
                           <TextBlock Grid.Column="2" Text="{Binding Path}" Margin="8,6" Classes="secondary" />
                           <TextBlock Grid.Column="3" Text="{Binding Expires}" Margin="8,6" Classes="secondary" />
-                          <TextBlock Grid.Column="4" Text="{Binding Flags}" Margin="8,6" Classes="tertiary" FontSize="11" />
+                          <TextBlock Grid.Column="4" Text="{Binding Flags}" Margin="8,6" Classes="tertiary" FontSize="{StaticResource FontSizeCaption}" />
                           <Button Grid.Column="5" Classes="icon" CommandParameter="{Binding}" ToolTip.Tip="Delete"
                                   Command="{Binding $parent[Window].((vm:CookieManagerViewModel)DataContext).DeleteCommand}">
                             <PathIcon Data="{StaticResource IconDelete}" />

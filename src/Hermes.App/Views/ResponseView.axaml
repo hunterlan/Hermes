@@ -60,7 +60,7 @@
                   ToolTip.Tip="{Binding ViewingEarlier.Label}">
             <TextBlock Text="Earlier response" />
           </Border>
-          <Button Classes="outline" FontSize="12" MinHeight="26" Padding="10,2" Margin="0,0,6,0" IsVisible="{Binding HasSavedResponses}"
+          <Button Classes="outline" FontSize="{StaticResource FontSizeSmall}" MinHeight="26" Padding="10,2" Margin="0,0,6,0" IsVisible="{Binding HasSavedResponses}"
                   ToolTip.Tip="Responses are saved with the request">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="{Binding SavedResponsesLabel}" VerticalAlignment="Center" />
@@ -104,7 +104,7 @@
                                   Command="{Binding SetViewModeCommand}" CommandParameter="{x:Static vm:ResponseViewMode.Preview}" />
                   </StackPanel>
                 </Border>
-                <TextBlock Classes="tertiary" Text="Large response: showing raw text" FontSize="12" VerticalAlignment="Center"
+                <TextBlock Classes="tertiary" Text="Large response: showing raw text" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center"
                            IsVisible="{Binding IsTooLargeForPretty}" />
               </StackPanel>
               <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2">
@@ -149,8 +149,8 @@
                     <DataTemplate x:DataType="core:KeyValueItem">
                       <Border Classes="tableRow">
                         <Grid ColumnDefinitions="*,2*">
-                          <SelectableTextBlock Classes="mono" Text="{Binding Key}" Margin="8,6" FontSize="12.5" TextWrapping="Wrap" />
-                          <SelectableTextBlock Grid.Column="1" Classes="mono" Text="{Binding Value}" Margin="8,6" FontSize="12.5" TextWrapping="Wrap" />
+                          <SelectableTextBlock Classes="mono" Text="{Binding Key}" Margin="8,6" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap" />
+                          <SelectableTextBlock Grid.Column="1" Classes="mono" Text="{Binding Value}" Margin="8,6" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap" />
                         </Grid>
                       </Border>
                     </DataTemplate>
@@ -204,7 +204,7 @@
           <TabItem.Header>
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="Sent request" VerticalAlignment="Center" />
-              <TextBlock Text="exact bytes" FontSize="11" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
+              <TextBlock Text="exact bytes" FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
             </StackPanel>
           </TabItem.Header>
           <Border Classes="table" Margin="0,6,0,0" Background="{DynamicResource BgCodeBrush}">
@@ -212,7 +212,7 @@
             <Grid RowDefinitions="Auto,*">
               <ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="0,8">
-                  <TextBlock Name="SentRequestLineText" Classes="mono" Text="{Binding SentRequestLine}" FontSize="12.5" FontWeight="SemiBold"
+                  <TextBlock Name="SentRequestLineText" Classes="mono" Text="{Binding SentRequestLine}" FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
                              Margin="16,0,16,6" TextTrimming="CharacterEllipsis" />
                   <v:HeaderListView Rows="{Binding SentHeaderRows}" />
                 </StackPanel>
@@ -227,8 +227,8 @@
       <!-- timing: what we measure, nothing invented -->
       <StackPanel Grid.Row="2" Spacing="6" Margin="0,10,0,0">
         <StackPanel Orientation="Horizontal" Spacing="8">
-          <TextBlock Text="Timing" FontWeight="SemiBold" FontSize="12" />
-          <TextBlock Classes="mono tertiary" FontSize="12" Text="{Binding TimeText, StringFormat='{}{0} total'}" />
+          <TextBlock Text="Timing" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
+          <TextBlock Classes="mono tertiary" FontSize="{StaticResource FontSizeSmall}" Text="{Binding TimeText, StringFormat='{}{0} total'}" />
         </StackPanel>
         <Grid Name="TimingBar" ColumnDefinitions="*,2,*" Height="8">
           <Border Background="{DynamicResource AccentBrush}" CornerRadius="4,0,0,4" />
@@ -237,11 +237,11 @@
         <StackPanel Orientation="Horizontal" Spacing="16">
           <StackPanel Orientation="Horizontal" Spacing="6">
             <Rectangle Width="8" Height="8" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
-            <TextBlock Classes="mono secondary" FontSize="11.5" Text="{Binding WaitText}" />
+            <TextBlock Classes="mono secondary" FontSize="{StaticResource FontSizeCaption}" Text="{Binding WaitText}" />
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="6">
             <Rectangle Width="8" Height="8" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center" />
-            <TextBlock Classes="mono secondary" FontSize="11.5" Text="{Binding DownloadText}" />
+            <TextBlock Classes="mono secondary" FontSize="{StaticResource FontSizeCaption}" Text="{Binding DownloadText}" />
           </StackPanel>
         </StackPanel>
       </StackPanel>

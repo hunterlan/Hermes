@@ -4,13 +4,13 @@
 
   <!-- Inputs -->
   <Style Selector="TextBox">
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
     <Setter Property="MinHeight" Value="30" />
     <Setter Property="Padding" Value="8,5" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="ComboBox">
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
     <Setter Property="MinHeight" Value="30" />
     <Setter Property="Padding" Value="8,4" />
   </Style>

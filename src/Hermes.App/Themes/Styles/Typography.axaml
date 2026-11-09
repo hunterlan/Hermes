@@ -5,7 +5,7 @@
     <Setter Property="Icon" Value="avares://Hermes/Assets/hermes.ico" />
     <Setter Property="Background" Value="{DynamicResource BgPrimaryBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
   </Style>
 
   <Style Selector="TextBlock.secondary">
@@ -15,11 +15,11 @@
     <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
   </Style>
   <Style Selector="TextBlock.h1">
-    <Setter Property="FontSize" Value="18" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeHeading}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="TextBlock.section">
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
   </Style>

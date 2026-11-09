@@ -5,9 +5,9 @@
     <ResourceDictionary>
       <!-- Fluent overrides: compact tabs with an accent pipe -->
       <x:Double x:Key="TabItemMinHeight">34</x:Double>
-      <x:Double x:Key="TabItemHeaderFontSize">13</x:Double>
+      <StaticResource x:Key="TabItemHeaderFontSize" ResourceKey="FontSizeBody" />
       <Thickness x:Key="TabItemHeaderMargin">10,0</Thickness>
-      <x:Double x:Key="ControlContentThemeFontSize">13</x:Double>
+      <StaticResource x:Key="ControlContentThemeFontSize" ResourceKey="FontSizeBody" />
     </ResourceDictionary>
   </Styles.Resources>
 

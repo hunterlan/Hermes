@@ -9,7 +9,7 @@
     <Setter Property="Background" Value="{DynamicResource BgTertiaryBrush}" />
   </Style>
   <Style Selector="Border.tag TextBlock">
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <!-- Foreground is set through the inherited TextElement.Foreground so text and icons both pick it up -->
@@ -43,7 +43,7 @@
   </Style>
   <Style Selector="Border.kbd TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
-    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
     <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
   </Style>
 </Styles>

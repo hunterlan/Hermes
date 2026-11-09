@@ -23,7 +23,7 @@
         <Panel>
           <Button Classes="ghost" Padding="4,2" Command="{Binding StartRenameCommand}" IsVisible="{Binding !IsRenaming}"
                   Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="Rename">
-            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="15" />
+            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="{StaticResource FontSizeTitle}" />
           </Button>
           <c:InlineRenameBox Name="NameBox" IsVisible="{Binding IsRenaming}" MinWidth="240" MinHeight="26" Padding="6,2" />
         </Panel>
@@ -83,8 +83,8 @@
     <StackPanel Name="ResolvedUrlLine" Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="2,8,0,4"
                 IsVisible="{Binding HasUrlSubstitutions}">
       <PathIcon Data="{StaticResource IconArrowRight}" Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-      <TextBlock Classes="secondary" Text="Sends to" FontSize="12" VerticalAlignment="Center" />
-      <SelectableTextBlock Classes="mono" Text="{Binding ResolvedUrl}" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
+      <TextBlock Classes="secondary" Text="Sends to" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
+      <SelectableTextBlock Classes="mono" Text="{Binding ResolvedUrl}" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" TextWrapping="Wrap" />
       <Border Classes="tag warn" IsVisible="{Binding ActiveEnvironmentName, Converter={x:Static ObjectConverters.IsNotNull}}">
         <TextBlock Text="{Binding ActiveEnvironmentName}" />
       </Border>
@@ -114,8 +114,8 @@
               <c:CollapsibleSection.HeaderActions>
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <ComboBox ItemsSource="{x:Static vm:RequestTabViewModel.RawLanguages}" SelectedItem="{Binding SelectedRawLanguage}"
-                            IsVisible="{Binding IsBodyRaw}" MinWidth="100" MinHeight="26" Padding="8,2" FontSize="12" />
-                  <Button Classes="outline" Content="Format" FontSize="12" MinHeight="26" Padding="10,2" Command="{Binding BeautifyCommand}"
+                            IsVisible="{Binding IsBodyRaw}" MinWidth="100" MinHeight="26" Padding="8,2" FontSize="{StaticResource FontSizeSmall}" />
+                  <Button Classes="outline" Content="Format" FontSize="{StaticResource FontSizeSmall}" MinHeight="26" Padding="10,2" Command="{Binding BeautifyCommand}"
                           IsVisible="{Binding IsBodyRaw}" ToolTip.Tip="Beautify" />
                 </StackPanel>
               </c:CollapsibleSection.HeaderActions>
@@ -136,7 +136,7 @@
                 <Panel Grid.Row="1">
                   <StackPanel IsVisible="{Binding IsBodyNone}" Spacing="6" Margin="0,4">
                     <TextBlock Classes="tertiary" Text="This request does not have a body." />
-                    <TextBlock Classes="tertiary" FontSize="12" IsVisible="{Binding HasUnsupportedBody}" TextWrapping="Wrap"
+                    <TextBlock Classes="tertiary" FontSize="{StaticResource FontSizeSmall}" IsVisible="{Binding HasUnsupportedBody}" TextWrapping="Wrap"
                                Text="The imported body uses a mode Hermes doesn't support (e.g. GraphQL); it is kept for export." />
                   </StackPanel>
                   <v:KeyValueTable DataContext="{Binding FormData}" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).IsBodyFormData}" />
@@ -198,7 +198,7 @@
           <!-- Not used yet -->
           <Border Classes="section" Padding="0,12,0,0" IsVisible="{Binding HasUnusedSections}">
             <WrapPanel ItemSpacing="8" LineSpacing="8">
-              <TextBlock Classes="tertiary" Text="Not used yet" FontSize="12" VerticalAlignment="Center" />
+              <TextBlock Classes="tertiary" Text="Not used yet" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
               <Button Classes="chip" Content="+ Query params" Command="{Binding AddSectionCommand}" CommandParameter="params"
                       IsVisible="{Binding !IsParamsSectionVisible}" />
               <Button Classes="chip" Content="+ Body" Command="{Binding AddSectionCommand}" CommandParameter="body"

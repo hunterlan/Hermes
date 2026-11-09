@@ -31,7 +31,7 @@
     </Style>
     <Style Selector="TextBox.matrix">
       <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
-      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
     </Style>
   </UserControl.Styles>
 
@@ -39,7 +39,7 @@
     <Grid ColumnDefinitions="*,Auto">
       <StackPanel Spacing="2">
         <TextBlock Classes="h1" Text="Variables across environments" />
-        <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
+        <TextBlock Classes="secondary" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap"
                    Text="Edit a variable in every environment in one row. Empty cells fall back to Globals. Resolution order: request, folder, collection, environment, globals." />
       </StackPanel>
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
@@ -85,7 +85,7 @@
                                   IsVisible="{Binding ConfirmBeforeSend}" />
                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
                       </StackPanel>
-                      <TextBlock Text="{Binding Caption}" FontSize="11" Classes="tertiary" />
+                      <TextBlock Text="{Binding Caption}" FontSize="{StaticResource FontSizeCaption}" Classes="tertiary" />
                     </StackPanel>
                   </Border>
                 </DataTemplate>
@@ -119,7 +119,7 @@
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                   <Border Grid.Column="2" Classes="cell usedCell" Padding="12,0">
-                    <TextBlock Text="{Binding UsedByText}" Classes="secondary" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding UsedByText}" Classes="secondary" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
                   </Border>
                 </Grid>
               </DataTemplate>
@@ -131,7 +131,7 @@
 
     <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,12,0,14">
       <PathIcon Data="{StaticResource IconKey}" Width="13" Height="13" Foreground="{DynamicResource SuccessBrush}" />
-      <TextBlock Classes="secondary" FontSize="12" Text="Secret values are masked on screen." VerticalAlignment="Center" />
+      <TextBlock Classes="secondary" FontSize="{StaticResource FontSizeSmall}" Text="Secret values are masked on screen." VerticalAlignment="Center" />
     </StackPanel>
   </Grid>
 </UserControl>

@@ -48,13 +48,13 @@ public sealed class CodeEditor : UserControl
         _editor = new TextEditor
         {
             FontFamily = (FontFamily?)Application.Current?.FindResource("MonoFont") ?? FontFamily.Default,
-            FontSize = 13,
             ShowLineNumbers = true,
             HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
             Background = Brushes.Transparent,
             Padding = new Thickness(4, 4, 0, 4),
         };
+        _editor.Bind(FontSizeProperty, this.GetResourceObservable("FontSizeBody"));
         _editor.Options.EnableHyperlinks = false;
         _editor.Options.EnableEmailHyperlinks = false;
         _editor.Options.ConvertTabsToSpaces = true;

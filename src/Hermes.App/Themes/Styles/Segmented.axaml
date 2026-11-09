@@ -13,7 +13,7 @@
     <Setter Property="CornerRadius" Value="5" />
     <Setter Property="Padding" Value="10,3" />
     <Setter Property="MinHeight" Value="0" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
     <Setter Property="FontWeight" Value="Medium" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />

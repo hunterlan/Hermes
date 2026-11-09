@@ -35,13 +35,16 @@ public sealed class MessageDialog : Window
             buttonPanel.Children.Add(button);
         }
 
+        var titleText = new TextBlock { Text = title, FontWeight = FontWeight.SemiBold };
+        titleText.Bind(TextBlock.FontSizeProperty, this.GetResourceObservable("FontSizeTitle"));
+
         Content = new StackPanel
         {
             Margin = new Thickness(20),
             Spacing = 14,
             Children =
             {
-                new TextBlock { Text = title, FontSize = 16, FontWeight = FontWeight.SemiBold },
+                titleText,
                 new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
                 buttonPanel,
             },

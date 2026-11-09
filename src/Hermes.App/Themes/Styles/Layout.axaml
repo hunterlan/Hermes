@@ -3,7 +3,7 @@
 
   <!-- Compact tabs -->
   <Style Selector="TabItem">
-    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
     <Setter Property="MinHeight" Value="34" />
     <Setter Property="Padding" Value="10,0" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />

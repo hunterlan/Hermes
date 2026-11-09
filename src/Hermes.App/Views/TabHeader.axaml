@@ -60,7 +60,7 @@
       <PathIcon Data="{StaticResource IconPin}" Width="12" Height="12" Margin="0,0,6,0" IsVisible="{Binding IsPinned}"
                 AutomationProperties.Name="Pinned" />
       <Panel Grid.Column="1" Margin="0,0,7,0" VerticalAlignment="Center">
-        <c:MethodBadge Method="{Binding Method}" Compact="True" FontSize="10" IsVisible="{Binding Method, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <c:MethodBadge Method="{Binding Method}" Compact="True" FontSize="{StaticResource FontSizeMicro}" IsVisible="{Binding Method, Converter={x:Static ObjectConverters.IsNotNull}}" />
         <PathIcon Data="{Binding KindIconKey, Converter={x:Static vm:UiConverters.IconFromKey}}" Width="12" Height="12"
                   Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center"
                   AutomationProperties.Name="{Binding KindName}"
