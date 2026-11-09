@@ -11,7 +11,7 @@
   <Grid ColumnDefinitions="*,Auto">
     <StackPanel Orientation="Horizontal" Spacing="10">
       <PathIcon Data="{Binding #Header.Icon}" Width="18" Height="18" Foreground="{DynamicResource TextSecondaryBrush}" />
-      <TextBox Text="{Binding #Header.Title, Mode=TwoWay}" IsVisible="{Binding #Header.IsTitleEditable}" FontSize="16" FontWeight="SemiBold"
+      <TextBox Text="{Binding #Header.Title, Mode=TwoWay}" IsVisible="{Binding #Header.IsTitleEditable}" FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold"
                MinWidth="260" BorderThickness="0" Background="Transparent" Padding="4,2" />
       <TextBlock Classes="h1" Text="{Binding #Header.ReadOnlyTitle}" IsVisible="{Binding !#Header.IsTitleEditable}" VerticalAlignment="Center" />
     </StackPanel>

@@ -7,6 +7,7 @@
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="avares://Hermes/Themes/Palette.axaml" />
+        <ResourceInclude Source="avares://Hermes/Themes/Sizes.axaml" />
         <ResourceInclude Source="avares://Hermes/Themes/Icons.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>

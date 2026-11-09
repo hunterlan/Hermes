@@ -29,13 +29,16 @@ public sealed class PromptDialog : Window
         var cancel = new Button { Content = "Cancel", IsCancel = true };
         cancel.Click += (_, _) => Close(null);
 
+        var titleText = new TextBlock { Text = title, FontWeight = FontWeight.SemiBold };
+        titleText.Bind(TextBlock.FontSizeProperty, this.GetResourceObservable("FontSizeTitle"));
+
         Content = new StackPanel
         {
             Margin = new Thickness(20),
             Spacing = 10,
             Children =
             {
-                new TextBlock { Text = title, FontSize = 16, FontWeight = FontWeight.SemiBold },
+                titleText,
                 new TextBlock { Text = label, Classes = { "secondary" } },
                 _input,
                 new StackPanel

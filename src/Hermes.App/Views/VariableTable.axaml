@@ -20,7 +20,7 @@
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Classes="section" Text="Current value"
                          ToolTip.Tip="Local value used when sending requests. Never exported." />
-              <Button Grid.Column="1" Classes="link" FontSize="12" Content="Reset all" Margin="8,0"
+              <Button Grid.Column="1" Classes="link" FontSize="{StaticResource FontSizeSmall}" Content="Reset all" Margin="8,0"
                       Command="{Binding ResetCurrentValuesCommand}" ToolTip.Tip="Reset all current values to their initial values" />
             </Grid>
           </Border>
@@ -35,7 +35,7 @@
                 <TextBox Grid.Column="1" Classes="cell" Text="{Binding Key}" PlaceholderText="Add new variable" />
                 <Border Grid.Column="2" Classes="cellSep">
                   <ComboBox SelectedIndex="{Binding IsSecret, Converter={x:Static v:KeyValueTable.BoolToIndex}}" BorderThickness="0"
-                            Background="Transparent" HorizontalAlignment="Stretch" MinHeight="28" FontSize="12">
+                            Background="Transparent" HorizontalAlignment="Stretch" MinHeight="28" FontSize="{StaticResource FontSizeSmall}">
                     <ComboBoxItem>default</ComboBoxItem>
                     <ComboBoxItem>secret</ComboBoxItem>
                   </ComboBox>

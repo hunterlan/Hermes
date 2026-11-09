@@ -13,7 +13,7 @@
                                 IsVisible="{TemplateBinding Leading, Converter={x:Static ObjectConverters.IsNotNull}}" />
               <StackPanel Grid.Column="1" Spacing="2">
                 <TextBlock Text="{TemplateBinding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                <TextBlock Text="{TemplateBinding Hint}" FontSize="12" TextWrapping="Wrap"
+                <TextBlock Text="{TemplateBinding Hint}" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            IsVisible="{TemplateBinding Hint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 <ContentPresenter Content="{TemplateBinding Details}"

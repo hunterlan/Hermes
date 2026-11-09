@@ -65,8 +65,8 @@ public sealed class VariableTextBox : UserControl
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Background = Brushes.Transparent,
             VerticalAlignment = VerticalAlignment.Center,
-            FontSize = 13,
         };
+        _editor.Bind(FontSizeProperty, this.GetResourceObservable("FontSizeBody"));
         _editor.Options.EnableHyperlinks = false;
         _editor.Options.EnableEmailHyperlinks = false;
         _editor.Options.HighlightCurrentLine = false;
@@ -90,8 +90,8 @@ public sealed class VariableTextBox : UserControl
             IsHitTestVisible = false,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(1, 0, 0, 0),
-            FontSize = 13,
         };
+        _watermark.Bind(TextBlock.FontSizeProperty, this.GetResourceObservable("FontSizeBody"));
         _watermark.Bind(TextBlock.ForegroundProperty, this.GetResourceObservable("TextTertiaryBrush"));
 
         _suggestionList = new ListBox
@@ -380,17 +380,18 @@ public sealed class VariableTextBox : UserControl
 
     private Control BuildSuggestionRow(VariableSuggestion item)
     {
-        var name = new TextBlock { Text = item.Name, FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center };
+        var name = new TextBlock { Text = item.Name, VerticalAlignment = VerticalAlignment.Center };
         name.Bind(TextBlock.FontFamilyProperty, this.GetResourceObservable("MonoFont"));
+        name.Bind(TextBlock.FontSizeProperty, this.GetResourceObservable("FontSizeSmall"));
         var value = new TextBlock
         {
             Text = item.Value is null ? "dynamic" : item.Value.Length == 0 ? "(empty)" : item.Value,
-            FontSize = 12,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(16, 0, 0, 0),
         };
+        value.Bind(TextBlock.FontSizeProperty, this.GetResourceObservable("FontSizeSmall"));
         value.Bind(TextBlock.ForegroundProperty, this.GetResourceObservable("TextTertiaryBrush"));
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*") };
         Grid.SetColumn(value, 1);

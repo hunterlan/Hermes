@@ -22,7 +22,7 @@
   </Style>
   <Style Selector="TextBlock.chainDetail">
     <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
   </Style>
   <Style Selector="TextBlock.chainDetail.struck">
     <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />

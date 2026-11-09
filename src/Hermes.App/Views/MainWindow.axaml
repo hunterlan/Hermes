@@ -41,7 +41,7 @@
       <Setter Property="MaxWidth" Value="120" />
     </Style>
     <Style Selector="Border.statusBar TextBlock">
-      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
       <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
@@ -49,7 +49,7 @@
       <Setter Property="Padding" Value="6,0" />
       <Setter Property="MinHeight" Value="0" />
       <Setter Property="Height" Value="23" />
-      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
   </Window.Styles>
@@ -68,7 +68,7 @@
         <StackPanel Name="HeaderLeadingGroup" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
           <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <PathIcon Data="{StaticResource IconLogo}" Foreground="{DynamicResource AccentBrush}" Width="18" Height="18" />
-            <TextBlock Text="Hermes" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" />
+            <TextBlock Text="Hermes" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSubtitle}" VerticalAlignment="Center" />
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="4" Margin="12,0,0,0" VerticalAlignment="Center">
             <Border Width="1" Height="18" Background="{DynamicResource BorderBrush}" Margin="0,0,8,0" />
@@ -105,7 +105,7 @@
                   AutomationProperties.Name="{Binding EnvironmentButtonText, StringFormat='Active environment: {0}. Change environment'}">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <c:EnvironmentColorDot Name="EnvironmentButtonDot" Color="{Binding ActiveEnvironmentColor}" />
-              <TextBlock Text="ENV" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
+              <TextBlock Text="ENV" FontSize="{StaticResource FontSizeCaption}" FontWeight="SemiBold" Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
               <TextBlock Name="EnvironmentNameText" Text="{Binding EnvironmentButtonText}" FontWeight="SemiBold" VerticalAlignment="Center"
                          TextTrimming="CharacterEllipsis" />
               <PathIcon Data="{StaticResource IconLock}" Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}"
@@ -132,7 +132,7 @@
                                      Classes.secondary="{Binding IsMuted}" Classes.active="{Binding IsActive}" />
                           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding AsksFirst}">
                             <PathIcon Data="{StaticResource IconLock}" Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                            <TextBlock Classes="tertiary" FontSize="11" Text="asks first" VerticalAlignment="Center" />
+                            <TextBlock Classes="tertiary" FontSize="{StaticResource FontSizeCaption}" Text="asks first" VerticalAlignment="Center" />
                           </StackPanel>
                           <PathIcon Grid.Column="3" Data="{StaticResource IconCheck}" Width="14" Height="14"
                                     Foreground="{DynamicResource AccentBrush}" IsVisible="{Binding IsActive}" />
@@ -145,20 +145,20 @@
                   <StackPanel IsVisible="{Binding HasActiveEnvironment}">
                     <Grid ColumnDefinitions="*,Auto" Margin="14,4,14,4">
                       <TextBlock Classes="caption" Text="{Binding QuickLookEnvironmentTitle, Converter={x:Static vm:UiConverters.Upper}}" />
-                      <Button Grid.Column="1" Classes="link" Content="Edit" FontSize="12" Command="{Binding EditActiveEnvironmentCommand}" />
+                      <Button Grid.Column="1" Classes="link" Content="Edit" FontSize="{StaticResource FontSizeSmall}" Command="{Binding EditActiveEnvironmentCommand}" />
                     </Grid>
                     <v:QuickLookTable DataContext="{Binding QuickLookEnvironment}" Margin="14,0,14,8" />
                   </StackPanel>
                   <Border IsVisible="{Binding !HasActiveEnvironment}" Background="{DynamicResource BgTertiaryBrush}" CornerRadius="7"
                           Margin="14,2,14,10" Padding="12,10">
-                    <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap"
+                    <TextBlock Classes="secondary" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap"
                                Text="Requests use Globals only. Pick an environment above to layer its values on top." />
                   </Border>
 
                   <Border Classes="picker-rule" />
                   <Grid ColumnDefinitions="*,Auto" Margin="14,4,14,4">
                     <TextBlock Classes="caption" Text="{Binding QuickLookGlobalsTitle, Converter={x:Static vm:UiConverters.Upper}}" />
-                    <Button Grid.Column="1" Classes="link" Content="Edit" FontSize="12" Command="{Binding EditGlobalsCommand}" />
+                    <Button Grid.Column="1" Classes="link" Content="Edit" FontSize="{StaticResource FontSizeSmall}" Command="{Binding EditGlobalsCommand}" />
                   </Grid>
                   <v:QuickLookTable DataContext="{Binding QuickLookGlobals}" Margin="14,0,14,8" />
 
@@ -204,8 +204,8 @@
           <Border Grid.Row="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="14,6">
             <Grid ColumnDefinitions="Auto,*,Auto">
               <PathIcon Data="{StaticResource IconFile}" Width="13" Height="13" Foreground="{DynamicResource TextTertiaryBrush}" />
-              <TextBlock Grid.Column="1" Classes="mono tertiary" Text="Plain files on disk" FontSize="12" Margin="8,0" VerticalAlignment="Center" />
-              <Button Grid.Column="2" Classes="link" Content="Reveal" FontSize="12" Command="{Binding RevealDataDirectoryCommand}"
+              <TextBlock Grid.Column="1" Classes="mono tertiary" Text="Plain files on disk" FontSize="{StaticResource FontSizeSmall}" Margin="8,0" VerticalAlignment="Center" />
+              <Button Grid.Column="2" Classes="link" Content="Reveal" FontSize="{StaticResource FontSizeSmall}" Command="{Binding RevealDataDirectoryCommand}"
                       ToolTip.Tip="{Binding DataDirectory}" />
             </Grid>
           </Border>
@@ -269,16 +269,16 @@
         <ScrollViewer Grid.Row="1" Grid.RowSpan="1" IsVisible="{Binding !HasTabs}">
           <StackPanel Width="440" Spacing="0" Margin="56,48" HorizontalAlignment="Center" VerticalAlignment="Center">
             <PathIcon Data="{StaticResource IconLogo}" Width="40" Height="40" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" />
-            <TextBlock Text="Send a request." FontSize="32" FontWeight="SemiBold" Margin="0,14,0,6" TextAlignment="Center" />
-            <TextBlock Classes="secondary" FontSize="14" TextWrapping="Wrap" Margin="0,0,0,24" TextAlignment="Center"
+            <TextBlock Text="Send a request." FontSize="{StaticResource FontSizeDisplay}" FontWeight="SemiBold" Margin="0,14,0,6" TextAlignment="Center" />
+            <TextBlock Classes="secondary" FontSize="{StaticResource FontSizeSubtitle}" TextWrapping="Wrap" Margin="0,0,0,24" TextAlignment="Center"
                        Text="There is no sign-up and no cloud. Everything is kept as plain JSON files in your data folder." />
             <StackPanel Spacing="10">
               <Button Classes="welcome" Command="{Binding NewRequestCommand}">
                 <Grid ColumnDefinitions="Auto,*,Auto">
                   <Border Classes="welcomeIcon"><PathIcon Data="{StaticResource IconPlus}" /></Border>
                   <StackPanel Grid.Column="1" Margin="14,0">
-                    <TextBlock Text="New request" FontWeight="SemiBold" FontSize="14" />
-                    <TextBlock Classes="secondary" FontSize="12.5" Text="Paste a cURL command into the URL bar to import it" TextWrapping="Wrap" />
+                    <TextBlock Text="New request" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSubtitle}" />
+                    <TextBlock Classes="secondary" FontSize="{StaticResource FontSizeSmall}" Text="Paste a cURL command into the URL bar to import it" TextWrapping="Wrap" />
                   </StackPanel>
                   <Border Grid.Column="2" Classes="kbd"><TextBlock Text="Ctrl T" /></Border>
                 </Grid>
@@ -287,8 +287,8 @@
                 <Grid ColumnDefinitions="Auto,*,Auto">
                   <Border Classes="welcomeIcon"><PathIcon Data="{StaticResource IconImport}" /></Border>
                   <StackPanel Grid.Column="1" Margin="14,0">
-                    <TextBlock Text="Import" FontWeight="SemiBold" FontSize="14" />
-                    <TextBlock Classes="secondary" FontSize="12.5" Text="Postman collection or environment, cURL" TextWrapping="Wrap" />
+                    <TextBlock Text="Import" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSubtitle}" />
+                    <TextBlock Classes="secondary" FontSize="{StaticResource FontSizeSmall}" Text="Postman collection or environment, cURL" TextWrapping="Wrap" />
                   </StackPanel>
                   <Border Grid.Column="2" Classes="kbd"><TextBlock Text="Ctrl O" /></Border>
                 </Grid>
@@ -297,8 +297,8 @@
                 <Grid ColumnDefinitions="Auto,*">
                   <Border Classes="welcomeIcon"><PathIcon Data="{StaticResource IconFolderOutline}" /></Border>
                   <StackPanel Grid.Column="1" Margin="14,0">
-                    <TextBlock Text="New collection" FontWeight="SemiBold" FontSize="14" />
-                    <TextBlock Classes="secondary" FontSize="12.5" Text="Group requests and share auth and variables" TextWrapping="Wrap" />
+                    <TextBlock Text="New collection" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSubtitle}" />
+                    <TextBlock Classes="secondary" FontSize="{StaticResource FontSizeSmall}" Text="Group requests and share auth and variables" TextWrapping="Wrap" />
                   </StackPanel>
                 </Grid>
               </Button>
@@ -306,8 +306,8 @@
                 <Grid ColumnDefinitions="Auto,*,Auto">
                   <Border Classes="welcomeIcon"><PathIcon Data="{StaticResource IconHelp}" /></Border>
                   <StackPanel Grid.Column="1" Margin="14,0">
-                    <TextBlock Text="User manual" FontWeight="SemiBold" FontSize="14" />
-                    <TextBlock Classes="secondary" FontSize="12.5" Text="Works offline" TextWrapping="Wrap" />
+                    <TextBlock Text="User manual" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSubtitle}" />
+                    <TextBlock Classes="secondary" FontSize="{StaticResource FontSizeSmall}" Text="Works offline" TextWrapping="Wrap" />
                   </StackPanel>
                   <Border Grid.Column="2" Classes="kbd"><TextBlock Text="F1" /></Border>
                 </Grid>
@@ -357,12 +357,12 @@
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:PaletteItem">
                 <Grid ColumnDefinitions="56,*,Auto" MinHeight="30">
-                  <c:MethodBadge Method="{Binding Method}" Compact="True" FontSize="10" IsVisible="{Binding IsRequest}" VerticalAlignment="Center" />
+                  <c:MethodBadge Method="{Binding Method}" Compact="True" FontSize="{StaticResource FontSizeMicro}" IsVisible="{Binding IsRequest}" VerticalAlignment="Center" />
                   <PathIcon Data="{StaticResource IconArrowRight}" Width="12" Height="12" IsVisible="{Binding !IsRequest}"
                             Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Left" />
                   <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding Detail}" Classes="tertiary" FontSize="11.5" TextTrimming="CharacterEllipsis"
+                    <TextBlock Text="{Binding Detail}" Classes="tertiary" FontSize="{StaticResource FontSizeCaption}" TextTrimming="CharacterEllipsis"
                                IsVisible="{Binding Detail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                   </StackPanel>
                   <Border Grid.Column="2" Classes="kbd" IsVisible="{Binding HasShortcut}" Margin="8,0,0,0">

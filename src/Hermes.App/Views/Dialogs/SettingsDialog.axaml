@@ -28,7 +28,7 @@
         <c:SettingRow Title="Tabs kept ready"
                       Hint="The most recently used tabs, the open one included, switch back instantly. Each one keeps its view in memory: a few MB, or about 60 MB with a 1 MB response. Other tabs take a moment to reload.">
           <c:SettingRow.Details>
-            <TextBlock Text="{Binding TabViewPoolSizeError}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource ErrorBrush}"
+            <TextBlock Text="{Binding TabViewPoolSizeError}" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorBrush}"
                        IsVisible="{Binding TabViewPoolSizeError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </c:SettingRow.Details>
           <TextBox Width="140" VerticalAlignment="Top" Text="{Binding TabViewPoolSizeText}" />
@@ -56,7 +56,7 @@
         <c:SettingRow Title="History retention (days)"
                       Hint="Number of days to keep, counting today. 0 keeps history forever.">
           <c:SettingRow.Details>
-            <TextBlock Text="{Binding HistoryRetentionError}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource ErrorBrush}"
+            <TextBlock Text="{Binding HistoryRetentionError}" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap" Foreground="{DynamicResource ErrorBrush}"
                        IsVisible="{Binding HistoryRetentionError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </c:SettingRow.Details>
           <TextBox Width="140" VerticalAlignment="Top" Text="{Binding HistoryRetentionText}" />
@@ -71,7 +71,7 @@
         <c:SettingRow Title="User manual" Hint="Works offline. Closes this dialog without saving changes.">
           <Button Content="Open manual" Command="{Binding OpenManualCommand}" />
         </c:SettingRow>
-        <TextBlock Text="Restart Hermes to use the new data folder." Foreground="{DynamicResource AccentBrush}" FontSize="12"
+        <TextBlock Text="Restart Hermes to use the new data folder." Foreground="{DynamicResource AccentBrush}" FontSize="{StaticResource FontSizeSmall}"
                    IsVisible="{Binding DataDirectoryChanged}" Margin="0,-8,0,8" />
       </StackPanel>
     </ScrollViewer>

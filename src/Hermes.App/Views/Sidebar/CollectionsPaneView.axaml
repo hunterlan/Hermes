@@ -26,7 +26,7 @@
 
     <StackPanel Grid.Row="1" IsVisible="{Binding IsEmpty}" Margin="24,40" Spacing="10">
       <TextBlock Text="Create a collection for your requests" FontWeight="SemiBold" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
-      <TextBlock Classes="secondary" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"
+      <TextBlock Classes="secondary" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap" TextAlignment="Center"
                  Text="A collection lets you group related requests and easily set common authorization and variables for all requests in it." />
       <Button Classes="ghost" HorizontalAlignment="Center" Content="Create Collection" Command="{Binding NewCollectionCommand}"
               BorderThickness="1" BorderBrush="{DynamicResource BorderStrongBrush}" />
@@ -46,7 +46,7 @@
                           Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsCollection}" />
                 <PathIcon Data="{StaticResource IconFolderOutline}" Width="14" Height="14" HorizontalAlignment="Left"
                           Foreground="{DynamicResource TextSecondaryBrush}" IsVisible="{Binding IsFolder}" />
-                <c:MethodBadge Method="{Binding $self.DataContext, Converter={x:Static sb:SidebarConverters.MethodOf}}" Compact="True" FontSize="10"
+                <c:MethodBadge Method="{Binding $self.DataContext, Converter={x:Static sb:SidebarConverters.MethodOf}}" Compact="True" FontSize="{StaticResource FontSizeMicro}"
                                HorizontalAlignment="Left" IsVisible="{Binding IsRequest}" />
               </Panel>
               <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,5"

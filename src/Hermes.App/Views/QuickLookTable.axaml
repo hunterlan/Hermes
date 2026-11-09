@@ -6,13 +6,13 @@
   <UserControl.Styles>
     <Style Selector="Grid.kv TextBlock">
       <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
-      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
       <Setter Property="LineHeight" Value="24" />
       <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     </Style>
   </UserControl.Styles>
   <Panel>
-    <TextBlock Classes="tertiary" FontSize="12" Text="No variables" IsVisible="{Binding IsEmpty}" />
+    <TextBlock Classes="tertiary" FontSize="{StaticResource FontSizeSmall}" Text="No variables" IsVisible="{Binding IsEmpty}" />
     <StackPanel IsVisible="{Binding !IsEmpty}" Grid.IsSharedSizeScope="True">
       <ItemsControl ItemsSource="{Binding Rows}">
         <ItemsControl.ItemTemplate>
@@ -38,7 +38,7 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
-      <TextBlock Classes="tertiary" FontSize="12" Margin="0,4,0,0" Text="{Binding MoreText}" IsVisible="{Binding HasMore}" />
+      <TextBlock Classes="tertiary" FontSize="{StaticResource FontSizeSmall}" Margin="0,4,0,0" Text="{Binding MoreText}" IsVisible="{Binding HasMore}" />
     </StackPanel>
   </Panel>
 </UserControl>
