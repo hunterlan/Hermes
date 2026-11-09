@@ -9,7 +9,7 @@
   <Grid RowDefinitions="Auto,*,Auto" Margin="20">
     <c:DialogHeader Margin="0,0,0,12" Title="Code snippet" Subtitle="cURL, with variables and auth resolved">
       <Button Command="{Binding CopyCommand}">
-        <StackPanel Orientation="Horizontal" Spacing="6">
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
           <PathIcon Width="14" Height="14" Data="{StaticResource IconCopy}" />
           <TextBlock Text="{Binding CopyText}" />
         </StackPanel>

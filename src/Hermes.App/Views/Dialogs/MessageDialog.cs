@@ -24,8 +24,8 @@ public sealed class MessageDialog : Window
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
-            Spacing = 8,
         };
+        buttonPanel.Bind(StackPanel.SpacingProperty, this.GetResourceObservable("Spacing8"));
         foreach (var (label, id, cls) in buttons)
         {
             var button = new Button { Content = label };
@@ -38,10 +38,9 @@ public sealed class MessageDialog : Window
         var titleText = new TextBlock { Text = title, FontWeight = FontWeight.SemiBold };
         titleText.Bind(TextBlock.FontSizeProperty, this.GetResourceObservable("FontSizeTitle"));
 
-        Content = new StackPanel
+        var layout = new StackPanel
         {
             Margin = new Thickness(20),
-            Spacing = 14,
             Children =
             {
                 titleText,
@@ -49,6 +48,8 @@ public sealed class MessageDialog : Window
                 buttonPanel,
             },
         };
+        layout.Bind(StackPanel.SpacingProperty, this.GetResourceObservable("Spacing14"));
+        Content = layout;
         KeyDown += (_, e) =>
         {
             if (e.Key == Avalonia.Input.Key.Escape)

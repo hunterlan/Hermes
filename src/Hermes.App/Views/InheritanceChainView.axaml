@@ -19,7 +19,7 @@
         <StackPanel>
           <Border Classes="chainNode" Classes.source="{Binding IsSource}">
             <Grid ColumnDefinitions="*,Auto">
-              <StackPanel Spacing="2">
+              <StackPanel Spacing="{StaticResource Spacing2}">
                 <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
                 <ItemsControl Classes="chainDetails" ItemsSource="{Binding Details}" IsVisible="{Binding HasDetails}">
                   <ItemsControl.ItemsPanel>

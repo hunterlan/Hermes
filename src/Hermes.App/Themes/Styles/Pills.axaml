@@ -9,7 +9,7 @@
   <Style Selector="ListBox.pills ListBoxItem">
     <Setter Property="Padding" Value="10,5" />
     <Setter Property="MinHeight" Value="0" />
-    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
   </Style>
   <Style Selector="ListBox.pills ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">

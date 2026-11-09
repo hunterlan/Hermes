@@ -5,7 +5,7 @@
              xmlns:v="using:Hermes.App.Views"
              x:Class="Hermes.App.Views.KeyValueTable"
              x:DataType="vm:KeyValueListViewModel">
-  <StackPanel Spacing="6">
+  <StackPanel Spacing="{StaticResource Spacing6}">
     <Border Classes="table" IsVisible="{Binding !IsBulkEdit}">
       <StackPanel>
         <!-- header -->
@@ -48,7 +48,7 @@
                       <TextBlock Text="{Binding TagText}" MaxWidth="200" TextTrimming="CharacterEllipsis" />
                     </Border>
                     <Border Grid.Column="3" Classes="tag warn" IsVisible="{Binding HasWarningTag}" Margin="0,0,4,0">
-                      <StackPanel Orientation="Horizontal" Spacing="5">
+                      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing4}">
                         <PathIcon Width="11" Height="11" Data="{StaticResource IconAlert}" />
                         <TextBlock Text="{Binding WarningTagText}" />
                       </StackPanel>
@@ -114,7 +114,7 @@
     </Border>
 
     <!-- bulk edit -->
-    <StackPanel Spacing="6" IsVisible="{Binding IsBulkEdit}">
+    <StackPanel Spacing="{StaticResource Spacing6}" IsVisible="{Binding IsBulkEdit}">
       <Grid ColumnDefinitions="*,Auto">
         <TextBlock Classes="tertiary" Text="Rows are separated by new lines. Keys and values are separated by ':'. Prepend '//' to disable a row." VerticalAlignment="Center" TextWrapping="Wrap" />
         <Button Grid.Column="1" Classes="link" Content="Key-Value Edit" Command="{Binding ToggleBulkEditCommand}" />

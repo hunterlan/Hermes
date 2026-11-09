@@ -37,14 +37,14 @@
 
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="20,14,20,0">
     <Grid ColumnDefinitions="*,Auto">
-      <StackPanel Spacing="2">
+      <StackPanel Spacing="{StaticResource Spacing2}">
         <TextBlock Classes="h1" Text="Variables across environments" />
         <TextBlock Classes="secondary" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap"
                    Text="Edit a variable in every environment in one row. Empty cells fall back to Globals. Resolution order: request, folder, collection, environment, globals." />
       </StackPanel>
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Spacing6}" VerticalAlignment="Top">
         <Button Classes="outline" Command="{Binding AddVariableCommand}">
-          <StackPanel Orientation="Horizontal" Spacing="6">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
             <PathIcon Data="{StaticResource IconPlus}" Width="12" Height="12" />
             <TextBlock Text="Add variable" />
           </StackPanel>
@@ -56,7 +56,7 @@
     </Grid>
 
     <!-- empty values in the active environment that saved requests use -->
-    <Border Grid.Row="1" Margin="0,12,0,0" Padding="14,10" CornerRadius="10" Background="{DynamicResource WarningBgBrush}"
+    <Border Grid.Row="1" Margin="0,12,0,0" Padding="14,10" CornerRadius="{StaticResource RadiusCard}" Background="{DynamicResource WarningBgBrush}"
             IsVisible="{Binding MissingWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
       <Grid ColumnDefinitions="Auto,*">
         <PathIcon Data="{StaticResource IconAlert}" Width="16" Height="16" Foreground="{DynamicResource WarningBrush}" Margin="0,0,12,0" />
@@ -64,7 +64,7 @@
       </Grid>
     </Border>
 
-    <Border Grid.Row="2" Margin="0,14,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" ClipToBounds="True"
+    <Border Grid.Row="2" Margin="0,14,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" ClipToBounds="True"
             VerticalAlignment="Top">
       <ScrollViewer HorizontalScrollBarVisibility="Auto">
         <StackPanel MinWidth="{Binding TableMinWidth}">
@@ -78,8 +78,8 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:MatrixColumn">
                   <Border Classes="cell headerCell" Classes.active="{Binding IsActive}">
-                    <StackPanel VerticalAlignment="Center" Spacing="1">
-                      <StackPanel Orientation="Horizontal" Spacing="6">
+                    <StackPanel VerticalAlignment="Center" Spacing="{StaticResource Spacing2}">
+                      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
                         <c:EnvironmentColorDot Color="{Binding Color}" IsVisible="{Binding ShowsColor}" />
                         <PathIcon Data="{StaticResource IconLock}" Width="11" Height="11" Foreground="{DynamicResource ErrorBrush}"
                                   IsVisible="{Binding ConfirmBeforeSend}" />
@@ -129,7 +129,7 @@
       </ScrollViewer>
     </Border>
 
-    <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,12,0,14">
+    <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="{StaticResource Spacing8}" Margin="0,12,0,14">
       <PathIcon Data="{StaticResource IconKey}" Width="13" Height="13" Foreground="{DynamicResource SuccessBrush}" />
       <TextBlock Classes="secondary" FontSize="{StaticResource FontSizeSmall}" Text="Secret values are masked on screen." VerticalAlignment="Center" />
     </StackPanel>

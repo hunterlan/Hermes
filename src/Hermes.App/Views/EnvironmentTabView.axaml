@@ -60,20 +60,20 @@
                 IsEnabled="{Binding !IsActiveEnvironment}" />
       </v:ContainerTabHeader.Actions>
     </v:ContainerTabHeader>
-    <StackPanel Grid.Row="1" Spacing="10" Margin="0,8,0,14">
+    <StackPanel Grid.Row="1" Spacing="{StaticResource Spacing10}" Margin="0,8,0,14">
       <TextBlock Classes="secondary" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap"
                  Text="Use variables as {{name}} in URLs, headers, bodies and auth. Environment variables override collection variables, which override globals." />
       <Border IsVisible="{Binding CanRename}" Background="{DynamicResource BgPrimaryBrush}" BorderBrush="{DynamicResource BorderBrush}"
-              BorderThickness="1" CornerRadius="10" Padding="14,12" HorizontalAlignment="Left" MaxWidth="640">
-        <StackPanel Spacing="12">
-          <StackPanel Spacing="6">
+              BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="14,12" HorizontalAlignment="Left" MaxWidth="640">
+        <StackPanel Spacing="{StaticResource Spacing12}">
+          <StackPanel Spacing="{StaticResource Spacing6}">
             <TextBlock Text="Color" FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
             <!-- a radio group: one tab stop, arrow keys move the choice -->
             <ListBox Name="ColorSwatches" Classes="swatches" ItemsSource="{Binding ColorChoices}" SelectedItem="{Binding Color}"
                      SelectionMode="Single,AlwaysSelected" AutomationProperties.Name="Environment color">
               <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
-                  <StackPanel Orientation="Horizontal" Spacing="6" />
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}" />
                 </ItemsPanelTemplate>
               </ListBox.ItemsPanel>
               <ListBox.ItemTemplate>

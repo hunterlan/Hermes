@@ -9,7 +9,7 @@
         <Setter Property="Template">
           <ControlTemplate>
             <Grid ColumnDefinitions="*,Auto">
-              <StackPanel Spacing="2">
+              <StackPanel Spacing="{StaticResource Spacing2}">
                 <TextBlock Classes="h1" Text="{TemplateBinding Title}" />
                 <TextBlock Classes="secondary" Text="{TemplateBinding Subtitle}"
                            IsVisible="{TemplateBinding Subtitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
@@ -27,7 +27,7 @@
           <ControlTemplate>
             <Grid ColumnDefinitions="Auto,*,Auto">
               <ContentPresenter Content="{TemplateBinding Leading}" VerticalAlignment="Center" />
-              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
                 <Button Name="PART_CloseButton" Content="{TemplateBinding CloseButtonText}"
                         IsCancel="{TemplateBinding CloseButtonText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                         IsVisible="{TemplateBinding CloseButtonText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />

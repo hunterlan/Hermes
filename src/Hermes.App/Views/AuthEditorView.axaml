@@ -13,21 +13,21 @@
 
   <Grid ColumnDefinitions="300,*">
     <!-- type selection and where auth comes from -->
-    <StackPanel Spacing="10" Margin="0,0,24,0">
+    <StackPanel Spacing="{StaticResource Spacing10}" Margin="0,0,24,0">
       <TextBlock Classes="section" Text="Auth Type" />
       <ListBox Classes="pills" ItemsSource="{Binding Types}" SelectedItem="{Binding SelectedType}">
         <ListBox.ItemsPanel>
-          <ItemsPanelTemplate><WrapPanel ItemSpacing="4" LineSpacing="4" /></ItemsPanelTemplate>
+          <ItemsPanelTemplate><WrapPanel ItemSpacing="{StaticResource Spacing4}" LineSpacing="{StaticResource Spacing4}" /></ItemsPanelTemplate>
         </ListBox.ItemsPanel>
       </ListBox>
       <TextBlock Classes="secondary" Text="{Binding TypeDescription}" TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}" />
 
-      <StackPanel Spacing="0" Margin="0,8,0,0" IsVisible="{Binding Chain.Count}">
+      <StackPanel Margin="0,8,0,0" IsVisible="{Binding Chain.Count}">
         <TextBlock Classes="section" Text="Where auth comes from" Margin="0,0,0,8" />
         <v:InheritanceChainView Nodes="{Binding Chain}" />
       </StackPanel>
 
-      <StackPanel Spacing="0" Margin="0,8,0,0" IsVisible="{Binding UsageSummary, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <StackPanel Margin="0,8,0,0" IsVisible="{Binding UsageSummary, Converter={x:Static ObjectConverters.IsNotNull}}">
         <TextBlock Classes="section" Text="Overrides inside" Margin="0,0,0,6" IsVisible="{Binding HasOverrides}" />
         <ItemsControl ItemsSource="{Binding Overrides}">
           <ItemsControl.ItemTemplate>
@@ -80,8 +80,8 @@
 
         <!-- oauth2 -->
         <ScrollViewer IsVisible="{Binding IsOAuth2}">
-          <StackPanel Spacing="14" Margin="0,0,12,12">
-            <StackPanel Spacing="8">
+          <StackPanel Spacing="{StaticResource Spacing14}" Margin="0,0,12,12">
+            <StackPanel Spacing="{StaticResource Spacing8}">
               <TextBlock Classes="section" Text="Current Token" />
               <Grid Classes="form" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto">
                 <TextBlock Classes="label" Text="Access Token" />
@@ -95,7 +95,7 @@
               </Grid>
             </StackPanel>
 
-            <StackPanel Spacing="8">
+            <StackPanel Spacing="{StaticResource Spacing8}">
               <TextBlock Classes="section" Text="Configure New Token" />
               <Grid Classes="form" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                 <TextBlock Classes="label" Text="Grant Type" />
@@ -134,7 +134,7 @@
                 <TextBlock Grid.Row="11" Classes="label" Text="Client Authentication" />
                 <ComboBox Grid.Row="11" Grid.Column="1" ItemsSource="{Binding ClientAuthOptions}" SelectedItem="{Binding SelectedClientAuth}" HorizontalAlignment="Stretch" />
               </Grid>
-              <StackPanel Orientation="Horizontal" Spacing="12" Margin="140,6,0,0">
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing12}" Margin="140,6,0,0">
                 <Button Classes="accent" Command="{Binding TokenButtonCommand}">
                   <Panel>
                     <TextBlock Text="Get New Access Token" IsVisible="{Binding !IsFetchingToken}" />
@@ -143,7 +143,7 @@
                 </Button>
                 <TextBlock Text="{Binding TokenStatus}" VerticalAlignment="Center" TextWrapping="Wrap" Classes="secondary" MaxWidth="460" />
               </StackPanel>
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="140,6,0,0" MaxWidth="620" HorizontalAlignment="Left"
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Spacing8}" Margin="140,6,0,0" MaxWidth="620" HorizontalAlignment="Left"
                     IsVisible="{Binding AuthorizationUrl, Converter={x:Static ObjectConverters.IsNotNull}}">
                 <SelectableTextBlock Text="{Binding AuthorizationUrl}" TextWrapping="Wrap" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
                 <Button Grid.Column="1" Classes="ghost" Content="Copy" Command="{Binding CopyAuthorizationUrlCommand}" VerticalAlignment="Top" />

@@ -9,7 +9,7 @@
     </Style>
   </UserControl.Styles>
   <Grid ColumnDefinitions="*,Auto">
-    <StackPanel Orientation="Horizontal" Spacing="10">
+    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing10}">
       <PathIcon Data="{Binding #Header.Icon}" Width="18" Height="18" Foreground="{DynamicResource TextSecondaryBrush}" />
       <TextBox Text="{Binding #Header.Title, Mode=TwoWay}" IsVisible="{Binding #Header.IsTitleEditable}" FontSize="{StaticResource FontSizeTitle}" FontWeight="SemiBold"
                MinWidth="260" BorderThickness="0" Background="Transparent" Padding="4,2" />
@@ -18,7 +18,7 @@
     <StackPanel Grid.Column="1" Orientation="Horizontal">
       <StackPanel Name="ActionsPanel" Orientation="Horizontal" />
       <Button Classes="ghost" Command="{Binding #Header.SaveCommand}" ToolTip.Tip="Save (Ctrl+S)">
-        <StackPanel Orientation="Horizontal" Spacing="6">
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
           <PathIcon Width="14" Height="14" Data="{StaticResource IconSave}" />
           <TextBlock Text="Save" />
         </StackPanel>

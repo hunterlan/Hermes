@@ -5,7 +5,7 @@
   <Style Selector="Border.table">
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusXSmall}" />
     <Setter Property="ClipToBounds" Value="True" />
   </Style>
   <Style Selector="Border.tableHeader">

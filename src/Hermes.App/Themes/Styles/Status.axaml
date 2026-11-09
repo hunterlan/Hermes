@@ -14,7 +14,7 @@
 
   <!-- Response status block: larger than a plain tag; must stay after Tags.axaml so it wins over Border.tag -->
   <Style Selector="Border.status">
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
     <Setter Property="Padding" Value="9,3" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>

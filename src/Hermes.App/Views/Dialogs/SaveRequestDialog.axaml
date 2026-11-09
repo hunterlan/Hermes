@@ -8,7 +8,7 @@
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
   <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto" Margin="20">
     <c:DialogHeader Title="Save request" />
-    <StackPanel Grid.Row="1" Spacing="6" Margin="0,0,0,14">
+    <StackPanel Grid.Row="1" Spacing="{StaticResource Spacing6}" Margin="0,0,0,14">
       <TextBlock Classes="section" Text="Request name" />
       <TextBox Name="NameBox" Text="{Binding Name}" />
     </StackPanel>
@@ -18,7 +18,7 @@
         <TreeView ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}">
           <TreeView.ItemTemplate>
             <TreeDataTemplate ItemsSource="{Binding Children}" x:DataType="vm:SaveTargetNode">
-              <StackPanel Orientation="Horizontal" Spacing="8">
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
                 <PathIcon Width="14" Height="14" Data="{StaticResource IconCollections}" IsVisible="{Binding !IsFolder}" Foreground="{DynamicResource TextSecondaryBrush}" />
                 <PathIcon Width="14" Height="14" Data="{StaticResource IconFolderOutline}" IsVisible="{Binding IsFolder}" Foreground="{DynamicResource TextSecondaryBrush}" />
                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
@@ -40,7 +40,7 @@
       <c:DialogFooter.Leading>
         <Button Classes="link" Content="+ New Collection" Command="{Binding StartNewCollectionCommand}" />
       </c:DialogFooter.Leading>
-      <StackPanel Orientation="Horizontal" Spacing="8">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
         <Button Content="Cancel" Command="{Binding CancelCommand}" />
         <Button Classes="accent" Content="{Binding SaveButtonText}" Command="{Binding SaveCommand}" IsDefault="True" />
       </StackPanel>
