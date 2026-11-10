@@ -4,7 +4,9 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using Hermes.App.Services;
 using Hermes.App.ViewModels.Sidebar;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hermes.App.Views.Sidebar;
 
@@ -66,6 +68,11 @@ public partial class CollectionsPaneView : UserControl
         try
         {
             await DragDrop.DoDragDropAsync(_lastPressArgs, data, DragDropEffects.Move);
+        }
+        catch (Exception exception)
+        {
+            if (App.Services?.GetService<DialogService>() is { } dialogs)
+                await dialogs.ReportUnexpectedErrorAsync("Moving the item", exception);
         }
         finally
         {

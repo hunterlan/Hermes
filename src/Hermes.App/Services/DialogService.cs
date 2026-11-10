@@ -52,6 +52,22 @@ public sealed class DialogService
     public async Task ShowStorageErrorsAsync(string title, IReadOnlyList<StorageError> errors) =>
         await ShowDialogAsync<StorageDialogResult>(new StorageErrorDialog(title, errors, []));
 
+    /// <summary>
+    /// Tells the user an event handler failed. Never throws, so it is safe to call from a catch block of an
+    /// <c>async void</c> handler, where an escaping exception would end the app.
+    /// </summary>
+    public async Task ReportUnexpectedErrorAsync(string action, Exception exception)
+    {
+        try
+        {
+            await ShowMessageAsync("Something went wrong", $"{action} failed: {exception.Message}");
+        }
+        catch (Exception)
+        {
+            // Nothing else can report it; losing the message is better than ending the app.
+        }
+    }
+
     public async Task<SaveChangesResult> AskSaveChangesAsync(string name)
     {
         var dialog = new MessageDialog("Unsaved changes",
