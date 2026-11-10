@@ -170,16 +170,41 @@ public partial class MainWindow : Window
 
     private async void OnOpened(object? sender, EventArgs e)
     {
-        _sessionTimer.Start();
-        var workspace = App.Services?.GetService<WorkspaceService>();
-        if (workspace?.LoadErrors is { Count: > 0 } errors)
+        try
         {
-            var dialogs = App.Services!.GetRequiredService<DialogService>();
-            await dialogs.ShowStorageErrorsAsync("Some files couldn't be loaded", errors);
+            _sessionTimer.Start();
+            var workspace = App.Services?.GetService<WorkspaceService>();
+            if (workspace?.LoadErrors is { Count: > 0 } errors)
+            {
+                var dialogs = App.Services!.GetRequiredService<DialogService>();
+                await dialogs.ShowStorageErrorsAsync("Some files couldn't be loaded", errors);
+            }
+        }
+        catch (Exception exception)
+        {
+            await ReportHandlerFailureAsync("Opening the window", exception);
         }
     }
 
+    private static async Task ReportHandlerFailureAsync(string action, Exception exception)
+    {
+        if (App.Services?.GetService<DialogService>() is { } dialogs)
+            await dialogs.ReportUnexpectedErrorAsync(action, exception);
+    }
+
     private async void OnClosing(object? sender, WindowClosingEventArgs e)
+    {
+        try
+        {
+            await HandleClosingAsync(e);
+        }
+        catch (Exception exception)
+        {
+            await ReportHandlerFailureAsync("Closing the window", exception);
+        }
+    }
+
+    private async Task HandleClosingAsync(WindowClosingEventArgs e)
     {
         if (_viewModel is null)
             return;
