@@ -33,7 +33,8 @@
     <PackageReference Include="TextMateSharp" />
     <PackageReference Include="TextMateSharp.Grammars" />
     <PackageReference Include="Markdown.Avalonia.Tight" />
-    <PackageReference Include="CommunityToolkit.Mvvm" />    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="AvaloniaUI.DiagnosticsSupport">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
