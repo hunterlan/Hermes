@@ -1,3 +1,4 @@
+using System.Globalization;
 using Avalonia.Headless.XUnit;
 using Hermes.App.Services;
 using Hermes.App.ViewModels;
@@ -55,6 +56,27 @@ public class HistoryRetentionSettingsTests : IDisposable
         Assert.True(dialog.SaveCommand.CanExecute(null));
         dialog.SaveCommand.Execute(null);
         Assert.Equal(expectedDays, _settings.Current.HistoryRetentionDays);
+    }
+
+    [AvaloniaFact]
+    public void Numbers_are_read_the_same_under_a_culture_with_another_minus_sign()
+    {
+        var original = CultureInfo.CurrentCulture;
+        // Swedish writes the minus sign as U+2212, so "-5" is not a number there unless parsing ignores the culture.
+        CultureInfo.CurrentCulture = new CultureInfo("sv-SE");
+        try
+        {
+            var dialog = CreateDialog();
+
+            dialog.HistoryRetentionText = "-5";
+            Assert.Equal("Days can't be negative.", dialog.HistoryRetentionError);
+            dialog.HistoryRetentionText = "30";
+            Assert.Null(dialog.HistoryRetentionError);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
     }
 
     [AvaloniaFact]

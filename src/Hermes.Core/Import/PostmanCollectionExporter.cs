@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Hermes.Core.Headers;
@@ -128,7 +129,7 @@ public static class PostmanCollectionExporter
         var path = slash < 0 ? "" : rest[(slash + 1)..];
 
         var colon = hostPort.LastIndexOf(':');
-        if (colon > 0 && !hostPort.EndsWith("}}", StringComparison.Ordinal) && int.TryParse(hostPort[(colon + 1)..], out _))
+        if (colon > 0 && !hostPort.EndsWith("}}", StringComparison.Ordinal) && int.TryParse(hostPort[(colon + 1)..], NumberStyles.None, CultureInfo.InvariantCulture, out _))
         {
             url["port"] = hostPort[(colon + 1)..];
             hostPort = hostPort[..colon];

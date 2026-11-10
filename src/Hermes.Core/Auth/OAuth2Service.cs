@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
@@ -22,6 +23,9 @@ public sealed class OAuth2Service : IDisposable
     private static readonly TimeSpan AuthorizationTimeout = TimeSpan.FromMinutes(5);
 
     private readonly HttpClientProvider _clients = new(useCookies: false);
+    private readonly TimeProvider _timeProvider;
+
+    public OAuth2Service(TimeProvider? timeProvider = null) => _timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <param name="openBrowser">Opens the authorization URL in the system browser (authorization code flow only).</param>
     /// <param name="sslSource">Where <paramref name="verifySsl"/> comes from, so a certificate failure can say where to change it.</param>
@@ -91,7 +95,7 @@ public sealed class OAuth2Service : IDisposable
         {
             using var response = await _clients.Get(followRedirects: true, verifySsl).SendAsync(request, cancellationToken).ConfigureAwait(false);
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            return ParseTokenResponse(body, response.StatusCode);
+            return ParseTokenResponse(body, response.StatusCode, _timeProvider);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -109,7 +113,7 @@ public sealed class OAuth2Service : IDisposable
         }
     }
 
-    internal static OAuth2TokenResult ParseTokenResponse(string body, HttpStatusCode status)
+    internal static OAuth2TokenResult ParseTokenResponse(string body, HttpStatusCode status, TimeProvider? timeProvider = null)
     {
         // Repeated names keep the last value, so an odd response is reported as a failure, never thrown.
         var values = new Dictionary<string, string>();
@@ -136,8 +140,8 @@ public sealed class OAuth2Service : IDisposable
         if (!values.TryGetValue("access_token", out var token) || token.Length == 0)
             return Fail(OAuth2FailureDescriber.FromUnexpectedResponse("It answered, but the answer has no access token.", body, status));
 
-        DateTimeOffset? expiresAt = values.TryGetValue("expires_in", out var expires) && int.TryParse(expires, out var seconds)
-            ? DateTimeOffset.Now.AddSeconds(seconds)
+        DateTimeOffset? expiresAt = values.TryGetValue("expires_in", out var expires) && int.TryParse(expires, NumberStyles.None, CultureInfo.InvariantCulture, out var seconds)
+            ? (timeProvider ?? TimeProvider.System).GetUtcNow().AddSeconds(seconds)
             : null;
         return new OAuth2TokenResult
         {
