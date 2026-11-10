@@ -47,3 +47,25 @@ The macOS app is not notarized. On first launch, right-click Hermes.app and choo
 ## Windows SmartScreen
 
 The Windows installer is unsigned, so SmartScreen warns before running it.
+
+## Files that couldn't be loaded or saved
+
+When Hermes can't read a file in the [data folder](08-data-folder.md), it tells you which collection, environment or
+file it is, and why, in a dialog. Each problem comes with a next step:
+
+| Message | What to do |
+|---|---|
+| It isn't valid JSON (line 41, column 8) | The file is damaged, often cut short by a crash or a sync tool. Choose **Reveal file** to repair it by hand, or **Move aside** to rename it to `.corrupt` so Hermes starts without it. Nothing is deleted. |
+| Hermes isn't allowed to read or write it | Check the permissions of the folder, then try again. |
+| The disk is full | Free up disk space, then try again. |
+| Another program is using it | Close the program that has the file open (a sync or backup tool, or another Hermes window), then try again. |
+| It or its folder wasn't found | Check that the folder still exists and that its drive is connected, then try again. |
+
+The technical message is kept under **Details**; choose **Copy details** to put it on the clipboard, for example to
+include in a bug report.
+
+A damaged line in a history file is skipped and reported once; the other entries load normally.
+
+If Hermes can't use the data folder when it starts, it says which folder and why. Choose **Use default folder** to
+go back to the default location, or **Choose another folder** to pick one. Your files in the old folder are not
+touched.
