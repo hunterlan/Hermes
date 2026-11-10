@@ -17,10 +17,12 @@ internal static class UiTestHelpers
 
     /// <summary>
     /// Opens a main window with a fresh view model (tests run in random order and the DI singleton would leak
-    /// tabs between them), focused on a new request tab.
+    /// tabs between them), focused on a new request tab. The saved session is cleared first: every window saves
+    /// its tabs when it closes, and the next view model would restore them.
     /// </summary>
     public static (MainWindow Window, MainWindowViewModel ViewModel) ShowMainWindow()
     {
+        App.Services.GetRequiredService<Services.WorkspaceService>().SaveSession(new Core.Models.SessionState());
         var vm = new MainWindowViewModel(App.Services.GetRequiredService<TabServices>());
         vm.NewRequestCommand.Execute(null);
         var window = new MainWindow { DataContext = vm, Width = 1400, Height = 860 };
