@@ -24,18 +24,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.1.4" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.4" />
-    <PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
-    <PackageReference Include="AvaloniaEdit.TextMate" Version="12.0.0" />
-    <PackageReference Include="TextMateSharp" Version="2.0.5" />
-    <PackageReference Include="TextMateSharp.Grammars" Version="2.0.5" />
-    <PackageReference Include="Markdown.Avalonia.Tight" Version="12.0.2" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
-    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" />
+    <PackageReference Include="AvaloniaEdit.TextMate" />
+    <PackageReference Include="TextMateSharp" />
+    <PackageReference Include="TextMateSharp.Grammars" />
+    <PackageReference Include="Markdown.Avalonia.Tight" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <!-- Publishing a single-file app for a runtime identifier adds this package implicitly. Referencing it always
+         keeps packages.lock.json the same for `dotnet build` and `dotnet publish -r <rid>`, so locked restore works. -->
+    <PackageReference Include="Microsoft.NET.ILLink.Tasks" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>

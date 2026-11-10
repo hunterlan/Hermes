@@ -4,6 +4,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Debug builds stay usable while editing; Release (CI and packaging) must be warning-free. -->
+    <TreatWarningsAsErrors Condition="'$(Configuration)' == 'Release'">true</TreatWarningsAsErrors>
+    <!-- A new vulnerability advisory must not break an unrelated build; audit warnings stay warnings. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <!-- Every runtime identifier the release workflow and packaging scripts publish for, so each packages.lock.json
+         covers them and a locked restore works for `dotnet publish -r <rid>`. Keep in sync with release.yml. -->
+    <RuntimeIdentifiers>win-x64;win-arm64;osx-x64;osx-arm64;linux-x64;linux-arm64</RuntimeIdentifiers>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- GitHub Actions sets CI=true: there the restore must match the committed packages.lock.json exactly. -->
+    <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
   </PropertyGroup>
 </Project>
