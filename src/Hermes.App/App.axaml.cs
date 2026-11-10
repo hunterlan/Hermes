@@ -77,6 +77,8 @@ public partial class App : Application
         desktop.Exit += (_, _) =>
         {
             // Give queued history writes a moment to land; a slow disk mustn't hold the app open.
+            // Blocking is deliberate: the app is exiting, there is no UI left to freeze, and the process
+            // may end as soon as this handler returns, so the flush cannot be awaited asynchronously.
             Services.GetRequiredService<WorkspaceService>().FlushHistoryAsync().Wait(TimeSpan.FromSeconds(2));
             (Services as IDisposable)?.Dispose();
             _dataFolderLock!.Dispose();
