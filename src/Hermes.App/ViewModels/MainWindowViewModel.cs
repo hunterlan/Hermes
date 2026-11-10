@@ -10,7 +10,7 @@ using Hermes.Core.Variables;
 
 namespace Hermes.App.ViewModels;
 
-public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
+public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, IDisposable
 {
     private readonly TabServices _services;
     private bool _syncingEnvironment;
@@ -327,6 +327,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
             return true;
         }
         Tabs[index] = tab;
+        current.Dispose();
         ActiveTab = tab;
         return true;
     }
@@ -369,6 +370,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         {
             var tab = CreatePreview();
             Tabs[Tabs.IndexOf(previous)] = tab;
+            previous.Dispose();
             ActiveTab = tab;
         }
         else
@@ -495,6 +497,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         return true;
     }
 
+    /// <summary>Cancels what the open tabs still have running; called when the app exits.</summary>
+    public void Dispose()
+    {
+        foreach (var tab in Tabs)
+            tab.Dispose();
+    }
+
     /// <summary>Removes a tab without prompting (e.g. its entity was deleted).</summary>
     public void RemoveTab(TabViewModelBase tab)
     {
@@ -502,6 +511,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
         if (index < 0)
             return;
         Tabs.RemoveAt(index);
+        tab.Dispose();
         if (ActiveTab == tab)
             ActiveTab = Tabs.Count == 0 ? null : Tabs[Math.Min(index, Tabs.Count - 1)];
         OnPropertyChanged(nameof(HasTabs));

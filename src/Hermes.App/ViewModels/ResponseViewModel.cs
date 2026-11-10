@@ -13,7 +13,7 @@ using Hermes.Core.Web;
 
 namespace Hermes.App.ViewModels;
 
-public sealed partial class ResponseViewModel(DialogService dialogs, SettingsService settings) : ObservableObject
+public sealed partial class ResponseViewModel(DialogService dialogs, SettingsService settings) : ObservableObject, IDisposable
 {
     private const string SentSection = "sent";
 
@@ -323,6 +323,14 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         PreviewImage = null;
         oldPreview?.Dispose();
         OnPropertyChanged(nameof(DisplayText));
+    }
+
+    /// <summary>Releases the preview image; the view model is not used afterwards.</summary>
+    public void Dispose()
+    {
+        var oldPreview = PreviewImage;
+        PreviewImage = null;
+        oldPreview?.Dispose();
     }
 
     [RelayCommand]
