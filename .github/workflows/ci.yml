@@ -40,8 +40,13 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # Fails when a package reference changed without its packages.lock.json being updated.
+      - name: Restore
+        run: dotnet restore Hermes.slnx --locked-mode
+
+      # Release turns warnings into errors.
       - name: Build
-        run: dotnet build Hermes.slnx -c Release
+        run: dotnet build Hermes.slnx -c Release --no-restore
 
       - name: Test
         run: dotnet test Hermes.slnx -c Release --no-build
