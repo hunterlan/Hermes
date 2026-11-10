@@ -16,6 +16,9 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
     /// <summary>A tab view with a large response can take tens of megabytes, so a few are plenty.</summary>
     public const int MaxTabViewPoolSize = 10;
 
+    // Whole numbers typed into a text box mean the same under every UI culture.
+    private const NumberStyles WholeNumber = NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite;
+
     private readonly SettingsService _settings;
     private readonly DialogService _dialogs;
     private readonly HttpClientProvider _http;
@@ -101,9 +104,6 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
     }
 
     private bool CanSave() => HistoryRetentionError is null && TabViewPoolSizeError is null;
-
-    // Whole numbers typed into a text box mean the same under every UI culture.
-    private const NumberStyles WholeNumber = NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite;
 
     private static string? ValidateTabViewPoolSize(string text, out int tabs)
     {
