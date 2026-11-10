@@ -12,7 +12,8 @@ public sealed class TabServices(
     DialogService dialogs,
     SettingsService settings,
     HttpClientProvider http,
-    ManualService manual)
+    ManualService manual,
+    TimeProvider timeProvider)
 {
     public WorkspaceService Workspace { get; } = workspace;
     public RequestExecutor Executor { get; } = executor;
@@ -21,6 +22,7 @@ public sealed class TabServices(
     public SettingsService Settings { get; } = settings;
     public HttpClientProvider Http { get; } = http;
     public ManualService Manual { get; } = manual;
+    public TimeProvider TimeProvider { get; } = timeProvider;
 
     /// <summary>
     /// Opens (or focuses) the tab of the folder or collection with the given id. Set by the main window, which owns
@@ -32,7 +34,7 @@ public sealed class TabServices(
     public Func<Task>? OpenSettingsAsync { get; set; }
 
     public AuthEditorViewModel CreateAuthEditor(bool allowInherit) =>
-        new(OAuth, Dialogs.OpenUrlAsync, Dialogs.CopyTextAsync, allowInherit)
+        new(OAuth, Dialogs.OpenUrlAsync, Dialogs.CopyTextAsync, allowInherit, TimeProvider)
         {
             VerifySslProvider = () => Settings.Current.VerifySsl,
         };

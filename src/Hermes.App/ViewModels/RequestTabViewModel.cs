@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -162,7 +163,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 
     public bool HasSettingsOverrides => FollowRedirectsOverride is not null || VerifySslOverride is not null || TimeoutMs is not null;
 
-    private int? TimeoutMs => int.TryParse(TimeoutText, out var t) && t >= 0 ? t : null;
+    private int? TimeoutMs => int.TryParse(TimeoutText, NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite, CultureInfo.InvariantCulture, out var t) && t >= 0 ? t : null;
     public bool IsSettingsSectionVisible => SettingsAdded || HasSettingsOverrides;
     public bool HasUnusedSections => !IsParamsSectionVisible || !IsBodySectionVisible || !IsSettingsSectionVisible;
 
@@ -215,7 +216,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         Auth.Load(model.Auth);
         FollowRedirectsOverride = model.Settings.FollowRedirects;
         VerifySslOverride = model.Settings.VerifySsl;
-        TimeoutText = model.Settings.TimeoutMs?.ToString() ?? "";
+        TimeoutText = model.Settings.TimeoutMs?.ToString(CultureInfo.InvariantCulture) ?? "";
         _description = model.Description;
         _eventsJson = model.EventsJson;
         _unsupportedBodyJson = model.Body.UnsupportedJson;

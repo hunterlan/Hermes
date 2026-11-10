@@ -28,11 +28,14 @@ public sealed partial class AuthEditorViewModel : ObservableObject, IDisposable
     private bool _loading;
     private CancellationTokenSource? _tokenCts;
     private string? _refreshToken;
+    private readonly TimeProvider _timeProvider;
     private DateTimeOffset? _expiresAt;
 
     /// <param name="openBrowser">Opens a URL in the system browser; false when none could be launched.</param>
-    public AuthEditorViewModel(OAuth2Service oauth, Func<Uri, Task<bool>> openBrowser, Func<string, Task> copyText, bool allowInherit)
+    public AuthEditorViewModel(OAuth2Service oauth, Func<Uri, Task<bool>> openBrowser, Func<string, Task> copyText, bool allowInherit,
+        TimeProvider? timeProvider = null)
     {
+        _timeProvider = timeProvider ?? TimeProvider.System;
         _oauth = oauth;
         _openBrowser = openBrowser;
         _copyText = copyText;
@@ -200,7 +203,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject, IDisposable
     }
 
     public string TokenExpiry => _expiresAt is { } expires
-        ? expires < DateTimeOffset.Now ? "Token expired" : $"Expires {expires.LocalDateTime:g}"
+        ? expires < _timeProvider.GetUtcNow() ? "Token expired" : $"Expires {expires.LocalDateTime:g}"
         : "";
 
     /// <summary>One line for the collapsed Auth section, e.g. "Inherited · OAuth 2.0 from Payments API".</summary>

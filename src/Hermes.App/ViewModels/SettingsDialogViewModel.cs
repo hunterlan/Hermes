@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Services;
@@ -101,10 +102,13 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
 
     private bool CanSave() => HistoryRetentionError is null && TabViewPoolSizeError is null;
 
+    // Whole numbers typed into a text box mean the same under every UI culture.
+    private const NumberStyles WholeNumber = NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite;
+
     private static string? ValidateTabViewPoolSize(string text, out int tabs)
     {
         tabs = 0;
-        if (!int.TryParse(text, out tabs) || tabs < 1 || tabs > MaxTabViewPoolSize)
+        if (!int.TryParse(text, WholeNumber, CultureInfo.InvariantCulture, out tabs) || tabs < 1 || tabs > MaxTabViewPoolSize)
             return $"Enter a whole number from 1 to {MaxTabViewPoolSize}.";
         return null;
     }
@@ -114,7 +118,7 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
         days = 0;
         if (string.IsNullOrWhiteSpace(text))
             return "Enter a number of days. 0 keeps history forever.";
-        if (!int.TryParse(text, out days))
+        if (!int.TryParse(text, WholeNumber | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out days))
             return "Enter a whole number of days.";
         if (days < 0)
             return "Days can't be negative.";
@@ -124,7 +128,7 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task Save()
     {
-        static int Parse(string text, int fallback, int min) => int.TryParse(text, out var v) && v >= min ? v : fallback;
+        static int Parse(string text, int fallback, int min) => int.TryParse(text, WholeNumber, CultureInfo.InvariantCulture, out var v) && v >= min ? v : fallback;
 
         if (ValidateHistoryRetention(HistoryRetentionText, out var historyRetentionDays) is not null
             || ValidateTabViewPoolSize(TabViewPoolSizeText, out var tabViewPoolSize) is not null)

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using Hermes.Core.Auth;
 using Hermes.Core.Formatting;
@@ -5,6 +6,7 @@ using Hermes.Core.Http;
 using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
 using Hermes.TestSupport;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Hermes.Core.Tests;
 
@@ -47,6 +49,26 @@ public class FormatterAndOAuthTests
     {
         Assert.Equal("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
             OAuth2Service.CreateCodeChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"));
+    }
+
+    [Fact]
+    public void Token_expiry_is_read_in_any_culture_and_counted_from_the_clock_in_UTC()
+    {
+        var original = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = new CultureInfo("ar-SA");
+        try
+        {
+            var clock = new FakeTimeProvider(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+
+            var result = OAuth2Service.ParseTokenResponse("{\"access_token\":\"t\",\"expires_in\":\"3600\"}", HttpStatusCode.OK, clock);
+
+            Assert.Equal(new DateTimeOffset(2026, 1, 1, 13, 0, 0, TimeSpan.Zero), result.ExpiresAt);
+            Assert.Equal(TimeSpan.Zero, result.ExpiresAt!.Value.Offset);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
     }
 
     [Fact]
