@@ -33,6 +33,8 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         HeadersEditor.Refresh();
     }
 
+    public override void Dispose() => Auth.Dispose();
+
     public override SessionTabKind Kind => SessionTabKind.Folder;
     public override Guid EntityId => _folder.Id;
     public override string KindIconKey => "IconFolderOutline";

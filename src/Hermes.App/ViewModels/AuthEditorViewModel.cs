@@ -9,7 +9,7 @@ using Hermes.Core.Variables;
 
 namespace Hermes.App.ViewModels;
 
-public sealed partial class AuthEditorViewModel : ObservableObject
+public sealed partial class AuthEditorViewModel : ObservableObject, IDisposable
 {
     private static readonly Option<AuthType> InheritOption = new("Inherit auth from parent", AuthType.Inherit);
 
@@ -353,6 +353,9 @@ public sealed partial class AuthEditorViewModel : ObservableObject
 
     [RelayCommand]
     private void CancelToken() => _tokenCts?.Cancel();
+
+    /// <summary>Cancels a token request in progress, which also stops the callback listener and frees its port.</summary>
+    public void Dispose() => CancelToken();
 
     [RelayCommand]
     private async Task GetNewAccessToken()

@@ -5,7 +5,7 @@ using Hermes.Core.Models;
 
 namespace Hermes.App.ViewModels;
 
-public abstract partial class TabViewModelBase(TabServices services) : ObservableObject
+public abstract partial class TabViewModelBase(TabServices services) : ObservableObject, IDisposable
 {
     protected TabServices Services { get; } = services;
 
@@ -84,6 +84,12 @@ public abstract partial class TabViewModelBase(TabServices services) : Observabl
     public virtual bool KeepsDraftInSession => false;
 
     public virtual SessionTab ToSession() => new() { Kind = Kind, EntityId = EntityId, IsPinned = IsPinned };
+
+    /// <summary>
+    /// Called once the tab is closed or replaced. A tab cancels what it still has running (a send, a token request)
+    /// and frees what it holds (a preview image).
+    /// </summary>
+    public virtual void Dispose() { }
 
     /// <summary>Called when the app settings changed.</summary>
     public virtual void OnSettingsChanged() { }

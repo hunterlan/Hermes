@@ -25,6 +25,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     private bool _loading;
     private bool _syncingUrl;
     private CancellationTokenSource? _sendCts;
+    private bool _isClosed;
 
     // Preserved, not editable in the UI.
     private string? _description;
@@ -518,6 +519,15 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     [RelayCommand]
     private void CancelSend() => _sendCts?.Cancel();
 
+    /// <summary>Cancels the send and the token request in flight and frees the preview image.</summary>
+    public override void Dispose()
+    {
+        _isClosed = true;
+        CancelSend();
+        Auth.Dispose();
+        Response.Dispose();
+    }
+
     [RelayCommand]
     private async Task Send()
     {
@@ -525,7 +535,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         // One context for the request and its masked copy: switching environments while it's in flight changes neither.
         var context = CreateContext();
         var (prepared, masked) = RequestPreparer.PrepareWithMasked(model, context);
-        if (!await ConfirmSendAsync(prepared))
+        if (!await ConfirmSendAsync(prepared) || _isClosed)
             return;
 
         IsSending = true;
@@ -535,6 +545,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         try
         {
             var result = await Services.Executor.ExecuteAsync(prepared, _sendCts.Token);
+            // A tab closed during the send leaves no response and no history behind.
+            if (_isClosed)
+                return;
             if (result.Cancelled)
                 Response.SetCancelled();
             else if (result.Response is { } response)

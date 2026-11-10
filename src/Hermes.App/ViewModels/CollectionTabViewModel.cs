@@ -32,6 +32,8 @@ public sealed partial class CollectionTabViewModel : TabViewModelBase
         HeadersEditor.Refresh();
     }
 
+    public override void Dispose() => Auth.Dispose();
+
     public override SessionTabKind Kind => SessionTabKind.Collection;
     public override Guid EntityId => _collection.Id;
     public override string KindIconKey => "IconCollections";
