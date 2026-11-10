@@ -687,8 +687,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
 
         // With tabs turned off only the active tab comes back. Through the UI a Tabs-off session holds just that one
         // tab: turning tabs off closes the others first, asking to save any unsaved ones.
-        foreach (var tab in restored.Where(t => ShowTabs || t == active))
-            Tabs.Add(tab);
+        foreach (var tab in restored)
+        {
+            if (ShowTabs || tab == active)
+                Tabs.Add(tab);
+            else
+                tab.Dispose();
+        }
 
         if (active is null)
             InsertTab(new RequestTabViewModel(_services, HttpRequestModel.CreateNew()));
@@ -730,6 +735,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
     }
 
     /// <summary>The snapshot a clean tab would have for <paramref name="model"/> (normalised through the view model).</summary>
-    private string SnapshotOf(HttpRequestModel model) =>
-        ModelCloner.Serialize(new RequestTabViewModel(_services, ModelCloner.Clone(model)).BuildModel());
+    private string SnapshotOf(HttpRequestModel model)
+    {
+        using var throwaway = new RequestTabViewModel(_services, ModelCloner.Clone(model));
+        return ModelCloner.Serialize(throwaway.BuildModel());
+    }
 }

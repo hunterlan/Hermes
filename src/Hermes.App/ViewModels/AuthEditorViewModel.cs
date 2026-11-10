@@ -25,10 +25,10 @@ public sealed partial class AuthEditorViewModel : ObservableObject, IDisposable
     private readonly OAuth2Service _oauth;
     private readonly Func<Uri, Task<bool>> _openBrowser;
     private readonly Func<string, Task> _copyText;
+    private readonly TimeProvider _timeProvider;
     private bool _loading;
     private CancellationTokenSource? _tokenCts;
     private string? _refreshToken;
-    private readonly TimeProvider _timeProvider;
     private DateTimeOffset? _expiresAt;
 
     /// <param name="openBrowser">Opens a URL in the system browser; false when none could be launched.</param>
