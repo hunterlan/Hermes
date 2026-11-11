@@ -11,4 +11,7 @@ public enum StorageOperation
 
     /// <summary>Opening a folder to work in: "can't be used".</summary>
     Use,
+
+    /// <summary>Removing a file: "couldn't be deleted".</summary>
+    Delete,
 }
