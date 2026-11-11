@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
@@ -94,6 +95,33 @@ public class CertificateFailureViewTests
         Assert.Equal(1, revealRequests);
         Assert.True(Find<Border>(window, "SettingsSection").IsEffectivelyVisible);
         Assert.Null(tab.VerifySslOverride);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task Selectable_text_with_the_mono_class_uses_the_monospace_font()
+    {
+        using var listener = new PlainHttpListener();
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+        tab.Url = $"https://127.0.0.1:{listener.Port}/";
+
+        await tab.SendCommand.ExecuteAsync(null);
+        UiTestHelpers.Pump();
+
+        Assert.Equal(RequestFailureKind.PlainHttpAnswered, tab.Response.Failure?.Kind);
+        Find<CollapsibleSection>(window, "FailureDetailsSection").IsExpanded = true;
+        UiTestHelpers.Pump();
+        var originalMessage = Find<SelectableTextBlock>(window, "FailureOriginalMessageText");
+        Assert.Contains("mono", originalMessage.Classes);
+        Assert.True(Application.Current!.TryFindResource("MonoFont", out var monoFont));
+        Assert.Equal(monoFont, originalMessage.FontFamily);
+
+        // Any selectable text with the class, as in the headers table and the resolved URL, gets the font too.
+        var plainSelectableText = new SelectableTextBlock { Text = "sample", Classes = { "mono" } };
+        window.GetVisualDescendants().OfType<Panel>().First().Children.Add(plainSelectableText);
+        UiTestHelpers.Pump();
+        Assert.Equal(monoFont, plainSelectableText.FontFamily);
         window.Close();
     }
 }

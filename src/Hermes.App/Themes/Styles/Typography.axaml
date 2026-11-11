@@ -26,6 +26,10 @@
   <Style Selector="TextBlock.mono">
     <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
   </Style>
+  <!-- a type selector matches the exact type, so TextBlock.mono doesn't reach SelectableTextBlock -->
+  <Style Selector="SelectableTextBlock.mono">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+  </Style>
   <Style Selector="TextBox.mono">
     <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
   </Style>
