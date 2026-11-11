@@ -17,7 +17,7 @@ public sealed class RequestExecutor(HttpClientProvider clients)
         }
         catch (Exception ex) when (ex is UriFormatException or IOException or UnauthorizedAccessException or FormatException or ArgumentException)
         {
-            return new ExecutionResult { Error = ex.Message, ResolvedUrl = request.Url };
+            return new ExecutionResult { Failure = RequestFailure.FromMessage(ex.Message), ResolvedUrl = request.Url };
         }
 
         using var _ = message;
@@ -26,6 +26,9 @@ public sealed class RequestExecutor(HttpClientProvider clients)
             timeout.CancelAfter(request.TimeoutMs);
 
         var client = clients.Get(request.FollowRedirects, request.VerifySsl);
+        // Read before sending: a redirect rewrites the message's RequestUri.
+        var requestedHost = message.RequestUri?.IdnHost ?? "";
+        var startTimestamp = Stopwatch.GetTimestamp();
         var stopwatch = Stopwatch.StartNew();
         try
         {
@@ -61,15 +64,15 @@ public sealed class RequestExecutor(HttpClientProvider clients)
         }
         catch (OperationCanceledException)
         {
-            return new ExecutionResult { Error = $"Request timed out after {request.TimeoutMs} ms.", ResolvedUrl = request.Url };
+            return new ExecutionResult { Failure = RequestFailure.FromMessage($"Request timed out after {request.TimeoutMs} ms."), ResolvedUrl = request.Url };
         }
         catch (HttpRequestException ex)
         {
-            return new ExecutionResult { Error = Describe(ex), ResolvedUrl = request.Url };
+            return new ExecutionResult { Failure = Describe(ex, requestedHost, startTimestamp), ResolvedUrl = request.Url };
         }
         catch (Exception ex) when (ex is IOException or SocketException)
         {
-            return new ExecutionResult { Error = ex.Message, ResolvedUrl = request.Url };
+            return new ExecutionResult { Failure = RequestFailure.FromMessage(ex.Message), ResolvedUrl = request.Url };
         }
     }
 
@@ -107,11 +110,14 @@ public sealed class RequestExecutor(HttpClientProvider clients)
             Secure = c.Secure,
         }).ToList();
 
-    private static string Describe(HttpRequestException ex)
+    private RequestFailure Describe(HttpRequestException ex, string requestedHost, long startTimestamp)
     {
         var inner = ex.InnerException;
         if (inner is AuthenticationException)
-            return $"SSL error: {inner.Message} You can disable SSL certificate verification in the request settings.";
-        return inner is null || inner.Message == ex.Message ? ex.Message : $"{ex.Message} ({inner.Message})";
+        {
+            var facts = clients.CertificateFailures.Find(requestedHost, startTimestamp);
+            return CertificateFailureDescriber.Describe(facts, inner.Message, DateTime.Now, requestedHost);
+        }
+        return RequestFailure.FromMessage(inner is null || inner.Message == ex.Message ? ex.Message : $"{ex.Message} ({inner.Message})");
     }
 }

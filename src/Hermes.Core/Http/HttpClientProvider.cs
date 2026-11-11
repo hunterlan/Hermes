@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Hermes.Core.Http;
 
@@ -13,6 +15,9 @@ public sealed class HttpClientProvider(bool useCookies = true) : IDisposable
     private readonly ConcurrentDictionary<(bool FollowRedirects, bool VerifySsl), HttpClient> _clients = new();
 
     public CookieContainer Cookies { get; } = new();
+
+    /// <summary>What failed certificate checks looked like, for the executor to explain a failed request.</summary>
+    public CertificateFailureLog CertificateFailures { get; } = new();
 
     public HttpClient Get(bool followRedirects, bool verifySsl) =>
         _clients.GetOrAdd((followRedirects, verifySsl), key => new HttpClient(CreateHandler(key.FollowRedirects, key.VerifySsl))
@@ -33,9 +38,30 @@ public sealed class HttpClientProvider(bool useCookies = true) : IDisposable
         };
         if (useCookies)
             handler.CookieContainer = Cookies;
-        if (!verifySsl)
-            handler.SslOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true;
+        handler.SslOptions.RemoteCertificateValidationCallback = verifySsl ? ValidateAndRecord : (_, _, _, _) => true;
         return handler;
+    }
+
+    /// <summary>
+    /// Accepts exactly what the default validation accepts, and notes what the certificate looked like when it
+    /// doesn't, so a failed request can say why in words.
+    /// </summary>
+    private bool ValidateAndRecord(object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors policyErrors)
+    {
+        var host = sender switch
+        {
+            SslStream stream => stream.TargetHostName,
+            HttpRequestMessage message => message.RequestUri?.IdnHost,
+            _ => null,
+        };
+        if (host is null)
+            return policyErrors == SslPolicyErrors.None;
+
+        if (policyErrors == SslPolicyErrors.None)
+            CertificateFailures.Clear(host);
+        else if (CertificateFacts.Capture(host, certificate, chain, policyErrors) is { } facts)
+            CertificateFailures.Record(facts);
+        return policyErrors == SslPolicyErrors.None;
     }
 
     /// <summary>Cookies in the jar, without those deleted or past their expiry.</summary>
