@@ -41,7 +41,12 @@ public partial class MainWindow : Window
         NewTabButton.SizeChanged += (_, _) => UpdateTabScrollerMaxWidth();
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
-        _sessionTimer.Tick += (_, _) => _viewModel?.SaveSession();
+        _sessionTimer.Tick += (_, _) =>
+        {
+            if (!IsQuittingAfterBug)
+                _viewModel?.SaveSession();
+        };
+        Closed += (_, _) => _viewModel?.OnWindowClosed();
         Opened += OnOpened;
         Closing += OnClosing;
     }
@@ -168,11 +173,15 @@ public partial class MainWindow : Window
         }
     }
 
+    // After a bug the app quits without prompts or a final session write; see UnexpectedErrorHandler.
+    private static bool IsQuittingAfterBug => App.Services?.GetService<UnexpectedErrorHandler>()?.IsQuitting == true;
+
     private async void OnOpened(object? sender, EventArgs e)
     {
         try
         {
             _sessionTimer.Start();
+            _viewModel?.OnWindowOpened();
             var workspace = App.Services?.GetService<WorkspaceService>();
             if (workspace?.LoadErrors is { Count: > 0 } errors)
             {
@@ -208,6 +217,11 @@ public partial class MainWindow : Window
     {
         if (_viewModel is null)
             return;
+        if (IsQuittingAfterBug)
+        {
+            _sessionTimer.Stop();
+            return;
+        }
         // The OS won't wait for a prompt when it shuts down.
         if (_confirmingQuit)
         {
