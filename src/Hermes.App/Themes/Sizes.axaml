@@ -35,4 +35,8 @@
   <x:Double x:Key="Spacing12">12</x:Double>
   <x:Double x:Key="Spacing14">14</x:Double>
   <x:Double x:Key="Spacing16">16</x:Double>
+
+  <!-- The failure shown instead of a response: its icon tile, and how wide its text runs -->
+  <x:Double x:Key="SizeFailureIconTile">32</x:Double>
+  <x:Double x:Key="WidthFailureMax">560</x:Double>
 </ResourceDictionary>

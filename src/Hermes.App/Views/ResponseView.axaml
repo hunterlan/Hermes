@@ -20,18 +20,72 @@
       <TextBlock Classes="secondary" Text="Sending request…" HorizontalAlignment="Center" />
     </StackPanel>
 
-    <!-- no response: say why, in words -->
-    <StackPanel IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                Spacing="{StaticResource Spacing10}" MaxWidth="560" Margin="20">
-      <Border Classes="status" HorizontalAlignment="Center" Background="{DynamicResource BgTertiaryBrush}"
-              BorderBrush="{DynamicResource TextTertiaryBrush}" BorderThickness="1">
-        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
-          <PathIcon Data="{StaticResource IconCancel}" Width="13" Height="13" Foreground="{DynamicResource TextSecondaryBrush}" />
-          <TextBlock Text="No response" Foreground="{DynamicResource TextSecondaryBrush}" />
+    <!-- no response: say why in four parts: headline, facts, next step, details (collapsed) -->
+    <ScrollViewer IsVisible="{Binding HasFailure}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+      <StackPanel Name="FailurePanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="{StaticResource Spacing14}"
+                  MaxWidth="{StaticResource WidthFailureMax}" Margin="20">
+        <Border Classes="status" HorizontalAlignment="Left" Background="{DynamicResource BgTertiaryBrush}"
+                BorderBrush="{DynamicResource TextTertiaryBrush}" BorderThickness="1">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
+            <PathIcon Data="{StaticResource IconCancel}" Width="13" Height="13" Foreground="{DynamicResource TextSecondaryBrush}" />
+            <TextBlock Text="No response" Foreground="{DynamicResource TextSecondaryBrush}" />
+          </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Spacing10}">
+          <Border Width="{StaticResource SizeFailureIconTile}" Height="{StaticResource SizeFailureIconTile}" VerticalAlignment="Top"
+                  Background="{DynamicResource ErrorBgBrush}" CornerRadius="{StaticResource RadiusLarge}">
+            <PathIcon Data="{Binding FailureIconKey, Converter={x:Static vm:UiConverters.IconFromKey}}" Foreground="{DynamicResource ErrorBrush}" />
+          </Border>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="{StaticResource Spacing2}">
+            <SelectableTextBlock Name="FailureHeadlineText" Text="{Binding FailureHeadline}" FontSize="{StaticResource FontSizeTitle}"
+                                 FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock Classes="secondary" Text="Hermes stopped before sending anything." IsVisible="{Binding FailureNothingWasSent}" />
+          </StackPanel>
+        </Grid>
+
+        <SelectableTextBlock Name="FailureFactsText" Text="{Binding FailureFacts}" FontSize="{StaticResource FontSizeSubtitle}" TextWrapping="Wrap" />
+
+        <StackPanel IsVisible="{Binding HasFailureActions}" Spacing="{StaticResource Spacing8}">
+          <WrapPanel ItemSpacing="{StaticResource Spacing8}" LineSpacing="{StaticResource Spacing8}">
+            <Button Name="TurnOffVerificationButton" Classes="outline" Content="Turn off verification for this request"
+                    Command="{Binding TurnOffVerificationCommand}" IsVisible="{Binding CanTurnOffVerification}" />
+            <Button Name="OpenRequestSettingsButton" Classes="ghost" Content="Open request settings"
+                    Command="{Binding OpenRequestSettingsCommand}" IsVisible="{Binding CanOpenRequestSettings}" />
+          </WrapPanel>
+          <TextBlock Name="FailureActionCaptionText" Classes="secondary" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap"
+                     Text="{Binding FailureActionCaption}" IsVisible="{Binding FailureActionCaption, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         </StackPanel>
-      </Border>
-      <SelectableTextBlock Text="{Binding Error}" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
-    </StackPanel>
+
+        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" IsVisible="{Binding HasFailureDetails}">
+          <c:CollapsibleSection Name="FailureDetailsSection" Header="Details" IsExpanded="{Binding FailureDetailsExpanded}">
+            <StackPanel Spacing="{StaticResource Spacing8}" Margin="0,0,0,4">
+              <ItemsControl ItemsSource="{Binding FailureDetails}" Grid.IsSharedSizeScope="True">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="core:FailureDetail">
+                    <Grid ColumnSpacing="{StaticResource Spacing12}" Margin="0,2">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="FailureDetailLabel" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Classes="tertiary" FontSize="{StaticResource FontSizeSmall}" Text="{Binding Label}" />
+                      <SelectableTextBlock Grid.Column="1" FontSize="{StaticResource FontSizeSmall}" Text="{Binding Value}" TextWrapping="Wrap" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Border IsVisible="{Binding HasFailureOriginalMessage}" Background="{DynamicResource BgCodeBrush}" CornerRadius="{StaticResource RadiusMedium}"
+                      Padding="10,8">
+                <SelectableTextBlock Name="FailureOriginalMessageText" Classes="mono" Text="{Binding FailureOriginalMessage}"
+                                     FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+              </Border>
+              <Button Name="CopyFailureDetailsButton" Classes="ghost" HorizontalAlignment="Left" Content="Copy details"
+                      FontSize="{StaticResource FontSizeSmall}" Command="{Binding CopyFailureDetailsCommand}" />
+            </StackPanel>
+          </c:CollapsibleSection>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
 
     <!-- response -->
     <Grid RowDefinitions="Auto,*,Auto" IsVisible="{Binding HasResponse}" Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}">

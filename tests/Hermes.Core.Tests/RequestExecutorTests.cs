@@ -63,7 +63,7 @@ public sealed class RequestExecutorTests : IDisposable
             Body = { Mode = BodyMode.Raw, Raw = "{\"x\":1}", RawLanguage = RawLanguage.Json },
         });
 
-        Assert.Null(result.Error);
+        Assert.Null(result.Failure);
         var response = result.Response!;
         Assert.Equal(201, response.StatusCode);
         var text = Encoding.UTF8.GetString(response.Body);
@@ -129,7 +129,7 @@ public sealed class RequestExecutorTests : IDisposable
         _clients.ClearCookies();
         var result = await inFlight;
 
-        Assert.Null(result.Error);
+        Assert.Null(result.Failure);
         Assert.Equal(201, result.Response!.StatusCode);
         Assert.Empty(_clients.GetAllCookies());
     }
@@ -156,7 +156,7 @@ public sealed class RequestExecutorTests : IDisposable
             },
         });
 
-        Assert.NotNull(result.Error);
+        Assert.NotNull(result.Failure);
         // Exclusive access fails while any handle to the file is still open.
         using (File.Open(present, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
         dir.Delete(recursive: true);
@@ -170,14 +170,14 @@ public sealed class RequestExecutorTests : IDisposable
         Assert.True(cancelled.Cancelled);
 
         var timedOut = await Send(new HttpRequestModel { Url = _baseUrl + "delay", Settings = { TimeoutMs = 200 } });
-        Assert.Contains("timed out", timedOut.Error);
+        Assert.Contains("timed out", timedOut.Failure?.Facts);
     }
 
     [Fact]
     public async Task Invalid_url_is_an_error_not_an_exception()
     {
         var result = await Send(new HttpRequestModel { Url = "http://" });
-        Assert.NotNull(result.Error);
+        Assert.NotNull(result.Failure);
     }
 
     [Fact]
@@ -185,7 +185,7 @@ public sealed class RequestExecutorTests : IDisposable
     {
         using var port = new ResettingPort();
         var result = await Send(new HttpRequestModel { Url = $"http://127.0.0.1:{port.Port}/" });
-        Assert.NotNull(result.Error);
+        Assert.NotNull(result.Failure);
         Assert.Null(result.Response);
     }
 

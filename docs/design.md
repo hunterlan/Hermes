@@ -141,6 +141,15 @@ Gaps between items: `StackPanel.Spacing`, `Grid.ColumnSpacing`, `WrapPanel.ItemS
 
 Margins and paddings use the same steps, plus 20 and 24 for dialog and page edges.
 
+### Failure view
+
+What the response pane shows when a request fails (headline, facts, next step, collapsed details).
+
+| Token | Size | Use for |
+|---|---|---|
+| `SizeFailureIconTile` | 32 | The square tile behind the failure's icon (`ErrorBgBrush`, `RadiusLarge`) |
+| `WidthFailureMax` | 560 | Widest the failure's text runs, so it stays a readable column |
+
 ## The token rule
 
 - Don't write a literal `FontSize`, `CornerRadius` or gap. Use a token.

@@ -175,7 +175,7 @@
           </Border>
 
           <!-- Settings -->
-          <Border Classes="section" IsVisible="{Binding IsSettingsSectionVisible}">
+          <Border Name="SettingsSection" Classes="section" IsVisible="{Binding IsSettingsSectionVisible}">
             <c:CollapsibleSection Header="Settings" IsExpanded="{Binding SettingsExpanded}"
                                   Summary="{Binding HasSettingsOverrides, Converter={x:Static vm:UiConverters.OverridesSummary}}">
               <StackPanel Spacing="{StaticResource Spacing16}" Margin="0,4,0,12" MaxWidth="720" HorizontalAlignment="Left">

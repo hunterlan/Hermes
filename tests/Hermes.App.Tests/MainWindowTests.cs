@@ -31,7 +31,7 @@ public class MainWindowTests
         await tab.SendCommand.ExecuteAsync(null);
         UiTestHelpers.Pump();
 
-        Assert.True(tab.Response.HasResponse, tab.Response.Error);
+        Assert.True(tab.Response.HasResponse, tab.Response.Failure?.Facts);
         Assert.Equal("200 OK", tab.Response.StatusText);
         Assert.Equal("json", tab.Response.Language);
         Assert.Contains("\"path\": \"/users/42?page=2&limit=10\"", tab.Response.PrettyText);

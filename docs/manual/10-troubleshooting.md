@@ -2,9 +2,28 @@
 
 ## Certificate errors
 
-If a server uses a self-signed or private certificate, the request fails with a certificate error. Turn off
-**SSL certificate verification** in [Settings](09-settings.md), or only on the request that needs it. Only do this
-for servers you trust.
+When a server's certificate fails its check, Hermes stops before sending anything and says why:
+
+| Headline | Meaning |
+|---|---|
+| Certificate expired | The certificate's dates have passed. The facts give the host and the date. |
+| Certificate isn't valid yet | The certificate starts in the future. Check the computer's clock. |
+| Certificate is self-signed | The server signed its own certificate. Common for local and test servers. |
+| Certificate isn't from a trusted authority | The issuer is named. If it is your company's authority, add it to the system's trusted certificates. |
+| Certificate is for a different address | The names it was issued for are listed. Check the URL for a typo or a missing subdomain. |
+| Secure connection failed | Any other problem with the secure connection. The message is shown as it is. |
+
+Two buttons sit under the facts:
+
+- **Turn off verification for this request** switches SSL certificate verification off for this request only and
+  sends it again. The app-wide setting stays as it is. Only do this for servers you trust.
+- **Open request settings** shows the request's Settings section, expanded, so you can change it yourself.
+
+**Details** is collapsed. It shows who the certificate was issued to and by, the dates it is valid, which check failed,
+and the original message. **Copy details** puts all of it on the clipboard for a bug report.
+
+To turn verification off for every request instead, use **SSL certificate verification** in
+[Settings](09-settings.md).
 
 ## Timeouts
 

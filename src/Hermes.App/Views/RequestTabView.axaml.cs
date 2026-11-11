@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Hermes.App.Services;
 using Hermes.App.ViewModels;
 using Hermes.Core.Models;
@@ -12,6 +13,7 @@ namespace Hermes.App.Views;
 public partial class RequestTabView : UserControl
 {
     private SettingsService? _settings;
+    private RequestTabViewModel? _tab;
 
     public RequestTabView()
     {
@@ -33,6 +35,20 @@ public partial class RequestTabView : UserControl
         if (_settings is not null)
             _settings.Changed -= ApplyLayout;
     }
+
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        if (_tab is not null)
+            _tab.SettingsRevealRequested -= ScrollSettingsIntoView;
+        _tab = DataContext as RequestTabViewModel;
+        if (_tab is not null)
+            _tab.SettingsRevealRequested += ScrollSettingsIntoView;
+    }
+
+    /// <summary>Waits for the section to be laid out (it may have just become visible), then scrolls the request editor to it.</summary>
+    private void ScrollSettingsIntoView() =>
+        Dispatcher.UIThread.Post(() => SettingsSection.BringIntoView(), DispatcherPriority.Loaded);
 
     public void FocusUrl() => UrlBox.FocusEditor();
 

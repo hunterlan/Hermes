@@ -20,9 +20,22 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     private readonly HeaderRevealState _revealState = new(dialogs.CopyTextAsync);
     private ResponseModel? _response;
 
+    private static readonly string[] FailureViewProperties =
+    [
+        nameof(HasFailure), nameof(FailureHeadline), nameof(FailureFacts), nameof(FailureNothingWasSent), nameof(FailureDetails),
+        nameof(FailureOriginalMessage), nameof(HasFailureDetails), nameof(HasFailureOriginalMessage), nameof(CanTurnOffVerification),
+        nameof(CanOpenRequestSettings), nameof(HasFailureActions), nameof(FailureActionCaption), nameof(FailureIconKey),
+    ];
+
     [ObservableProperty] public partial bool IsLoading { get; set; }
     [ObservableProperty] public partial bool HasResponse { get; set; }
-    [ObservableProperty] public partial string? Error { get; set; }
+
+    /// <summary>Why there is no response; null while there is one, or none was asked for yet.</summary>
+    [ObservableProperty] public partial RequestFailure? Failure { get; set; }
+
+    /// <summary>Whether the failure's Details are open; they start closed for each new failure.</summary>
+    [ObservableProperty] public partial bool FailureDetailsExpanded { get; set; }
+
     [ObservableProperty] public partial ResponseViewMode ViewMode { get; set; } = ResponseViewMode.Pretty;
 
     [ObservableProperty] public partial string StatusText { get; set; } = "";
@@ -121,7 +134,36 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     public string HeadersBadge => Headers.Count > 0 ? $" ({Headers.Count})" : "";
     public string CookiesBadge => Cookies.Count > 0 ? $" ({Cookies.Count})" : "";
 
-    public bool IsEmpty => !HasResponse && !IsLoading && Error is null;
+    public bool IsEmpty => !HasResponse && !IsLoading && Failure is null;
+
+    // ---- the failure on screen ----
+
+    /// <summary>What the request tab does for "Turn off verification for this request"; set by the tab, which owns the request.</summary>
+    public Func<Task>? TurnOffVerificationHandler { get; set; }
+
+    /// <summary>What the request tab does for "Open request settings".</summary>
+    public Action? OpenRequestSettingsHandler { get; set; }
+
+    public bool HasFailure => Failure is not null;
+    public string FailureHeadline => Failure?.Headline ?? "";
+    public string FailureFacts => Failure?.Facts ?? "";
+    public bool FailureNothingWasSent => Failure?.NothingWasSent ?? false;
+    public IReadOnlyList<FailureDetail> FailureDetails => Failure?.Details ?? [];
+    public string? FailureOriginalMessage => Failure?.OriginalMessage;
+    public bool HasFailureDetails => Failure?.HasDetails ?? false;
+    public bool HasFailureOriginalMessage => FailureOriginalMessage is not null;
+    public bool CanTurnOffVerification => Failure?.Actions.Contains(RequestFailureAction.TurnOffSslVerification) ?? false;
+    public bool CanOpenRequestSettings => Failure?.Actions.Contains(RequestFailureAction.OpenRequestSettings) ?? false;
+    public bool HasFailureActions => Failure is { Actions.Count: > 0 };
+    public string? FailureActionCaption => Failure?.ActionCaption;
+
+    /// <summary>The resource key of the icon for the failure's kind.</summary>
+    public string FailureIconKey => Failure?.Kind switch
+    {
+        RequestFailureKind.SecureConnectionFailed or RequestFailureKind.PlainHttpAnswered or RequestFailureKind.CertificateExpired or RequestFailureKind.CertificateSelfSigned
+            or RequestFailureKind.CertificateUntrustedAuthority or RequestFailureKind.CertificateNameMismatch => "IconLock",
+        _ => "IconAlert",
+    };
     public bool IsPretty => ViewMode == ResponseViewMode.Pretty;
     public bool IsRaw => ViewMode == ResponseViewMode.Raw;
     public bool IsPreview => ViewMode == ResponseViewMode.Preview;
@@ -157,8 +199,13 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
             case nameof(RawText):
                 OnPropertyChanged(nameof(PreviewText));
                 break;
-            case nameof(HasResponse) or nameof(IsLoading) or nameof(Error):
+            case nameof(HasResponse) or nameof(IsLoading):
                 OnPropertyChanged(nameof(IsEmpty));
+                break;
+            case nameof(Failure):
+                OnPropertyChanged(nameof(IsEmpty));
+                foreach (var name in FailureViewProperties)
+                    OnPropertyChanged(name);
                 break;
             case nameof(PreviewImage):
                 OnPropertyChanged(nameof(HasPreviewImage));
@@ -221,7 +268,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     public void BeginLoading()
     {
         IsLoading = true;
-        Error = null;
+        Failure = null;
     }
 
     public void SetCancelled()
@@ -229,12 +276,13 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         IsLoading = false;
     }
 
-    public void SetError(string error)
+    public void SetFailure(RequestFailure failure)
     {
         IsLoading = false;
         HasResponse = false;
         _response = null;
-        Error = error;
+        FailureDetailsExpanded = false;
+        Failure = failure;
     }
 
     /// <param name="sentWith">The environment the request was resolved with; null for none or a saved response, which doesn't record it.</param>
@@ -242,7 +290,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     {
         _response = response;
         IsLoading = false;
-        Error = null;
+        Failure = null;
         SentWithEnvironmentName = sentWith?.Name;
         SentWithEnvironmentColor = sentWith?.Color ?? EnvironmentColor.None;
 
@@ -292,12 +340,29 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         _response = null;
         HasResponse = false;
         IsLoading = false;
-        Error = null;
+        Failure = null;
         PrettyText = RawText = "";
         var oldPreview = PreviewImage;
         PreviewImage = null;
         oldPreview?.Dispose();
         OnPropertyChanged(nameof(DisplayText));
+    }
+
+    [RelayCommand]
+    private async Task TurnOffVerification()
+    {
+        if (TurnOffVerificationHandler is { } handler)
+            await handler();
+    }
+
+    [RelayCommand]
+    private void OpenRequestSettings() => OpenRequestSettingsHandler?.Invoke();
+
+    [RelayCommand]
+    private async Task CopyFailureDetails()
+    {
+        if (Failure is { } failure)
+            await dialogs.CopyTextAsync(failure.ToClipboardText());
     }
 
     [RelayCommand]

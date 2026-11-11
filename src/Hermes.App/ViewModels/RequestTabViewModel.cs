@@ -72,6 +72,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 
         Response = new ResponseViewModel(services.Dialogs, services.Settings);
         Response.SetSaved(services.Workspace.LoadResponses(model.Id), show: true);
+        Response.TurnOffVerificationHandler = TurnOffVerificationAndResendAsync;
+        Response.OpenRequestSettingsHandler = RevealSettings;
 
         Load(model);
         _savedSnapshot = savedSnapshot ?? CurrentSnapshot();
@@ -127,6 +129,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     [ObservableProperty] public partial bool AuthExpanded { get; set; }
     [ObservableProperty] public partial bool BodyExpanded { get; set; } = true;
     [ObservableProperty] public partial bool SettingsExpanded { get; set; } = true;
+
+    /// <summary>Raised when the Settings section should be brought on screen; the view scrolls to it.</summary>
+    public event Action? SettingsRevealRequested;
 
     public bool IsParamsSectionVisible => ParamsAdded || Params.ActiveCount > 0 || HasPathVariables;
     public bool IsBodySectionVisible => BodyAdded || HasBody || HasUnsupportedBody || SelectedMethod is "POST" or "PUT" or "PATCH";
@@ -534,7 +539,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
                     Response.AddSaved(saved);
             }
             else
-                Response.SetError(result.Error ?? "Unknown error");
+                Response.SetFailure(result.Failure ?? RequestFailure.FromMessage("Unknown error"));
 
             if (!result.Cancelled)
             {
@@ -703,6 +708,20 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
                 SettingsAdded = SettingsExpanded = true;
                 break;
         }
+    }
+
+    /// <summary>Shows the Settings section, expanded, and asks the view to bring it on screen.</summary>
+    private void RevealSettings()
+    {
+        SettingsAdded = SettingsExpanded = true;
+        SettingsRevealRequested?.Invoke();
+    }
+
+    /// <summary>"Turn off verification for this request": the request's own override, not the app-wide setting.</summary>
+    private async Task TurnOffVerificationAndResendAsync()
+    {
+        VerifySslOverride = false;
+        await SendCommand.ExecuteAsync(null);
     }
 
     /// <summary>Drops the request's own settings, so it follows the app settings again.</summary>
