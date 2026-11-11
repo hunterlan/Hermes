@@ -27,6 +27,35 @@ public class StorageErrorDialogTests : IDisposable
     }
 
     [AvaloniaFact]
+    public async Task A_dialog_opened_while_another_is_open_is_owned_by_that_other_one()
+    {
+        var main = new Window();
+        main.Show();
+        var service = new Services.DialogService { Owner = main };
+        var first = new StorageErrorDialog("First", [], []);
+        var second = new StorageErrorDialog("Second", [], []);
+
+        var firstShown = service.ShowDialogAsync<StorageDialogResult>(first);
+        var secondShown = service.ShowDialogAsync<StorageDialogResult>(second);
+        UiTestHelpers.Pump();
+
+        Assert.Same(main, first.Owner);
+        Assert.Same(first, second.Owner);
+
+        second.Close();
+        first.Close();
+        await secondShown;
+        await firstShown;
+        var third = new StorageErrorDialog("Third", [], []);
+        var thirdShown = service.ShowDialogAsync<StorageDialogResult>(third);
+        UiTestHelpers.Pump();
+        Assert.Same(main, third.Owner);
+        third.Close();
+        await thirdShown;
+        main.Close();
+    }
+
+    [AvaloniaFact]
     public void The_dialog_shows_the_sentence_and_next_step_and_keeps_the_raw_text_for_details()
     {
         var error = StorageErrorDescriber.Describe(new IOException("No space left on device", unchecked((int)0x80070070)),

@@ -145,8 +145,11 @@ public static class StorageErrorDescriber
         _ => "Hermes couldn't read it.",
     };
 
-    // 1-based, as editors show them. The column counts bytes, which is the same as characters for plain ASCII.
-    private static string? PositionOf(JsonException exception) =>
+    /// <summary>
+    /// Where a syntax error is, as <c> (line 3, column 7)</c> with a leading space, or null when the exception has no
+    /// position. 1-based, as editors show them. The column counts bytes, which is the same as characters for plain ASCII.
+    /// </summary>
+    public static string? PositionOf(JsonException exception) =>
         exception.LineNumber is { } line
             ? $" (line {line + 1}, column {(exception.BytePositionInLine ?? 0) + 1})"
             : null;

@@ -40,4 +40,9 @@
   <x:Double x:Key="SizeFailureIconTile">32</x:Double>
   <x:Double x:Key="SizeFailureIconInline">16</x:Double>
   <x:Double x:Key="WidthFailureMax">560</x:Double>
+
+  <!-- Import dialog: the file list (3 rows) and error lines (3 lines) scroll once taller than this; the paste box never shrinks below its minimum -->
+  <x:Double x:Key="ImportFilesMaxHeight">78</x:Double>
+  <x:Double x:Key="ImportErrorsMaxHeight">60</x:Double>
+  <x:Double x:Key="ImportPasteMinHeight">80</x:Double>
 </ResourceDictionary>

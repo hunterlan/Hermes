@@ -152,6 +152,16 @@ shows the same four parts, compact, when getting a token fails.
 | `SizeFailureIconInline` | 16 | The failure's icon without a tile, in the Auth panel |
 | `WidthFailureMax` | 560 | Widest the failure's text runs, so it stays a readable column |
 
+### Region heights
+
+Regions that scroll when their content grows, so they can't push the rest of a dialog out of view, and the minimum that keeps a flexible region usable.
+
+| Token | Height | Use for |
+|---|---|---|
+| `ImportFilesMaxHeight` | 78 | The picked-file list of the Import dialog (about 3 rows) |
+| `ImportErrorsMaxHeight` | 60 | The error lines of the Import dialog (about 3 lines of body text) |
+| `ImportPasteMinHeight` | 80 | The least the Import dialog's paste box (label and box) can shrink to |
+
 ## The token rule
 
 - Don't write a literal `FontSize`, `CornerRadius` or gap. Use a token.

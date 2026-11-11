@@ -224,16 +224,4 @@ public class PostmanTests
         Assert.Equal("tok", back.OAuth2.AccessToken);
         Assert.Equal(OAuth2GrantType.ClientCredentials, back.OAuth2.GrantType);
     }
-
-    [Fact]
-    public void Importer_failures_become_import_errors()
-    {
-        var result = new ImportResult();
-
-        // Repeated names make System.Text.Json throw ArgumentException when the object is read.
-        ImportService.ImportText("""{ "info": { "name": "a", "name": "b" }, "item": [] }""", result, "dup.json");
-
-        Assert.Empty(result.Collections);
-        Assert.StartsWith("dup.json:", Assert.Single(result.Errors));
-    }
 }

@@ -8,24 +8,69 @@ namespace Hermes.Core.Import;
 public static class CurlParser
 {
     /// <summary>
-    /// curl options that take a value (from curl's manual). The list has to be complete enough: an unknown option is
-    /// taken to have no value, so its value would be read as the URL.
+    /// curl options that take a value (from <c>curl --help all</c>). The list has to be complete: an option missing
+    /// here would be taken to have no value, and its value would be read as the URL.
     /// </summary>
     private static readonly HashSet<string> FlagsWithValue =
     [
-        "-X", "--request", "-H", "--header", "-d", "--data", "--data-raw", "--data-binary", "--data-ascii",
-        "--data-urlencode", "--json", "-F", "--form", "--form-string", "-u", "--user", "-A", "--user-agent",
-        "-b", "--cookie", "-c", "--cookie-jar", "-e", "--referer", "--url", "--url-query", "-o", "--output",
-        "-m", "--max-time", "--connect-timeout", "-x", "--proxy", "-U", "--proxy-user", "--proxy-header",
-        "--preproxy", "--noproxy", "--cacert", "--capath", "-E", "--cert", "--cert-type", "--key", "--key-type",
-        "--pass", "--crlfile", "--pinnedpubkey", "--ciphers", "--tls-max", "--oauth2-bearer", "--aws-sigv4",
-        "--sasl-authzid", "--login-options", "-w", "--write-out", "--retry", "--retry-delay", "--retry-max-time",
-        "-T", "--upload-file", "--max-redirs", "--max-filesize", "--resolve", "--connect-to", "-K", "--config",
-        "-Y", "--speed-limit", "-y", "--speed-time", "--limit-rate", "-r", "--range", "-z", "--time-cond",
-        "-D", "--dump-header", "-C", "--continue-at", "-Q", "--quote", "--interface", "--local-port",
-        "--dns-servers", "--keepalive-time", "--expect100-timeout", "--happy-eyeballs-timeout-ms", "--trace",
-        "--trace-ascii", "--stderr", "--unix-socket", "--abstract-unix-socket", "--variable", "--request-target",
-        "--mail-from", "--mail-rcpt", "--netrc-file", "--hostpubmd5", "--pubkey", "-P", "--ftp-port",
+        "--abstract-unix-socket", "--alt-svc", "--aws-sigv4", "--cacert", "--capath", "-E", "--cert",
+        "--cert-type", "--ciphers", "-K", "--config", "--connect-timeout", "--connect-to", "-C",
+        "--continue-at", "-b", "--cookie", "-c", "--cookie-jar", "--create-file-mode", "--crlfile", "--curves",
+        "-d", "--data", "--data-ascii", "--data-binary", "--data-raw", "--data-urlencode", "--delegation",
+        "--dns-interface", "--dns-ipv4-addr", "--dns-ipv6-addr", "--dns-servers", "--doh-url", "-D",
+        "--dump-header", "--egd-file", "--engine", "--etag-compare", "--etag-save", "--expect100-timeout", "-F",
+        "--form", "--form-string", "--ftp-account", "--ftp-alternative-to-user", "--ftp-method", "-P",
+        "--ftp-port", "--ftp-ssl-ccc-mode", "--happy-eyeballs-timeout-ms", "--haproxy-clientip", "-H",
+        "--header", "--hostpubmd5", "--hostpubsha256", "--hsts", "--interface", "--ipfs-gateway", "--json",
+        "--keepalive-time", "--key", "--key-type", "--krb", "--libcurl", "--limit-rate", "--local-port",
+        "--login-options", "--mail-auth", "--mail-from", "--mail-rcpt", "--max-filesize", "--max-redirs", "-m",
+        "--max-time", "--netrc-file", "--noproxy", "--oauth2-bearer", "-o", "--output", "--output-dir",
+        "--parallel-max", "--pass", "--pinnedpubkey", "--preproxy", "--proto", "--proto-default",
+        "--proto-redir", "-x", "--proxy", "--proxy-cacert", "--proxy-capath", "--proxy-cert",
+        "--proxy-cert-type", "--proxy-ciphers", "--proxy-crlfile", "--proxy-header", "--proxy-key",
+        "--proxy-key-type", "--proxy-pass", "--proxy-pinnedpubkey", "--proxy-service-name",
+        "--proxy-tls13-ciphers", "--proxy-tlsauthtype", "--proxy-tlspassword", "--proxy-tlsuser", "-U",
+        "--proxy-user", "--proxy1.0", "--pubkey", "-Q", "--quote", "--random-file", "-r", "--range", "--rate",
+        "-e", "--referer", "-X", "--request", "--request-target", "--resolve", "--retry", "--retry-delay",
+        "--retry-max-time", "--sasl-authzid", "--service-name", "--socks4", "--socks4a", "--socks5",
+        "--socks5-gssapi-service", "--socks5-hostname", "-Y", "--speed-limit", "-y", "--speed-time", "--stderr",
+        "-t", "--telnet-option", "--tftp-blksize", "-z", "--time-cond", "--tls-max", "--tls13-ciphers",
+        "--tlsauthtype", "--tlspassword", "--tlsuser", "--trace", "--trace-ascii", "--trace-config",
+        "--unix-socket", "-T", "--upload-file", "--url", "--url-query", "-u", "--user", "-A", "--user-agent",
+        "--variable", "-w", "--write-out", "--ech", "--ssl-sessions", "--upload-flags", "--knownhosts",
+        "--ip-tos", "--vlan-priority",
+    ];
+
+    /// <summary>
+    /// curl options without a value. Most of them change how curl transfers, which a request in Hermes has no use
+    /// for, so they are accepted and ignored. Anything in neither list is reported as an unknown option.
+    /// </summary>
+    private static readonly HashSet<string> FlagsWithoutValue =
+    [
+        "--anyauth", "-a", "--append", "--basic", "--ca-native", "--cert-status", "--compressed",
+        "--compressed-ssh", "--create-dirs", "--crlf", "--digest", "-q", "--disable", "--disable-eprt",
+        "--disable-epsv", "--disallow-username-in-url", "--doh-cert-status", "--doh-insecure", "-f", "--fail",
+        "--fail-early", "--fail-with-body", "--false-start", "--form-escape", "--ftp-create-dirs", "--ftp-pasv",
+        "--ftp-pret", "--ftp-skip-pasv-ip", "--ftp-ssl-ccc", "--ftp-ssl-control", "-G", "--get", "-g",
+        "--globoff", "--haproxy-protocol", "-I", "--head", "--http0.9", "-0", "--http1.0", "--http1.1",
+        "--http2", "--http2-prior-knowledge", "--http3", "--http3-only", "--ignore-content-length", "-i",
+        "--include", "-k", "--insecure", "-4", "--ipv4", "-6", "--ipv6", "-j", "--junk-session-cookies", "-l",
+        "--list-only", "-L", "--location", "--location-trusted", "--mail-rcpt-allowfails", "-M", "--manual",
+        "--metalink", "--negotiate", "-n", "--netrc", "--netrc-optional", "-:", "--next", "--no-alpn", "-N",
+        "--no-buffer", "--no-clobber", "--no-keepalive", "--no-npn", "--no-progress-meter", "--no-sessionid",
+        "--ntlm", "--ntlm-wb", "-Z", "--parallel", "--parallel-immediate", "--path-as-is", "--post301",
+        "--post302", "--post303", "-#", "--progress-bar", "--proxy-anyauth", "--proxy-basic",
+        "--proxy-ca-native", "--proxy-digest", "--proxy-http2", "--proxy-insecure", "--proxy-negotiate",
+        "--proxy-ntlm", "--proxy-ssl-allow-beast", "--proxy-ssl-auto-client-cert", "--proxy-tlsv1", "-p",
+        "--proxytunnel", "--raw", "-J", "--remote-header-name", "-O", "--remote-name", "--remote-name-all",
+        "-R", "--remote-time", "--remove-on-error", "--retry-all-errors", "--retry-connrefused", "--sasl-ir",
+        "-S", "--show-error", "-s", "--silent", "--socks5-basic", "--socks5-gssapi", "--socks5-gssapi-nec",
+        "--ssl", "--ssl-allow-beast", "--ssl-auto-client-cert", "--ssl-no-revoke", "--ssl-reqd",
+        "--ssl-revoke-best-effort", "-2", "--sslv2", "-3", "--sslv3", "--styled-output",
+        "--suppress-connect-headers", "--tcp-fastopen", "--tcp-nodelay", "--tftp-no-options", "-1", "--tlsv1",
+        "--tlsv1.0", "--tlsv1.1", "--tlsv1.2", "--tlsv1.3", "--tr-encoding", "--trace-ids", "--trace-time",
+        "-B", "--use-ascii", "-v", "--verbose", "-V", "--version", "--xattr", "-h", "--help", "--follow",
+        "--out-null", "--tls-earlydata", "--dump-ca-embed", "--skip-existing",
     ];
 
     /// <summary>Data options whose value is a file name when it starts with <c>@</c> (unlike --data-raw).</summary>
@@ -39,12 +84,13 @@ public static class CurlParser
     {
         var tokens = Tokenize(command);
         if (tokens.Count == 0 || !tokens[0].StartsWith("curl", StringComparison.OrdinalIgnoreCase))
-            throw new FormatException("Not a cURL command.");
+            throw new ImportException("This isn't a cURL command; it has to start with curl");
 
         var request = new HttpRequestModel();
         string? method = null;
         string? explicitUrl = null;
         var bareWords = new List<string>();
+        var unknownOptions = new List<string>();
         var urlQueries = new List<string>();
         var dataParts = new List<DataPart>();
         var urlEncodedParts = new List<string>();
@@ -129,6 +175,10 @@ public static class CurlParser
                 case "-L" or "--location":
                     request.Settings.FollowRedirects = true;
                     break;
+                default:
+                    if (!IsKnownOption(flag))
+                        unknownOptions.Add(flag);
+                    break;
             }
         }
 
@@ -141,6 +191,12 @@ public static class CurlParser
 
         // A word that looks like a URL wins over others, in case an unlisted option's value was taken for a word.
         request.Url = explicitUrl ?? bareWords.FirstOrDefault(LooksLikeUrl) ?? bareWords.FirstOrDefault() ?? "";
+        // An unknown option may take a value, which is then one of the bare words. That only matters when no word looks
+        // like a URL: the choice is then a guess, so say which option is to blame instead of importing a wrong URL.
+        if (unknownOptions.Count > 0 && explicitUrl is null && !bareWords.Any(LooksLikeUrl))
+            throw new ImportException($"The cURL command uses the option {unknownOptions[0]}, which Hermes doesn't know, so it can't tell which word is the URL");
+        if (request.Url.Length == 0)
+            throw new ImportException("The cURL command has no URL");
         if (urlQueries.Count > 0)
             request.Url += (request.Url.Contains('?') ? "&" : "?") + string.Join('&', urlQueries);
         var hasData = dataParts.Count > 0 || urlEncodedParts.Count > 0;
@@ -187,8 +243,7 @@ public static class CurlParser
                     yield return (arg[..eq], arg[(eq + 1)..]);
                 else if (FlagsWithValue.Contains(arg))
                 {
-                    if (Next() is { } value)
-                        yield return (arg, value);
+                    yield return (arg, Next() ?? throw MissingValue(arg));
                 }
                 else
                     yield return (arg, null);
@@ -203,9 +258,7 @@ public static class CurlParser
                         yield return (flag, null);
                         continue;
                     }
-                    var value = j + 1 < arg.Length ? arg[(j + 1)..] : Next();
-                    if (value is not null)
-                        yield return (flag, value);
+                    yield return (flag, j + 1 < arg.Length ? arg[(j + 1)..] : Next() ?? throw MissingValue(flag));
                     break;
                 }
             }
@@ -215,6 +268,15 @@ public static class CurlParser
             }
         }
     }
+
+    private static ImportException MissingValue(string flag) =>
+        new($"The cURL command ends after {flag}, which needs a value");
+
+    /// <summary>An option curl has, with or without a value. <c>--no-x</c> turns the on/off option <c>--x</c> off.</summary>
+    private static bool IsKnownOption(string? flag) =>
+        flag is not null &&
+        (FlagsWithoutValue.Contains(flag) || FlagsWithValue.Contains(flag) ||
+         (flag.StartsWith("--no-", StringComparison.Ordinal) && FlagsWithoutValue.Contains("--" + flag[5..])));
 
     private static bool LooksLikeUrl(string word) =>
         word.Contains("://", StringComparison.Ordinal) || word.StartsWith("{{", StringComparison.Ordinal) ||
@@ -302,6 +364,9 @@ public static class CurlParser
         return baseUrl.Length == 0 ? "Imported request" : baseUrl;
     }
 
+    private static ImportException UnterminatedQuote(string quote) =>
+        new($"The cURL command has a {quote} quote that is never closed");
+
     /// <summary>
     /// POSIX-shell-like tokenizer: single quotes, double quotes, backslash escapes, and line continuations
     /// (<c>\</c>, <c>^</c> for cmd.exe and <c>`</c> for PowerShell).
@@ -344,6 +409,8 @@ public static class CurlParser
                     i++;
                     while (i < input.Length && input[i] != '\'')
                         current.Append(input[i++]);
+                    if (i >= input.Length)
+                        throw UnterminatedQuote("'");
                     i++;
                     break;
 
@@ -363,6 +430,8 @@ public static class CurlParser
                         }
                         i++;
                     }
+                    if (i >= input.Length)
+                        throw UnterminatedQuote("'");
                     i++;
                     break;
 
@@ -374,6 +443,8 @@ public static class CurlParser
                             i++;
                         current.Append(input[i++]);
                     }
+                    if (i >= input.Length)
+                        throw UnterminatedQuote("\"");
                     i++;
                     break;
 

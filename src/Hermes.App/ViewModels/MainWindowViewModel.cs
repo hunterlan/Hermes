@@ -628,7 +628,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
         }
 
         if (result.Errors.Count > 0)
-            await Dialogs.ShowMessageAsync("Some items couldn't be imported", string.Join("\n", result.Errors));
+            await Dialogs.ShowStorageErrorsAsync("Some items couldn't be imported", result.Errors);
     }
 
     [RelayCommand]

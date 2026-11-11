@@ -66,6 +66,9 @@ internal static class PostmanFormat
     public static string? Str(JsonNode? node) =>
         node is JsonValue v && v.TryGetValue<string>(out var s) ? s : null;
 
+    /// <summary>The member <paramref name="name"/> of an object; null for anything that isn't one (a list, a text).</summary>
+    public static JsonNode? Member(JsonNode? node, string name) => node is JsonObject o ? o[name] : null;
+
     /// <summary>A value as text; non-string values keep their JSON form.</summary>
     public static string ValueString(JsonNode? node) => node switch
     {
@@ -103,7 +106,7 @@ internal static class PostmanFormat
             return list;
         foreach (var v in array)
         {
-            if (v is null)
+            if (v is not JsonObject)
                 continue;
             list.Add(new Variable
             {

@@ -11,9 +11,27 @@ public sealed class DialogService
 {
     public Window? Owner { get; set; }
 
+    private readonly Stack<Window> _openDialogs = new();
+
     private TopLevel Top => Owner ?? throw new InvalidOperationException("Main window not set.");
 
-    public Task<T?> ShowDialogAsync<T>(Window dialog) => dialog.ShowDialog<T?>(Top as Window ?? throw new InvalidOperationException());
+    /// <summary>
+    /// Shows the dialog modal over the dialog opened most recently and still open, or over the main window when none
+    /// is open, so a dialog opened from inside another one stacks on it.
+    /// </summary>
+    public async Task<T?> ShowDialogAsync<T>(Window dialog)
+    {
+        var owner = _openDialogs.Count > 0 ? _openDialogs.Peek() : Top as Window ?? throw new InvalidOperationException();
+        _openDialogs.Push(dialog);
+        try
+        {
+            return await dialog.ShowDialog<T?>(owner);
+        }
+        finally
+        {
+            _openDialogs.Pop();
+        }
+    }
 
     public async Task<bool> ConfirmAsync(string title, string message, string confirmText = "Delete", bool destructive = true)
     {
