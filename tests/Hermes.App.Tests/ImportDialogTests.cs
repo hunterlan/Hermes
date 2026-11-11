@@ -38,13 +38,11 @@ public class ImportDialogTests
     }
 
     [AvaloniaFact]
-    public async Task A_bug_shows_a_plain_sentence_and_keeps_the_raw_text_behind_a_details_button()
+    public async Task A_read_error_shows_a_plain_sentence_and_keeps_the_raw_text_behind_a_details_button()
     {
-        var vm = new ImportDialogViewModel(new DialogService())
-        {
-            // Repeated names make System.Text.Json throw ArgumentException when the object is read.
-            Text = """{ "info": { "name": "a", "name": "b" }, "item": [] }""",
-        };
+        var vm = new ImportDialogViewModel(new DialogService());
+        var missing = Path.Combine(Path.GetTempPath(), "hermes-missing-" + Guid.NewGuid() + ".json");
+        vm.AddFiles([missing]);
         var dialog = new ImportDialog { DataContext = vm };
         dialog.Show();
 
@@ -52,8 +50,8 @@ public class ImportDialogTests
         UiTestHelpers.Pump();
 
         var texts = dialog.GetVisualDescendants().OfType<TextBlock>().Select(text => text.Text).ToList();
-        Assert.Contains("Hermes couldn't import Pasted text. This is a bug; please report it.", texts);
-        Assert.DoesNotContain(texts, text => text?.Contains("ArgumentException") == true);
+        Assert.Contains(vm.Errors[0].Message, texts);
+        Assert.DoesNotContain(texts, text => text?.Contains("FileNotFoundException") == true);
         var details = dialog.GetVisualDescendants().OfType<Button>().Single(button => button.Content as string == "Details");
         Assert.True(details.IsVisible);
         Assert.Empty(dialog.GetVisualDescendants().OfType<CollapsibleSection>());

@@ -7,6 +7,10 @@ namespace Hermes.Core.Import;
 /// </summary>
 public sealed class ImportException : FormatException
 {
+    public string Problem { get; }
+
+    public string? Path { get; }
+
     /// <param name="problem">What is wrong, as a sentence without the final period.</param>
     /// <param name="path">
     /// Where in the file, as a JSON path such as <c>item[3].request.url</c>. Null when the problem already names the
@@ -18,8 +22,4 @@ public sealed class ImportException : FormatException
         Problem = problem;
         Path = path;
     }
-
-    public string Problem { get; }
-
-    public string? Path { get; }
 }
