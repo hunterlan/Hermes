@@ -323,9 +323,11 @@
             BorderThickness="0,1,0,0" Padding="14,0,8,0">
       <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
         <TextBlock Classes="mono" Text="{Binding DataDirectory}" TextTrimming="PathSegmentEllipsis" MaxWidth="520" />
-        <c:IconTag Grid.Column="1" Kind="Warn" Icon="{StaticResource IconAlert}" Text="Secrets not protected"
-                   HorizontalAlignment="Right" Margin="0,0,8,0" IsVisible="{Binding AreSecretsUnprotected}"
-                   ToolTip.Tip="{Binding SecretsWarning}" />
+        <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Right" Margin="0,0,8,0"
+                IsVisible="{Binding AreSecretsUnprotected}" Command="{Binding ShowSecretsProblemCommand}"
+                ToolTip.Tip="{Binding SecretsWarning}">
+          <c:IconTag Kind="Warn" Icon="{StaticResource IconAlert}" Text="Secrets aren't protected" />
+        </Button>
         <Button Grid.Column="2" Classes="ghost" Command="{Binding OpenCookiesCommand}" ToolTip.Tip="Manage cookies">
           <TextBlock Text="Cookies" />
         </Button>

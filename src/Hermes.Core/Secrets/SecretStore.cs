@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Hermes.Core.Serialization;
+using Hermes.Core.Storage;
 
 namespace Hermes.Core.Secrets;
 
@@ -20,12 +21,14 @@ public abstract class SecretStore
     public bool IsProtected { get; private set; } = true;
 
     /// <summary>Why secrets aren't protected, for the warning shown to the user.</summary>
-    public string? UnprotectedReason { get; private set; }
+    public StorageError? UnprotectedProblem { get; private set; }
 
     /// <summary>Raised when the store stops protecting secrets after a keychain failure.</summary>
     public event Action? ProtectionLost;
 
-    public static SecretStore Unprotected(string reason) => new UnprotectedSecretStore(reason);
+    public static SecretStore Unprotected(string reason) => new UnprotectedSecretStore(StorageError.Plain(reason));
+
+    public static SecretStore Unprotected(StorageError problem) => new UnprotectedSecretStore(problem);
 
     public IReadOnlyDictionary<string, string> Get(string owner)
     {
@@ -60,7 +63,7 @@ public abstract class SecretStore
             }
             catch (Exception ex)
             {
-                MarkUnprotected($"Saving to the keychain failed: {ex.Message}");
+                MarkUnprotected(KeychainErrorDescriber.Describe(ex, KeychainOperation.Write));
             }
         }
     }
@@ -69,12 +72,12 @@ public abstract class SecretStore
 
     protected abstract void Write(byte[] data);
 
-    protected void MarkUnprotected(string reason)
+    protected void MarkUnprotected(StorageError problem)
     {
         if (!IsProtected)
             return;
         IsProtected = false;
-        UnprotectedReason = reason;
+        UnprotectedProblem = problem;
         ProtectionLost?.Invoke();
     }
 
@@ -95,7 +98,7 @@ public abstract class SecretStore
             {
                 // Writing over secrets we couldn't read would lose them, so stop using the store instead.
                 _owners = [];
-                MarkUnprotected($"Reading the keychain failed: {ex.Message}");
+                MarkUnprotected(KeychainErrorDescriber.Describe(ex, KeychainOperation.Read));
             }
             return _owners;
         }
@@ -106,7 +109,7 @@ public abstract class SecretStore
 
     private sealed class UnprotectedSecretStore : SecretStore
     {
-        public UnprotectedSecretStore(string reason) => MarkUnprotected(reason);
+        public UnprotectedSecretStore(StorageError problem) => MarkUnprotected(problem);
 
         protected override byte[] Read() => [];
 

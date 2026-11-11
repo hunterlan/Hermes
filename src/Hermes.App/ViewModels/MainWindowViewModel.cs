@@ -134,8 +134,17 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
     /// <summary>True when there's no usable keychain, so secrets are written to the data files as plain text.</summary>
     public bool AreSecretsUnprotected => !Workspace.Secrets.IsProtected;
 
-    public string SecretsWarning =>
-        $"Secret values are saved as plain text in the data folder. {Workspace.Secrets.UnprotectedReason}";
+    /// <summary>The short tooltip of the "Secrets aren't protected" banner.</summary>
+    public string SecretsWarning => $"Secret values are stored as plain text in {DataDirectory}. Click for details.";
+
+    [RelayCommand]
+    private async Task ShowSecretsProblem()
+    {
+        if (Workspace.Secrets.UnprotectedProblem is not { } problem)
+            return;
+        var facts = $"Secret values are stored as plain text in {DataDirectory}.";
+        await Dialogs.ShowStorageErrorsAsync("Secrets aren't protected", [problem with { Summary = $"{facts} {problem.Summary}" }]);
+    }
 
     public string AppVersion { get; } = "Hermes " + (typeof(MainWindowViewModel).Assembly.GetName().Version?.ToString(2) ?? "");
 

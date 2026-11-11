@@ -20,6 +20,10 @@ workspace.json             the data folder's id and last known path
 If you delete the file, Hermes makes a new id and can no longer find the old secrets. If you copy the folder, the copy
 gets its own id and a copy of the secrets.
 
+If `workspace.json` is damaged or can't be read, Hermes can't find the folder's keychain entry. It keeps secrets as
+plain text, shows "Secrets aren't protected" in the status bar and offers **Reveal file**. Repair the file and restart
+Hermes. Hermes doesn't offer to move this file aside, because a new id would cut the folder off from its secrets.
+
 ## When a file can't be read
 
 A file that is damaged or locked is reported when Hermes starts, naming the collection or environment. You can

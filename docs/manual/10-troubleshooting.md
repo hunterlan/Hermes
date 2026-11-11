@@ -74,7 +74,9 @@ to 0 to wait forever.
 
 ## No keychain
 
-Without a usable keychain, secrets are saved as plain text in the data folder. See [Secrets](secrets.md).
+Without a usable keychain, secrets are saved as plain text in the data folder. Click "Secrets aren't protected" in the
+status bar to see why and what to do. On Linux you need libsecret and a keyring service (GNOME Keyring or KWallet);
+restart Hermes after installing or starting one. See [Secrets](secrets.md).
 
 ## macOS blocks the app
 
