@@ -240,4 +240,61 @@ public class TokenFailureViewTests
         Assert.False(editor.Failure.IsDetailsExpanded);
         Assert.Equal(0, changes);
     }
+
+    [AvaloniaFact]
+    public async Task Changing_the_grant_type_clears_the_failure()
+    {
+        using var oauth = new OAuth2Service();
+        var editor = CreateEditor(oauth, ClientCredentials($"http://127.0.0.1:{ClosedPort.Find()}/token"));
+        await editor.GetNewAccessTokenCommand.ExecuteAsync(null);
+        Assert.NotNull(editor.Failure);
+
+        editor.SelectedGrantType = editor.GrantTypes.First(grant => grant.Value == OAuth2GrantType.Password);
+
+        Assert.Null(editor.Failure);
+    }
+
+    [AvaloniaFact]
+    public async Task Changing_the_auth_type_away_and_back_clears_the_failure()
+    {
+        using var oauth = new OAuth2Service();
+        var editor = CreateEditor(oauth, ClientCredentials($"http://127.0.0.1:{ClosedPort.Find()}/token"));
+        await editor.GetNewAccessTokenCommand.ExecuteAsync(null);
+        Assert.NotNull(editor.Failure);
+
+        editor.SelectedType = editor.Types.First(type => type.Value == AuthType.Bearer);
+        editor.SelectedType = editor.Types.First(type => type.Value == AuthType.OAuth2);
+
+        Assert.Null(editor.Failure);
+    }
+
+    [AvaloniaFact]
+    public async Task Editing_the_token_url_keeps_the_failure_on_screen()
+    {
+        using var oauth = new OAuth2Service();
+        var editor = CreateEditor(oauth, ClientCredentials($"http://127.0.0.1:{ClosedPort.Find()}/token"));
+        await editor.GetNewAccessTokenCommand.ExecuteAsync(null);
+        var failure = editor.Failure;
+        Assert.NotNull(failure);
+
+        editor.OAuthTokenUrl = "http://127.0.0.1:1/other";
+        editor.OAuthClientId = "another";
+
+        Assert.Same(failure, editor.Failure);
+    }
+
+    [AvaloniaFact]
+    public async Task Clearing_the_failure_on_a_grant_type_change_marks_the_settings_changed_only_once()
+    {
+        using var oauth = new OAuth2Service();
+        var editor = CreateEditor(oauth, ClientCredentials($"http://127.0.0.1:{ClosedPort.Find()}/token"));
+        await editor.GetNewAccessTokenCommand.ExecuteAsync(null);
+        var changes = 0;
+        editor.Changed += () => changes++;
+
+        editor.SelectedGrantType = editor.GrantTypes.First(grant => grant.Value == OAuth2GrantType.Password);
+
+        Assert.Null(editor.Failure);
+        Assert.Equal(1, changes);
+    }
 }

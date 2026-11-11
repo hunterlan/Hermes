@@ -239,10 +239,13 @@ public sealed partial class AuthEditorViewModel : ObservableObject
                 OnPropertyChanged(nameof(TypeDescription));
                 OnPropertyChanged(nameof(Summary));
                 OnPropertyChanged(nameof(Chain));
+                // A token failure belongs to the OAuth settings it came from, not to whatever is picked next.
+                Failure = null;
                 break;
             case nameof(SelectedGrantType):
                 OnPropertyChanged(nameof(IsAuthCodeGrant));
                 OnPropertyChanged(nameof(IsPasswordGrant));
+                Failure = null;
                 break;
             case nameof(Failure):
                 OnPropertyChanged(nameof(FailureActionLabel));
