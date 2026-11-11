@@ -11,9 +11,9 @@ namespace Hermes.Core.Secrets;
 /// </summary>
 public sealed class KeychainSecretStore : SecretStore
 {
-    private readonly MsalStorage _storage;
+    private readonly IKeychainStorage _storage;
 
-    private KeychainSecretStore(MsalStorage storage) => _storage = storage;
+    private KeychainSecretStore(IKeychainStorage storage) => _storage = storage;
 
     /// <summary>
     /// The keychain store for <paramref name="dataDirectory"/>, or an unprotected store when the OS has no usable
@@ -26,6 +26,12 @@ public sealed class KeychainSecretStore : SecretStore
         if (Environment.GetEnvironmentVariable("HERMES_SECRET_STORE") == "memory")
             return new InMemorySecretStore();
 
+        return Create(dataDirectory, key => new MsalKeychainStorage(OpenMsal(key)));
+    }
+
+    /// <param name="open">Opens the keychain entry for a key; replaced in tests.</param>
+    internal static SecretStore Create(string dataDirectory, Func<string, IKeychainStorage> open)
+    {
         WorkspaceIdentityState identity;
         try
         {
@@ -33,18 +39,18 @@ public sealed class KeychainSecretStore : SecretStore
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return Unprotected($"The data folder's id couldn't be read: {ex.Message}");
+            return Unprotected(KeychainErrorDescriber.DescribeIdFile(ex, dataDirectory, StorageOperation.Read));
         }
 
         try
         {
-            var storage = Open(identity.Id.ToString("N"));
+            var storage = open(identity.Id.ToString("N"));
             storage.VerifyPersistence();
 
             // A folder new to ids takes the secrets stored under the hash of its path (how entries used to be keyed);
             // a copied folder starts with a copy of the original's secrets.
-            var source = identity.IsNew ? Open(PathKey(dataDirectory))
-                : identity.CopiedFrom is { } original ? Open(original.ToString("N"))
+            var source = identity.IsNew ? open(PathKey(dataDirectory))
+                : identity.CopiedFrom is { } original ? open(original.ToString("N"))
                 : null;
             var data = source?.ReadData() ?? [];
             if (data.Length > 0)
@@ -52,18 +58,27 @@ public sealed class KeychainSecretStore : SecretStore
             // The id is recorded only once the secrets are under it (a failure is retried next start), and the
             // path-keyed entry is cleared only after that. The original of a copy keeps its own entry.
             if (identity.NeedsWrite)
-                WorkspaceIdentity.Write(dataDirectory, identity.Id);
+            {
+                try
+                {
+                    WorkspaceIdentity.Write(dataDirectory, identity.Id);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    return Unprotected(KeychainErrorDescriber.DescribeIdFile(ex, dataDirectory, StorageOperation.Write));
+                }
+            }
             if (identity.IsNew && data.Length > 0)
                 source!.Clear();
             return new KeychainSecretStore(storage);
         }
         catch (Exception ex)
         {
-            return Unprotected($"No usable keychain: {ex.Message}");
+            return Unprotected(KeychainErrorDescriber.Describe(ex, KeychainOperation.Open));
         }
     }
 
-    private static MsalStorage Open(string key) =>
+    private static MsalStorage OpenMsal(string key) =>
         MsalStorage.Create(new StorageCreationPropertiesBuilder($"secrets-{key}.bin", AppPaths.ConfigDirectory)
             .WithMacKeyChain("Hermes", $"secrets-{key}")
             .WithLinuxKeyring("app.hermes.secrets", MsalCacheHelper.LinuxKeyRingDefaultCollection, "Hermes secrets",
