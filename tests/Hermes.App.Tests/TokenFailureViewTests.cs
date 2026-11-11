@@ -56,7 +56,7 @@ public class TokenFailureViewTests
         Assert.Equal("Try again", Find<Button>(view, "TokenFailureActionButton").Content);
         Assert.False(Find<CollapsibleSection>(view, "TokenFailureDetailsSection").IsExpanded);
 
-        editor.FailureDetailsExpanded = true;
+        editor.Failure!.IsDetailsExpanded = true;
         UiTestHelpers.Pump();
         Find<Button>(view, "CopyTokenFailureDetailsButton").Command!.Execute(null);
         Assert.StartsWith("Server isn't accepting connections", copied);
@@ -204,7 +204,7 @@ public class TokenFailureViewTests
         var facts = Find<SelectableTextBlock>(view, "TokenFailureFactsText").Text;
         Assert.EndsWith("Copy the details if you report this.", facts);
         Assert.DoesNotContain("Object reference", facts);
-        editor.FailureDetailsExpanded = true;
+        editor.Failure!.IsDetailsExpanded = true;
         UiTestHelpers.Pump();
         Assert.Contains("Object reference not set", Find<SelectableTextBlock>(view, "TokenFailureOriginalMessageText").Text);
         window.Close();
@@ -216,10 +216,28 @@ public class TokenFailureViewTests
         using var oauth = new OAuth2Service();
         var editor = CreateEditor(oauth, ClientCredentials($"http://127.0.0.1:{ClosedPort.Find()}/token"));
         await editor.GetNewAccessTokenCommand.ExecuteAsync(null);
-        Assert.True(editor.IsFailureShown);
+        Assert.NotNull(editor.Failure);
 
         editor.ClearTokenCommand.Execute(null);
 
-        Assert.False(editor.IsFailureShown);
+        Assert.Null(editor.Failure);
+    }
+
+    [AvaloniaFact]
+    public async Task A_failure_appearing_expanding_and_being_replaced_does_not_mark_the_auth_settings_changed()
+    {
+        using var oauth = new OAuth2Service();
+        var editor = CreateEditor(oauth, ClientCredentials($"http://127.0.0.1:{ClosedPort.Find()}/token"));
+        var changes = 0;
+        editor.Changed += () => changes++;
+
+        await editor.GetNewAccessTokenCommand.ExecuteAsync(null);
+        Assert.NotNull(editor.Failure);
+        editor.Failure.IsDetailsExpanded = true;
+        await editor.GetNewAccessTokenCommand.ExecuteAsync(null);
+
+        Assert.NotNull(editor.Failure);
+        Assert.False(editor.Failure.IsDetailsExpanded);
+        Assert.Equal(0, changes);
     }
 }

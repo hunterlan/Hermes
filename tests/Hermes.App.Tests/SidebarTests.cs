@@ -149,7 +149,7 @@ public class SidebarTests
 
         var historyBefore = Workspace.History.Count;
         await tab.SendCommand.ExecuteAsync(null);
-        Assert.True(tab.Response.HasResponse, tab.Response.Failure?.Facts);
+        Assert.True(tab.Response.HasResponse, tab.Response.Failure?.Model.Facts);
         Assert.Contains("/env-test", tab.Response.RawText);
         Assert.Equal(historyBefore + 1, Workspace.History.Count);
         Assert.Equal("{{baseUrl}}/env-test", Workspace.History[0].Request.Url);
