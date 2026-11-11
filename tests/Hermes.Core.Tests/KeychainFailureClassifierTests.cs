@@ -77,6 +77,15 @@ public class KeychainFailureClassifierTests
             KeychainPlatform.Windows));
 
     [Fact]
+    public void A_file_failure_on_Windows_is_a_secrets_file_problem()
+    {
+        Assert.Equal(KeychainFailureKind.SecretsFileUnavailable, KeychainFailureClassifier.Classify(
+            Persistence("x", new UnauthorizedAccessException("denied")), KeychainPlatform.Windows));
+        Assert.Equal(KeychainFailureKind.SecretsFileUnavailable, KeychainFailureClassifier.Classify(
+            new IOException("locked"), KeychainPlatform.Windows));
+    }
+
+    [Fact]
     public void An_unreadable_blob_is_unreadable_data_on_every_platform() =>
         Assert.Equal(KeychainFailureKind.UnreadableData,
             KeychainFailureClassifier.Classify(new JsonException("bad"), KeychainPlatform.Linux));

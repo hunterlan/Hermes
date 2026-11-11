@@ -50,8 +50,11 @@ public static partial class KeychainFailureClassifier
                     _ => KeychainFailureKind.Unrecognised,
                 };
             case KeychainPlatform.Windows:
-                return chain.Any(link => link is CryptographicException)
-                    ? KeychainFailureKind.EncryptionUnavailable
+                // The library keeps the encrypted secrets in a file in the config folder, so file errors are possible too.
+                if (chain.Any(link => link is CryptographicException))
+                    return KeychainFailureKind.EncryptionUnavailable;
+                return chain.Any(link => link is IOException or UnauthorizedAccessException)
+                    ? KeychainFailureKind.SecretsFileUnavailable
                     : KeychainFailureKind.Unrecognised;
             default:
                 return KeychainFailureKind.Unrecognised;

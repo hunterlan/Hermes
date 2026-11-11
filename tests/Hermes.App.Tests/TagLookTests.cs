@@ -67,8 +67,10 @@ public class TagLookTests
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         vm.SelectedPane = SidebarPane.Environments;
         UiTestHelpers.Pump();
-        // No environment is listed in this window, so no Confirm tag is on screen; any grid does as a host.
-        var host = window.GetVisualDescendants().OfType<Grid>().First();
+        // The host only has to sit inside the window so that theme and style resources reach the tags; the status bar
+        // grid is used because it is always there.
+        var statusBar = window.GetVisualDescendants().OfType<Border>().First(border => border.Classes.Contains("statusBar"));
+        var host = (Grid)statusBar.Child!;
 
         // The old Confirm icon was 10px; the shared control uses 11px on purpose.
         AssertSameLook(host, LegacyTag("err", null, 11, 5), NewTag(IconTagKind.Err, false), true);

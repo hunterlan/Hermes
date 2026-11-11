@@ -8,6 +8,8 @@ public class KeychainSecretStoreTests : IDisposable
 {
     private const string RawMessage = "raw-library-text: Domain:'1' Code:'2' Error code: -25293";
 
+    private static readonly IReadOnlyDictionary<string, string> OneSecret = new Dictionary<string, string> { ["key"] = "value" };
+
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "hermes-tests-" + Guid.NewGuid());
 
     public KeychainSecretStoreTests() => Directory.CreateDirectory(_dir);
@@ -17,8 +19,6 @@ public class KeychainSecretStoreTests : IDisposable
         if (Directory.Exists(_dir))
             Directory.Delete(_dir, recursive: true);
     }
-
-    private static readonly IReadOnlyDictionary<string, string> OneSecret = new Dictionary<string, string> { ["key"] = "value" };
 
     private static MsalCachePersistenceException Failure() => new(RawMessage);
 
@@ -140,7 +140,21 @@ public class KeychainSecretStoreTests : IDisposable
             KeychainOperation.Open, KeychainPlatform.Windows);
         Assert.Equal("Windows couldn't encrypt the secrets for your account.", windows.Summary);
         Assert.DoesNotContain("Credential Manager", windows.Message);
+        Assert.DoesNotContain("config folder", windows.NextStep);
         Assert.Contains("dpapi-raw", windows.Details);
+    }
+
+    [Fact]
+    public void A_Windows_secrets_file_failure_names_the_file_problem_and_the_config_folder()
+    {
+        var problem = KeychainErrorDescriber.Describe(
+            new MsalCachePersistenceException("x", new UnauthorizedAccessException("file-raw")),
+            KeychainOperation.Open, KeychainPlatform.Windows);
+
+        Assert.Equal("Hermes couldn't read or write its encrypted secrets file.", problem.Summary);
+        Assert.Contains(AppPaths.ConfigDirectory, problem.NextStep);
+        Assert.DoesNotContain("file-raw", problem.Message);
+        Assert.Contains("file-raw", problem.Details);
     }
 
     private sealed class FakeStorage : IKeychainStorage

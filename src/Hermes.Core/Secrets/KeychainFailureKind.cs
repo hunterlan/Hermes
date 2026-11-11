@@ -27,6 +27,9 @@ public enum KeychainFailureKind
     /// <summary>Windows: DPAPI couldn't encrypt or decrypt the secrets for the account.</summary>
     EncryptionUnavailable,
 
+    /// <summary>Windows: the encrypted secrets file in the config folder couldn't be read or written.</summary>
+    SecretsFileUnavailable,
+
     /// <summary>The keychain answered, but what it holds isn't the data Hermes stored.</summary>
     UnreadableData,
 }
