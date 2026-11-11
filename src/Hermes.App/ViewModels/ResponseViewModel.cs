@@ -203,7 +203,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     private void SetLayout(ResponseLayout layout)
     {
         settings.Current.Layout = layout;
-        settings.Update(settings.Current);
+        settings.SaveCurrent();
         OnPropertyChanged(nameof(IsSideBySide));
     }
 
@@ -354,7 +354,16 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
             return;
         var ext = MimeTypes.ExtensionFor(_response.ContentType);
         if (await dialogs.SaveFileAsync("Save response", "response" + ext, ext) is { } path)
-            await File.WriteAllBytesAsync(path, _response.Body);
+            await WriteToFileAsync(path);
+    }
+
+    /// <summary>Writes the response body to <paramref name="path"/>. When that fails the reason is shown and this returns false.</summary>
+    public async Task<bool> WriteToFileAsync(string path)
+    {
+        if (_response is not { } response)
+            return false;
+        return await UserFileWriter.WriteAsync(dialogs, "Couldn't save the response", path,
+            () => File.WriteAllBytesAsync(path, response.Body));
     }
 
     private static string Decode(ResponseModel response)

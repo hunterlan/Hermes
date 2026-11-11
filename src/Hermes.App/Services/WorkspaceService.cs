@@ -21,6 +21,7 @@ public sealed class WorkspaceService : IDisposable
 
     private EnvironmentModel? _activeEnvironment;
     private bool _disposed;
+    private bool _sessionFailureReported;
 
     public WorkspaceService(WorkspaceRepository repository, SettingsService settings, TimeProvider timeProvider)
     {
@@ -134,7 +135,15 @@ public sealed class WorkspaceService : IDisposable
     }
 
     // ---- collections ----
+    //
+    // A write that can fail either reports through StorageProblem (the bool methods) or returns the error for the
+    // caller to present (the Try methods, which tabs use to offer Retry). In-memory state changes only after the
+    // write succeeded, or is put back when it didn't, so the sidebar never shows what isn't on disk.
 
+    /// <summary>
+    /// Creates a collection and saves it. When it can't be written the failure is reported and the collection is not
+    /// in <see cref="Collections"/>; use <see cref="AddCollection"/> when the caller must know.
+    /// </summary>
     public CollectionModel CreateCollection(string name)
     {
         var collection = new CollectionModel { Name = name };
@@ -142,55 +151,89 @@ public sealed class WorkspaceService : IDisposable
         return collection;
     }
 
-    public void AddCollection(CollectionModel collection)
+    /// <summary>Saves <paramref name="collection"/> and adds it to the list. False, after reporting it, when it couldn't be written.</summary>
+    public bool AddCollection(CollectionModel collection) => !Report(TryAddCollection(collection));
+
+    /// <summary>Like <see cref="AddCollection"/>, but returns the error instead of reporting it. Null when it worked.</summary>
+    public StorageError? TryAddCollection(CollectionModel collection)
     {
+        if (TrySaveCollectionFile(collection) is { } error)
+            return error;
         Collections.Add(collection);
         Collections.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase));
-        _repository.SaveCollection(collection);
         CollectionsListChanged?.Invoke();
+        return null;
     }
 
-    public void SaveCollection(CollectionModel collection)
+    /// <summary>Writes <paramref name="collection"/>. False, after reporting it, when it couldn't be written.</summary>
+    public bool SaveCollection(CollectionModel collection) => !Report(TrySaveCollection(collection));
+
+    /// <summary>Like <see cref="SaveCollection"/>, but returns the error instead of reporting it. Null when it worked.</summary>
+    public StorageError? TrySaveCollection(CollectionModel collection)
     {
-        _repository.SaveCollection(collection);
+        if (TrySaveCollectionFile(collection) is { } error)
+            return error;
         CollectionChanged?.Invoke(collection);
         VariablesChanged?.Invoke();
+        return null;
     }
 
-    public void DeleteCollection(CollectionModel collection)
+    /// <summary>Deletes a collection. False, after reporting it, when its file couldn't be deleted; it stays in the list.</summary>
+    public bool DeleteCollection(CollectionModel collection)
     {
+        var error = Attempt(() => _repository.DeleteCollection(collection.Id), _repository.CollectionFile(collection.Id),
+            CollectionSubject(collection), StorageOperation.Delete);
+        if (Report(error))
+            return false;
         Collections.Remove(collection);
-        _repository.DeleteCollection(collection.Id);
         DeleteResponsesFor(collection.Items);
         CollectionsListChanged?.Invoke();
+        return true;
     }
 
-    /// <summary>Adds <paramref name="node"/> to a collection root or a folder.</summary>
-    public void AddNode(CollectionModel collection, FolderModel? folder, CollectionNode node, int index = -1)
+    /// <summary>Adds <paramref name="node"/> to a collection root or a folder. False, after reporting it, when it couldn't be saved.</summary>
+    public bool AddNode(CollectionModel collection, FolderModel? folder, CollectionNode node, int index = -1) =>
+        !Report(TryAddNode(collection, folder, node, index));
+
+    /// <summary>Like <see cref="AddNode"/>, but returns the error instead of reporting it. Null when it worked.</summary>
+    public StorageError? TryAddNode(CollectionModel collection, FolderModel? folder, CollectionNode node, int index = -1)
     {
         var items = folder?.Items ?? collection.Items;
+        var before = items.ToList();
         if (index < 0 || index > items.Count)
             items.Add(node);
         else
             items.Insert(index, node);
-        SaveCollection(collection);
+        var error = TrySaveCollection(collection);
+        if (error is not null)
+            Restore(items, before);
+        return error;
     }
 
-    public void DeleteNode(Guid nodeId)
+    /// <summary>Deletes a node. False, after reporting it, when the collection couldn't be saved; the node stays.</summary>
+    public bool DeleteNode(Guid nodeId)
     {
         if (Find(nodeId) is not { } location)
-            return;
+            return true;
+        var before = location.Container.ToList();
         location.Container.Remove(location.Node);
-        SaveCollection(location.Collection);
+        if (Report(TrySaveCollection(location.Collection)))
+        {
+            Restore(location.Container, before);
+            return false;
+        }
         DeleteResponsesFor([location.Node]);
+        return true;
     }
 
+    // The node is already gone from the collection; saved responses that stay behind are only wasted space.
     private void DeleteResponsesFor(IEnumerable<CollectionNode> nodes)
     {
         foreach (var node in nodes)
         {
             if (node is HttpRequestModel request)
-                _repository.DeleteResponses(request.Id);
+                Report(Attempt(() => _repository.DeleteResponses(request.Id), _repository.ResponsesFolder(request.Id),
+                    "Saved responses", StorageOperation.Delete));
             else if (node is FolderModel folder)
                 DeleteResponsesFor(folder.Items);
         }
@@ -198,7 +241,8 @@ public sealed class WorkspaceService : IDisposable
 
     /// <summary>
     /// Moves a node into <paramref name="targetFolder"/> (or the collection root) at <paramref name="index"/>.
-    /// Refuses to move a folder into itself or its descendants.
+    /// Refuses to move a folder into itself or its descendants. False when refused, or when the move couldn't be
+    /// saved (reported, and the node is back where it was).
     /// </summary>
     public bool MoveNode(Guid nodeId, CollectionModel targetCollection, FolderModel? targetFolder, int index)
     {
@@ -209,6 +253,8 @@ public sealed class WorkspaceService : IDisposable
             return false;
 
         var targetItems = targetFolder?.Items ?? targetCollection.Items;
+        var sourceBefore = source.Container.ToList();
+        var targetBefore = targetItems.ToList();
         var oldIndex = source.Container.IndexOf(source.Node);
         source.Container.RemoveAt(oldIndex);
         if (ReferenceEquals(source.Container, targetItems) && oldIndex < index)
@@ -216,17 +262,44 @@ public sealed class WorkspaceService : IDisposable
         index = Math.Clamp(index, 0, targetItems.Count);
         targetItems.Insert(index, source.Node);
 
-        SaveCollection(targetCollection);
-        if (source.Collection != targetCollection)
-            SaveCollection(source.Collection);
+        if (Report(TrySaveCollection(targetCollection)))
+        {
+            Restore(source.Container, sourceBefore);
+            Restore(targetItems, targetBefore);
+            return false;
+        }
+        if (source.Collection != targetCollection && Report(TrySaveCollection(source.Collection)))
+        {
+            Restore(source.Container, sourceBefore);
+            Restore(targetItems, targetBefore);
+            // The target's file already has the node; write it back without, so it isn't on disk twice.
+            TrySaveCollection(targetCollection);
+            return false;
+        }
         return true;
+    }
+
+    private static void Restore(List<CollectionNode> items, List<CollectionNode> before)
+    {
+        items.Clear();
+        items.AddRange(before);
     }
 
     private static bool IsDescendant(FolderModel ancestor, FolderModel candidate) =>
         ancestor.Items.OfType<FolderModel>().Any(f => f == candidate || IsDescendant(f, candidate));
 
+    private StorageError? TrySaveCollectionFile(CollectionModel collection) =>
+        Attempt(() => _repository.SaveCollection(collection), _repository.CollectionFile(collection.Id),
+            CollectionSubject(collection), StorageOperation.Write);
+
+    private static string CollectionSubject(CollectionModel collection) => $"Collection \"{collection.Name}\"";
+
     // ---- environments ----
 
+    /// <summary>
+    /// Creates an environment and saves it. When it can't be written the failure is reported and the environment is not
+    /// in <see cref="Environments"/>; use <see cref="AddEnvironment"/> when the caller must know.
+    /// </summary>
     public EnvironmentModel CreateEnvironment(string name)
     {
         var env = new EnvironmentModel { Name = name };
@@ -234,31 +307,78 @@ public sealed class WorkspaceService : IDisposable
         return env;
     }
 
-    public void AddEnvironment(EnvironmentModel environment)
+    /// <summary>Saves <paramref name="environment"/> and adds it to the list. False, after reporting it, when it couldn't be written.</summary>
+    public bool AddEnvironment(EnvironmentModel environment) => !Report(TryAddEnvironment(environment));
+
+    /// <summary>Like <see cref="AddEnvironment"/>, but returns the error instead of reporting it. Null when it worked.</summary>
+    public StorageError? TryAddEnvironment(EnvironmentModel environment)
     {
+        var error = Attempt(() => _repository.SaveEnvironment(environment), _repository.EnvironmentFile(environment.Id),
+            EnvironmentSubject(environment), StorageOperation.Write);
+        if (error is not null)
+            return error;
         Environments.Add(environment);
         Environments.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase));
-        _repository.SaveEnvironment(environment);
         EnvironmentsChanged?.Invoke();
+        return null;
     }
 
-    public void SaveEnvironment(EnvironmentModel environment)
+    /// <summary>Writes <paramref name="environment"/> (or the globals). False, after reporting it, when it couldn't be written.</summary>
+    public bool SaveEnvironment(EnvironmentModel environment) => !Report(TrySaveEnvironment(environment));
+
+    /// <summary>Like <see cref="SaveEnvironment"/>, but returns the error instead of reporting it. Null when it worked.</summary>
+    public StorageError? TrySaveEnvironment(EnvironmentModel environment)
     {
-        if (environment == Globals)
-            _repository.SaveGlobals(environment);
-        else
-            _repository.SaveEnvironment(environment);
+        var error = environment == Globals
+            ? Attempt(() => _repository.SaveGlobals(environment), _repository.GlobalsFile, "Global variables", StorageOperation.Write)
+            : Attempt(() => _repository.SaveEnvironment(environment), _repository.EnvironmentFile(environment.Id),
+                EnvironmentSubject(environment), StorageOperation.Write);
+        if (error is not null)
+            return error;
         EnvironmentsChanged?.Invoke();
         VariablesChanged?.Invoke();
+        return null;
     }
 
-    public void DeleteEnvironment(EnvironmentModel environment)
+    /// <summary>Deletes an environment. False, after reporting it, when its file couldn't be deleted; it stays in the list.</summary>
+    public bool DeleteEnvironment(EnvironmentModel environment)
     {
+        var error = Attempt(() => _repository.DeleteEnvironment(environment.Id), _repository.EnvironmentFile(environment.Id),
+            EnvironmentSubject(environment), StorageOperation.Delete);
+        if (Report(error))
+            return false;
         Environments.Remove(environment);
-        _repository.DeleteEnvironment(environment.Id);
         if (ActiveEnvironment == environment)
             ActiveEnvironment = null;
         EnvironmentsChanged?.Invoke();
+        return true;
+    }
+
+    private static string EnvironmentSubject(EnvironmentModel environment) => $"Environment \"{environment.Name}\"";
+
+    // ---- reporting ----
+
+    /// <summary>Runs a write and describes the failure of a file operation. Null when it worked.</summary>
+    private static StorageError? Attempt(Action write, string path, string subject, StorageOperation operation)
+    {
+        try
+        {
+            write();
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return StorageErrorDescriber.Describe(ex, path, subject, operation);
+        }
+    }
+
+    /// <summary>Raises <see cref="StorageProblem"/> for <paramref name="error"/> if there is one. True when there was.</summary>
+    private bool Report(StorageError? error)
+    {
+        if (error is null)
+            return false;
+        StorageProblem?.Invoke(error);
+        return true;
     }
 
     // ---- history ----
@@ -352,5 +472,22 @@ public sealed class WorkspaceService : IDisposable
 
     public SessionState LoadSession() => _repository.LoadSession();
 
-    public void SaveSession(SessionState session) => _repository.SaveSession(session);
+    /// <summary>
+    /// Saves the session. It runs on a timer, so a failure is reported once and stays quiet until a save has worked
+    /// again; the session is only a convenience and never worth interrupting the user every few seconds.
+    /// </summary>
+    public void SaveSession(SessionState session)
+    {
+        var error = Attempt(() => _repository.SaveSession(session), _repository.SessionFile,
+            "Session (open tabs and drafts)", StorageOperation.Write);
+        if (error is null)
+        {
+            _sessionFailureReported = false;
+            return;
+        }
+        if (_sessionFailureReported)
+            return;
+        _sessionFailureReported = true;
+        Report(error);
+    }
 }

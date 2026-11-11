@@ -42,4 +42,7 @@ Older history is removed as soon as you save the setting, and again each time th
 
 The value must be a whole number, 0 or more. If it isn't, the dialog explains why under the field and Save stays disabled until you fix it.
 
+If the settings can't be written, the reason appears at the bottom of the dialog and it stays open, so you can fix the
+problem and press Save again, or Cancel to keep the old settings. See [Troubleshooting](10-troubleshooting.md).
+
 See [Data folder](08-data-folder.md).

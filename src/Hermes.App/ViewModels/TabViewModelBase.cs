@@ -2,6 +2,7 @@ using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.Core.Models;
+using Hermes.Core.Storage;
 
 namespace Hermes.App.ViewModels;
 
@@ -77,8 +78,25 @@ public abstract partial class TabViewModelBase(TabServices services) : Observabl
     /// <summary>Accessible name of <see cref="KindIconKey"/> (e.g. "Environment").</summary>
     public virtual string? KindName => null;
 
-    /// <summary>Saves the tab. Returns false when the user cancelled (e.g. closed the "Save as" dialog).</summary>
+    /// <summary>
+    /// Saves the tab. Returns false when it wasn't saved: the user cancelled (e.g. closed the "Save as" dialog) or the
+    /// write failed and they gave up on retrying. The tab stays dirty then.
+    /// </summary>
     public abstract Task<bool> SaveAsync();
+
+    /// <summary>
+    /// Runs <paramref name="write"/> until it works or the user gives up: each failure is shown with its reason and a
+    /// Retry button. True when it worked. <paramref name="write"/> returns the error, or null when it worked.
+    /// </summary>
+    protected async Task<bool> WriteWithRetryAsync(Func<StorageError?> write)
+    {
+        while (write() is { } error)
+        {
+            if (!await Services.Dialogs.ShowSaveFailedAsync(error))
+                return false;
+        }
+        return true;
+    }
 
     /// <summary>Unsaved edits survive a restart in the session; otherwise quitting asks to save them.</summary>
     public virtual bool KeepsDraftInSession => false;

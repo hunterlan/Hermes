@@ -131,8 +131,9 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     [RelayCommand]
     private void NewCollection()
     {
-        var collection = _workspace.CreateCollection("New Collection");
-        BeginRename(collection.Id);
+        var collection = new CollectionModel { Name = "New Collection" };
+        if (_workspace.AddCollection(collection))
+            BeginRename(collection.Id);
     }
 
     [RelayCommand]
@@ -141,7 +142,8 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         if (ContainerOf(node) is not var (collection, folder))
             return;
         var request = new HttpRequestModel { Name = "New Request" };
-        _workspace.AddNode(collection, folder, request);
+        if (!_workspace.AddNode(collection, folder, request))
+            return;
         ExpandTo(request.Id);
         if (Find(request.Id) is { } created)
         {
@@ -157,7 +159,8 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         if (ContainerOf(node) is not var (collection, folder))
             return;
         var newFolder = new FolderModel { Name = "New Folder" };
-        _workspace.AddNode(collection, folder, newFolder);
+        if (!_workspace.AddNode(collection, folder, newFolder))
+            return;
         if (Find(newFolder.Id)?.Parent is { } parent)
             parent.IsExpanded = true;
         BeginRename(newFolder.Id);
@@ -192,22 +195,32 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
             return;
         }
 
-        switch (node)
+        var previousName = NameOf(node);
+        var saved = node switch
         {
-            case CollectionNodeViewModel c:
-                c.Model.Name = newName;
-                _workspace.SaveCollection(c.Model);
-                break;
-            case FolderNodeViewModel f:
-                f.Model.Name = newName;
-                _workspace.SaveCollection(f.Root.Model);
-                break;
-            case RequestNodeViewModel r:
-                r.Model.Name = newName;
-                _workspace.SaveCollection(r.Root.Model);
-                _host.OnRequestRenamed(r.Model.Id, newName);
-                break;
+            CollectionNodeViewModel c => Rename(c.Model.Name, name => c.Model.Name = name, newName, c.Model),
+            FolderNodeViewModel f => Rename(f.Model.Name, name => f.Model.Name = name, newName, f.Root.Model),
+            RequestNodeViewModel r => Rename(r.Model.Name, name => r.Model.Name = name, newName, r.Root.Model),
+            _ => true,
+        };
+        if (!saved)
+        {
+            // Not on disk, so the old name stays everywhere.
+            node.Name = previousName;
+            return;
         }
+        if (node is RequestNodeViewModel renamed)
+            _host.OnRequestRenamed(renamed.Model.Id, newName);
+    }
+
+    /// <summary>Sets a new name and saves the collection; puts the old name back when that fails.</summary>
+    private bool Rename(string previousName, Action<string> setName, string newName, CollectionModel collection)
+    {
+        setName(newName);
+        if (_workspace.SaveCollection(collection))
+            return true;
+        setName(previousName);
+        return false;
     }
 
     private static string NameOf(TreeNodeViewModel node) => node switch
@@ -256,11 +269,9 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
             return;
 
         var ids = node.SelfAndDescendants().Select(n => n.Id).ToList();
-        if (node is CollectionNodeViewModel c)
-            _workspace.DeleteCollection(c.Model);
-        else
-            _workspace.DeleteNode(node.Id);
-        _host.CloseTabsFor(ids);
+        var deleted = node is CollectionNodeViewModel c ? _workspace.DeleteCollection(c.Model) : _workspace.DeleteNode(node.Id);
+        if (deleted)
+            _host.CloseTabsFor(ids);
     }
 
     [RelayCommand]
@@ -275,7 +286,14 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
             model = root.Model;
         var fileName = $"{root.Model.Name}.postman_collection.json";
         if (await _dialogs.SaveFileAsync("Export collection (Postman v2.1)", fileName, ".json") is { } path)
-            await File.WriteAllTextAsync(path, PostmanCollectionExporter.Export(model));
+            await WriteExportAsync(model, path);
+    }
+
+    /// <summary>Writes the Postman export of <paramref name="model"/> to <paramref name="path"/>. When that fails the reason is shown and this returns false.</summary>
+    public async Task<bool> WriteExportAsync(CollectionModel model, string path)
+    {
+        var json = PostmanCollectionExporter.Export(model);
+        return await UserFileWriter.WriteAsync(_dialogs, "Couldn't export the collection", path, () => File.WriteAllTextAsync(path, json));
     }
 
     // ---- drag & drop ----

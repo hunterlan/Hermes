@@ -35,3 +35,6 @@ reveal the file in your file manager, or move a corrupt one aside (it is renamed
 The data folder is plain JSON, so a backup is a copy of the folder. To keep it in Git, make the folder a repository.
 Secrets are not in the folder (see [Secrets](secrets.md)), so it is safe to commit. `session.json` and `history/`
 change often and are usually left out with a `.gitignore`.
+
+If Hermes can't write to the data folder (it is read-only, the disk is full, or another program has a file open), it
+tells you what couldn't be saved and keeps your edits. See [Troubleshooting](10-troubleshooting.md).

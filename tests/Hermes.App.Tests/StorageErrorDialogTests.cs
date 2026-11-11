@@ -56,6 +56,39 @@ public class StorageErrorDialogTests : IDisposable
     }
 
     [AvaloniaFact]
+    public async Task A_dialog_closed_out_of_order_does_not_become_the_owner_of_the_next_one()
+    {
+        var main = new Window();
+        main.Show();
+        var service = new Services.DialogService { Owner = main };
+        var first = new StorageErrorDialog("First", [], []);
+        var second = new StorageErrorDialog("Second", [], []);
+        var firstShown = service.ShowDialogAsync<StorageDialogResult>(first);
+        var secondShown = service.ShowDialogAsync<StorageDialogResult>(second);
+        UiTestHelpers.Pump();
+
+        // Closing a dialog closes the ones stacked on it, so both finish here, the lower one first.
+        first.Close();
+        await firstShown;
+        await secondShown;
+        var third = new StorageErrorDialog("Third", [], []);
+        var thirdShown = service.ShowDialogAsync<StorageDialogResult>(third);
+        UiTestHelpers.Pump();
+        Assert.Same(main, third.Owner);
+
+        third.Close();
+        await thirdShown;
+        var fourth = new StorageErrorDialog("Fourth", [], []);
+        var fourthShown = service.ShowDialogAsync<StorageDialogResult>(fourth);
+        UiTestHelpers.Pump();
+
+        Assert.Same(main, fourth.Owner);
+        fourth.Close();
+        await fourthShown;
+        main.Close();
+    }
+
+    [AvaloniaFact]
     public void The_dialog_shows_the_sentence_and_next_step_and_keeps_the_raw_text_for_details()
     {
         var error = StorageErrorDescriber.Describe(new IOException("No space left on device", unchecked((int)0x80070070)),

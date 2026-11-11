@@ -24,7 +24,8 @@ own headers:
 - **Preview tab:** opening an item from the sidebar with a single click shows it in a preview tab, which the next
   item you open replaces.
 - **Pinned tab:** pin a tab to keep it. A pinned tab is not replaced while tabs are on.
-- **Unsaved changes:** a tab with unsaved changes is kept until you save (`Ctrl+S`) or close it.
+- **Unsaved changes:** a tab with unsaved changes is kept until you save (`Ctrl+S`) or close it. If saving fails, the
+  tab stays unsaved and Hermes says why; see [Troubleshooting](10-troubleshooting.md).
 
 Close a tab with `Ctrl+W` or a middle click. Switch tabs with `Ctrl+Tab` and `Ctrl+Shift+Tab`.
 

@@ -104,19 +104,25 @@ public sealed partial class CollectionTabViewModel : TabViewModelBase
         Auth.HideRevealedValues();
     }
 
-    public override Task<bool> SaveAsync()
+    public override async Task<bool> SaveAsync()
     {
+        var previous = (_collection.Name, _collection.Description, _collection.Auth, _collection.Variables, _collection.Headers);
         _collection.Name = string.IsNullOrWhiteSpace(Name) ? "New Collection" : Name.Trim();
         _collection.Description = string.IsNullOrWhiteSpace(Description) ? null : Description;
         _collection.Auth = Auth.ToModel();
         _collection.Variables = Variables.ToModels();
         _collection.Headers = HeadersEditor.Headers.ToModels();
-        Services.Workspace.SaveCollection(_collection);
+        if (!await WriteWithRetryAsync(() => Services.Workspace.TrySaveCollection(_collection)))
+        {
+            // Not on disk, so not in the collection either; the edits stay in the tab.
+            (_collection.Name, _collection.Description, _collection.Auth, _collection.Variables, _collection.Headers) = previous;
+            return false;
+        }
         Name = _collection.Name;
         _snapshot = Snapshot();
         UpdateDirty();
         HeadersEditor.Refresh();
-        return Task.FromResult(true);
+        return true;
     }
 
     [RelayCommand]

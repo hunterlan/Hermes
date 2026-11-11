@@ -77,6 +77,9 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
     public bool ManualRequested { get; private set; }
     [ObservableProperty] public partial string CookieStatus { get; set; } = "";
 
+    /// <summary>Why the settings couldn't be written, shown in the dialog, which stays open; null when there is no problem.</summary>
+    [ObservableProperty] public partial string? SaveError { get; set; }
+
     /// <summary>Why <see cref="HistoryRetentionText"/> can't be saved, or null when it can.</summary>
     public string? HistoryRetentionError => ValidateHistoryRetention(HistoryRetentionText, out _);
 
@@ -142,7 +145,7 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
         }
 
         var current = _settings.Current;
-        _settings.Update(new AppSettings
+        var error = _settings.Update(new AppSettings
         {
             Theme = SelectedTheme.Value,
             Layout = SelectedLayout.Value,
@@ -155,6 +158,12 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
             TabViewPoolSize = tabViewPoolSize,
             DataDirectory = DataDirectory == AppPaths.DefaultDataDirectory ? null : DataDirectory,
         });
+        if (error is not null)
+        {
+            SaveError = error.Message;
+            return;
+        }
+        SaveError = null;
         CloseRequested?.Invoke(true);
     }
 

@@ -120,12 +120,13 @@ public sealed partial class EnvironmentMatrixTabViewModel : TabViewModelBase
         UpdateState();
     }
 
-    public override Task<bool> SaveAsync()
+    public override async Task<bool> SaveAsync()
     {
         RemoveDeletedColumns();
-        foreach (var column in Columns)
+        foreach (var column in Columns.ToList())
         {
             var variables = column.Model.Variables;
+            var backup = variables.Select(VariableBackup.Of).ToList();
             var rows = Rows.Where(r => r.Name.Trim().Length > 0).ToList();
             // Each row's variable is found before any is renamed, so swapped names or a new row taking a renamed
             // row's old name can't land on the wrong variable.
@@ -156,10 +157,32 @@ public sealed partial class EnvironmentMatrixTabViewModel : TabViewModelBase
                         variable.Value = cell.Value;
                 }
             }
-            Services.Workspace.SaveEnvironment(column.Model);
+            if (!await WriteWithRetryAsync(() => Services.Workspace.TrySaveEnvironment(column.Model)))
+            {
+                // Not on disk, so not in the environment either. Columns before it are saved; the edits stay in the grid.
+                column.Model.Variables = backup.Select(entry => entry.Restore()).ToList();
+                return false;
+            }
         }
         Load();
-        return Task.FromResult(true);
+        return true;
+    }
+
+    // A variable as it was before the grid's edits reached it, to put it back when the write fails.
+    private sealed record VariableBackup(Variable Variable, bool Enabled, string Key, string Value, string? CurrentValue, VariableType Type)
+    {
+        public static VariableBackup Of(Variable variable) =>
+            new(variable, variable.Enabled, variable.Key, variable.Value, variable.CurrentValue, variable.Type);
+
+        public Variable Restore()
+        {
+            Variable.Enabled = Enabled;
+            Variable.Key = Key;
+            Variable.Value = Value;
+            Variable.CurrentValue = CurrentValue;
+            Variable.Type = Type;
+            return Variable;
+        }
     }
 
     [RelayCommand]

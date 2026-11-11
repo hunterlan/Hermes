@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Services;
 using Hermes.Core.Import;
+using Hermes.Core.Models;
 using Hermes.Core.Secrets;
 using Hermes.Core.Serialization;
 
@@ -61,8 +62,8 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
     [RelayCommand]
     private void NewEnvironment()
     {
-        var env = _workspace.CreateEnvironment("New Environment");
-        if (Items.FirstOrDefault(i => i.Model == env) is { } item)
+        var env = new EnvironmentModel { Name = "New Environment" };
+        if (_workspace.AddEnvironment(env) && Items.FirstOrDefault(i => i.Model == env) is { } item)
         {
             SelectedItem = item;
             item.IsRenaming = true;
@@ -82,8 +83,12 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
         name = name?.Trim();
         if (string.IsNullOrEmpty(name) || name == item.Model.Name)
             return;
+        var previousName = item.Model.Name;
         item.Model.Name = name;
-        _workspace.SaveEnvironment(item.Model);
+        if (_workspace.SaveEnvironment(item.Model))
+            return;
+        // Not on disk, so the old name stays everywhere.
+        item.Model.Name = previousName;
     }
 
     [RelayCommand]
@@ -104,8 +109,8 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
             return;
         if (!await _dialogs.ConfirmAsync($"Delete \"{item.Name}\"?", "This environment and its variables will be permanently deleted."))
             return;
-        _workspace.DeleteEnvironment(item.Model);
-        _host.CloseTabsFor([item.Model.Id]);
+        if (_workspace.DeleteEnvironment(item.Model))
+            _host.CloseTabsFor([item.Model.Id]);
     }
 
     [RelayCommand]
@@ -125,6 +130,13 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
         if (SecretFields.Strip(model).Count > 0 && await _dialogs.AskIncludeSecretsAsync())
             model = item.Model;
         if (await _dialogs.SaveFileAsync("Export environment", $"{item.Name}.{suffix}.json", ".json") is { } path)
-            await File.WriteAllTextAsync(path, PostmanEnvironmentConverter.Export(model, item.IsGlobals));
+            await WriteExportAsync(model, item.IsGlobals, path);
+    }
+
+    /// <summary>Writes the Postman export of <paramref name="model"/> to <paramref name="path"/>. When that fails the reason is shown and this returns false.</summary>
+    public async Task<bool> WriteExportAsync(EnvironmentModel model, bool isGlobals, string path)
+    {
+        var json = PostmanEnvironmentConverter.Export(model, isGlobals);
+        return await UserFileWriter.WriteAsync(_dialogs, "Couldn't export the environment", path, () => File.WriteAllTextAsync(path, json));
     }
 }

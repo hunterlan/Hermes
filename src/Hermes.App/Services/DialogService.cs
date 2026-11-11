@@ -9,27 +9,30 @@ namespace Hermes.App.Services;
 /// <summary>UI-level services (dialogs, pickers, clipboard, browser) for view models.</summary>
 public sealed class DialogService
 {
+    private const string RetryChoiceId = "retry";
+
     public Window? Owner { get; set; }
 
-    private readonly Stack<Window> _openDialogs = new();
+    private readonly List<Window> _openDialogs = [];
 
     private TopLevel Top => Owner ?? throw new InvalidOperationException("Main window not set.");
 
     /// <summary>
-    /// Shows the dialog modal over the dialog opened most recently and still open, or over the main window when none
+    /// Shows the dialog modal over the dialog opened last that is still open, or over the main window when none
     /// is open, so a dialog opened from inside another one stacks on it.
     /// </summary>
     public async Task<T?> ShowDialogAsync<T>(Window dialog)
     {
-        var owner = _openDialogs.Count > 0 ? _openDialogs.Peek() : Top as Window ?? throw new InvalidOperationException();
-        _openDialogs.Push(dialog);
+        var owner = _openDialogs.LastOrDefault(open => open.IsVisible)
+            ?? Top as Window ?? throw new InvalidOperationException();
+        _openDialogs.Add(dialog);
         try
         {
             return await dialog.ShowDialog<T?>(owner);
         }
         finally
         {
-            _openDialogs.Pop();
+            _openDialogs.Remove(dialog);
         }
     }
 
@@ -146,6 +149,27 @@ public sealed class DialogService
     public async Task<bool> OpenUrlAsync(Uri uri) => await Top.Launcher.LaunchUriAsync(uri);
 
     public async Task RevealFolderAsync(string path) => await Top.Launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(path));
+
+    /// <summary>Tells the user a save failed, with the reason and next step. True when they chose Retry, false when they gave up.</summary>
+    public async Task<bool> ShowSaveFailedAsync(StorageError error)
+    {
+        var dialog = new StorageErrorDialog("Couldn't save", [error], [new StorageDialogChoice("Retry", RetryChoiceId, "accent")],
+            closeText: "Cancel");
+        await ShowDialogAsync<StorageDialogResult>(dialog);
+        return dialog.Result?.ChoiceId == RetryChoiceId;
+    }
+
+    /// <summary>
+    /// The "Something went wrong" dialog for a bug: a plain sentence, with the exception under Details and Copy details.
+    /// The last-line handler uses it; handlers of <c>async void</c> methods may call it too.
+    /// </summary>
+    public async Task ShowUnexpectedErrorAsync(Exception exception)
+    {
+        var error = StorageError.Plain("Hermes ran into a problem it didn't expect.",
+            "Hermes can keep running, but if something looks wrong, save your work and restart it. If it keeps happening, copy the details when you report it.",
+            details: exception.ToString());
+        await ShowDialogAsync<StorageDialogResult>(new StorageErrorDialog("Something went wrong", [error], []));
+    }
 
     public static FilePickerFileType JsonFiles { get; } = new("JSON files") { Patterns = ["*.json"], MimeTypes = ["application/json"] };
 }
