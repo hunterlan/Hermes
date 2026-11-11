@@ -17,7 +17,9 @@ Press `Ctrl+O`, or use **Import** on the welcome page. Hermes imports:
 - cURL commands
 
 You can also paste a cURL command straight into the URL bar of a request, or drop a file onto the window.
-If some items cannot be imported, Hermes lists them after the import.
+If a file has a problem, Hermes says what and where it is, for example `item[3].request.url`. When only some items
+of a collection are wrong, Hermes imports the rest and lists the skipped items after the import. Click **Details**,
+or **Copy details**, for the technical text when you report a problem.
 
 ## Command palette
 

@@ -15,10 +15,25 @@ public static class PostmanEnvironmentConverter
     public static EnvironmentModel Import(string json) =>
         Import(JsonNode.Parse(json) ?? throw new FormatException("Empty document."));
 
+    /// <summary>
+    /// True when the file is meant to be an environment even if it is malformed (it has <c>values</c> or a variable
+    /// scope), so <see cref="Import(JsonNode)"/> can say what is wrong instead of the file being called unknown.
+    /// </summary>
+    public static bool IsMeantAsEnvironment(JsonNode? root) =>
+        root is JsonObject o && o["item"] is null && (o["values"] is not null || o["_postman_variable_scope"] is not null);
+
     public static EnvironmentModel Import(JsonNode root)
     {
-        if (!LooksLikeEnvironment(root))
-            throw new FormatException("Not a Postman environment.");
+        if (root is not JsonObject)
+            throw new ImportException("A Postman environment must be a JSON object");
+        if (root["values"] is null)
+            throw new ImportException("The environment has no `values` list");
+        if (root["values"] is not JsonArray)
+            throw new ImportException("`values` must be a list");
+        if (root["name"] is null)
+            throw new ImportException("The environment has no `name`");
+        if (root["name"] is not JsonValue)
+            throw new ImportException("`name` must be text");
         return new EnvironmentModel
         {
             Name = Str(root["name"]) ?? "Imported environment",

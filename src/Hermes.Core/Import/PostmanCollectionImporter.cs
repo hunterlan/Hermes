@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
 using static Hermes.Core.Import.PostmanFormat;
@@ -7,7 +8,7 @@ using static Hermes.Core.Import.PostmanFormat;
 namespace Hermes.Core.Import;
 
 /// <summary>Reads Postman Collection Format v2.0 / v2.1.</summary>
-public static class PostmanCollectionImporter
+public static partial class PostmanCollectionImporter
 {
     public static bool LooksLikeCollection(JsonNode? root) =>
         root is JsonObject o && o["info"] is JsonObject info && o["item"] is JsonArray &&
@@ -17,55 +18,103 @@ public static class PostmanCollectionImporter
         Import(JsonNode.Parse(json, documentOptions: new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip })
                ?? throw new FormatException("Empty document."));
 
-    public static CollectionModel Import(JsonNode root)
-    {
-        if (!LooksLikeCollection(root))
-            throw new FormatException("Not a Postman collection (v2.0 / v2.1).");
+    /// <summary>
+    /// True when the file is meant to be a collection even if it is malformed (it has <c>item</c>, or a collection
+    /// schema in <c>info</c>), so <see cref="Import(JsonNode, ICollection{ImportException}?)"/> can say what is wrong
+    /// instead of the file being called an unknown format.
+    /// </summary>
+    public static bool IsMeantAsCollection(JsonNode? root) =>
+        root is JsonObject o &&
+        (o["item"] is not null ||
+         (o["info"] is JsonObject info && (Str(info["schema"])?.Contains("collection", StringComparison.OrdinalIgnoreCase) ?? false)));
 
-        var info = root["info"]!;
+    /// <summary>
+    /// Imports a collection. A problem with the whole file throws <see cref="ImportException"/>; a problem with one
+    /// item skips just that item, which is added to <paramref name="skipped"/> (dropped silently when that is null).
+    /// </summary>
+    public static CollectionModel Import(JsonNode root, ICollection<ImportException>? skipped = null)
+    {
+        if (root is not JsonObject document)
+            throw new ImportException("A Postman collection must be a JSON object");
+        if (document["info"] is not JsonObject info)
+            throw new ImportException(document["info"] is null ? "The collection has no `info` section" : "`info` must be an object");
+        if (document["item"] is null)
+            throw new ImportException("The collection has no `item` list");
+        if (document["item"] is not JsonArray items)
+            throw new ImportException("`item` must be a list");
+        if (UnsupportedSchemaVersion(Str(info["schema"])) is { } version)
+            throw new ImportException($"Unsupported Postman schema version {version}; Hermes reads v2.0 and v2.1");
+
         var collection = new CollectionModel
         {
             Name = Str(info["name"]) ?? "Imported collection",
             Description = Description(info["description"]),
             PostmanId = Str(info["_postman_id"]),
-            Auth = ReadAuth(root["auth"]) ?? AuthConfig.NoAuth(),
-            Variables = ReadVariables(root["variable"]),
-            EventsJson = root["event"]?.ToJsonString(),
+            Auth = ReadAuth(document["auth"]) ?? AuthConfig.NoAuth(),
+            Variables = ReadVariables(document["variable"]),
+            EventsJson = document["event"]?.ToJsonString(),
         };
         if (collection.Auth.Type == AuthType.Inherit)
             collection.Auth = AuthConfig.NoAuth();
-        collection.Items.AddRange(ReadItems(root["item"]));
+        collection.Items.AddRange(ReadItems(items, "item", skipped));
         return collection;
     }
 
-    private static IEnumerable<CollectionNode> ReadItems(JsonNode? items)
+    /// <summary>The version of a collection schema URL such as <c>.../collection/v1.0.0/...</c> when it isn't 2.0 or 2.1.</summary>
+    private static string? UnsupportedSchemaVersion(string? schema)
     {
-        if (items is not JsonArray array)
-            yield break;
-        foreach (var item in array)
-        {
-            if (item is null)
-                continue;
-            if (item["item"] is JsonArray)
-            {
-                var folder = new FolderModel
-                {
-                    Name = Str(item["name"]) ?? "Folder",
-                    Description = Description(item["description"]),
-                    Auth = ReadAuth(item["auth"]) ?? AuthConfig.Inherit(),
-                    EventsJson = item["event"]?.ToJsonString(),
-                };
-                folder.Items.AddRange(ReadItems(item["item"]));
-                yield return folder;
-            }
-            else
-            {
-                yield return ReadRequest(item);
-            }
-        }
+        var match = schema is null ? null : SchemaVersion().Match(schema);
+        if (match is not { Success: true })
+            return null;
+        var version = match.Groups["version"].Value;
+        return version.StartsWith("2.0") || version.StartsWith("2.1") ? null : version;
     }
 
-    private static HttpRequestModel ReadRequest(JsonNode item)
+    [GeneratedRegex(@"/collection/v(?<version>\d+(\.\d+)*)", RegexOptions.IgnoreCase)]
+    private static partial Regex SchemaVersion();
+
+    private static List<CollectionNode> ReadItems(JsonArray items, string path, ICollection<ImportException>? skipped)
+    {
+        var nodes = new List<CollectionNode>();
+        for (var index = 0; index < items.Count; index++)
+        {
+            if (items[index] is null)
+                continue;
+            try
+            {
+                nodes.Add(ReadItem(items[index]!, $"{path}[{index}]", skipped));
+            }
+            catch (ImportException problem)
+            {
+                skipped?.Add(problem);
+            }
+        }
+        return nodes;
+    }
+
+    private static CollectionNode ReadItem(JsonNode node, string path, ICollection<ImportException>? skipped)
+    {
+        if (node is not JsonObject item)
+            throw new ImportException("An item must be an object, not a list or a single value", path);
+
+        var label = Str(item["name"]) is { Length: > 0 } name ? $"\"{name}\"" : "without a name";
+        if (item["item"] is null)
+            return ReadRequest(item, label, path);
+
+        if (item["item"] is not JsonArray children)
+            throw new ImportException($"The folder {label} has an `item` that isn't a list", $"{path}.item");
+        var folder = new FolderModel
+        {
+            Name = Str(item["name"]) ?? "Folder",
+            Description = Description(item["description"]),
+            Auth = ReadAuth(item["auth"]) ?? AuthConfig.Inherit(),
+            EventsJson = item["event"]?.ToJsonString(),
+        };
+        folder.Items.AddRange(ReadItems(children, $"{path}.item", skipped));
+        return folder;
+    }
+
+    private static HttpRequestModel ReadRequest(JsonObject item, string label, string path)
     {
         var model = new HttpRequestModel
         {
@@ -74,23 +123,32 @@ public static class PostmanCollectionImporter
         };
 
         var request = item["request"];
-        if (request is JsonValue)
+        switch (request)
         {
-            // v2.1 allows "request": "https://..."
-            model.Url = Str(request) ?? "";
-            model.QueryParams = Web.UrlUtilities.ParseQuery(Web.UrlUtilities.Split(model.Url).Query);
-            return model;
+            case null:
+                throw new ImportException($"The item {label} is neither a folder nor a request: it has no `request`", path);
+            case JsonValue:
+                // v2.1 allows "request": "https://..."
+                model.Url = Str(request) ?? throw new ImportException($"The request {label} must be an object or a URL text", $"{path}.request");
+                model.QueryParams = Web.UrlUtilities.ParseQuery(Web.UrlUtilities.Split(model.Url).Query);
+                break;
+            case JsonObject:
+                if (request["url"] is not (null or JsonValue or JsonObject))
+                    throw new ImportException($"The request {label} has a `url` that isn't text or an object", $"{path}.request.url");
+                model.Method = (Str(request["method"]) ?? "GET").ToUpperInvariant();
+                model.Description = Description(request["description"]) ?? Description(item["description"]);
+                model.Headers = ReadKeyValues(request["header"]);
+                model.Auth = ReadAuth(request["auth"]) ?? AuthConfig.Inherit();
+                ReadUrl(request["url"], model);
+                ReadBody(request["body"], model);
+                ReadProtocolProfile(item["protocolProfileBehavior"], model);
+                break;
+            default:
+                throw new ImportException($"The request {label} must be an object or a URL text", $"{path}.request");
         }
-        if (request is null)
-            return model;
 
-        model.Method = (Str(request["method"]) ?? "GET").ToUpperInvariant();
-        model.Description = Description(request["description"]) ?? Description(item["description"]);
-        model.Headers = ReadKeyValues(request["header"]);
-        model.Auth = ReadAuth(request["auth"]) ?? AuthConfig.Inherit();
-        ReadUrl(request["url"], model);
-        ReadBody(request["body"], model);
-        ReadProtocolProfile(item["protocolProfileBehavior"], model);
+        if (string.IsNullOrWhiteSpace(model.Url))
+            throw new ImportException($"The request {label} has no URL", $"{path}.request.url");
         return model;
     }
 
@@ -143,7 +201,7 @@ public static class PostmanCollectionImporter
                 model.Body.Mode = BodyMode.Raw;
                 model.Body.Raw = Str(body["raw"]) ?? "";
                 // "text" is also what Postman writes when nothing was chosen, so the Content-Type header decides then.
-                model.Body.RawLanguage = ParseRawLanguage(Str(body["options"]?["raw"]?["language"])) is { } language and not RawLanguage.Text
+                model.Body.RawLanguage = ParseRawLanguage(Str(Member(Member(body["options"], "raw"), "language"))) is { } language and not RawLanguage.Text
                     ? language
                     : GuessLanguage(model.Headers);
                 break;
@@ -249,8 +307,8 @@ public static class PostmanCollectionImporter
         {
             case JsonArray array:
                 foreach (var a in array)
-                    if (Str(a?["key"]) is { } key)
-                        result[key] = ValueString(a!["value"]);
+                    if (Str(Member(a, "key")) is { } key)
+                        result[key] = ValueString(Member(a, "value"));
                 break;
             case JsonObject obj:
                 foreach (var (key, value) in obj)
