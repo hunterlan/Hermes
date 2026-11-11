@@ -50,7 +50,7 @@ The technical message is under **Details**, and **Copy details** copies it for a
 | --- | --- | --- |
 | Linux | libsecret and a running keyring service, such as GNOME Keyring or KWallet | "libsecret isn't installed", or "No keyring service seems to be running". Install or start one, then restart Hermes. |
 | macOS | Access to the login keychain | "Keychain access was denied" (or cancelled). Allow access when macOS asks, or check Keychain Access, then restart Hermes. |
-| Windows | Encryption for your Windows account (DPAPI) | "Windows couldn't encrypt the secrets for your account". Check that you're signed in to your own account and that the Hermes config folder is writable. |
+| Windows | Encryption for your Windows account (DPAPI) | "Windows couldn't encrypt the secrets for your account". Check that you're signed in to your own account. If it says Hermes couldn't read or write its encrypted secrets file, check that Hermes can write to its config folder. |
 
 If the keychain fails while Hermes is running, the message says whether reading or saving failed, and that Hermes now
 keeps secret values as plain text. Restart Hermes after fixing the cause.
