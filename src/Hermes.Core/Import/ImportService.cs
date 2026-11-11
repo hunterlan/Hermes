@@ -11,10 +11,12 @@ namespace Hermes.Core.Import;
 /// </summary>
 public static class ImportService
 {
-    // A hand-edited file with comments or trailing commas still imports.
+    // A hand-edited file with comments or trailing commas still imports. A key that appears twice doesn't: which value
+    // is meant is anyone's guess, and it is a mistake in the file.
     private static readonly JsonDocumentOptions LenientJson = new()
     {
         AllowTrailingCommas = true,
+        AllowDuplicateProperties = false,
         CommentHandling = JsonCommentHandling.Skip,
     };
 
@@ -28,12 +30,21 @@ public static class ImportService
         if (text.Length == 0)
             return;
 
-        try
+        Guarded(result, sourceName, () =>
         {
             if (CurlParser.LooksLikeCurl(text))
                 result.Requests.Add(CurlParser.Parse(text));
             else
                 ImportJson(original, result, sourceName);
+        });
+    }
+
+    /// <summary>Runs an import and turns what it throws into errors in <paramref name="result"/>.</summary>
+    internal static void Guarded(ImportResult result, string sourceName, Action import)
+    {
+        try
+        {
+            import();
         }
         catch (ImportException problem)
         {
@@ -57,16 +68,22 @@ public static class ImportService
         }
         catch (JsonException syntaxError)
         {
-            result.Errors.Add(new StorageError(StorageErrorKind.InvalidJson,
-                $"{sourceName} isn't valid JSON{StorageErrorDescriber.PositionOf(syntaxError)}.",
-                null, DetailsOf(syntaxError, sourceName)));
+            // Duplicate keys are found after parsing, so that exception has no position. Parsing again where they are
+            // allowed tells them apart from a syntax error without reading the exception's text.
+            var position = StorageErrorDescriber.PositionOf(syntaxError);
+            var summary = position is null && ParsesWithDuplicateKeys(text)
+                ? $"{sourceName} has a key that appears twice in the same object."
+                : $"{sourceName} isn't valid JSON{position}.";
+            result.Errors.Add(new StorageError(StorageErrorKind.InvalidJson, summary, null, DetailsOf(syntaxError, sourceName)));
             return;
         }
 
         if (PostmanCollectionImporter.IsMeantAsCollection(root))
         {
             var skipped = new List<ImportException>();
-            result.Collections.Add(PostmanCollectionImporter.Import(root!, skipped));
+            var warnings = new List<string>();
+            result.Collections.Add(PostmanCollectionImporter.Import(root!, skipped, warnings));
+            result.Errors.AddRange(warnings.Select(warning => StorageError.Plain($"{sourceName}: {warning}.")));
             result.Errors.AddRange(skipped.Select(problem =>
                 StorageError.Plain($"{sourceName}: {problem.Message}. That item was skipped, the rest was imported.")));
         }
@@ -78,6 +95,24 @@ public static class ImportService
         {
             result.Errors.Add(StorageError.Plain(
                 $"{sourceName}: unrecognized format. Supported: Postman Collection v2.0/v2.1, Postman environment, cURL."));
+        }
+    }
+
+    private static bool ParsesWithDuplicateKeys(string text)
+    {
+        try
+        {
+            using var _ = JsonDocument.Parse(text, new JsonDocumentOptions
+            {
+                AllowTrailingCommas = LenientJson.AllowTrailingCommas,
+                CommentHandling = LenientJson.CommentHandling,
+                AllowDuplicateProperties = true,
+            });
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 

@@ -120,21 +120,22 @@ public class ImportErrorTests
         var result = Import(json, "pets.json");
 
         var collection = Assert.Single(result.Collections);
-        Assert.Equal("Good", Assert.IsType<HttpRequestModel>(collection.Items[0]).Name);
-        var folder = Assert.IsType<FolderModel>(collection.Items[1]);
-        Assert.Equal("Inside good", Assert.IsType<HttpRequestModel>(Assert.Single(folder.Items)).Name);
-        Assert.Equal(2, collection.Items.Count);
+        Assert.Equal(["Good", "Create user", "No request", "Folder"], collection.Items.Select(item => item.Name));
+        var folder = Assert.IsType<FolderModel>(collection.Items[3]);
+        Assert.Equal(["Inside good", "Inside bad"], folder.Items.Select(item => item.Name));
+        Assert.Equal("", Assert.IsType<HttpRequestModel>(collection.Items[1]).Url);
 
-        var messages = result.Errors.Select(error => error.Summary).ToList();
-        Assert.Equal(7, messages.Count);
-        Assert.Contains(messages, m => m.StartsWith("pets.json: An item must be an object") && m.Contains("(at item[1])"));
-        Assert.Contains(messages, m => m.Contains("The request \"Create user\" has no URL (at item[2].request.url)"));
-        Assert.Contains(messages, m => m.Contains("(at item[3].request)"));
-        Assert.Contains(messages, m => m.Contains("(at item[4].request.url)") && m.Contains("isn't text or an object"));
-        Assert.Contains(messages, m => m.Contains("\"No request\"") && m.Contains("(at item[5])"));
-        Assert.Contains(messages, m => m.Contains("\"Broken folder\"") && m.Contains("(at item[6].item)"));
-        Assert.Contains(messages, m => m.Contains("\"Inside bad\"") && m.Contains("(at item[7].item[1].request.url)"));
-        Assert.All(messages, m => Assert.EndsWith("That item was skipped, the rest was imported.", m));
+        var skipped = result.Errors.Select(error => error.Summary).Where(m => m.EndsWith("That item was skipped, the rest was imported.")).ToList();
+        var warned = result.Errors.Select(error => error.Summary).Where(m => m.Contains("; it was imported")).ToList();
+        Assert.Equal(4, skipped.Count);
+        Assert.Equal(3, warned.Count);
+        Assert.Contains(skipped, m => m.StartsWith("pets.json: An item must be an object") && m.Contains("(at item[1])"));
+        Assert.Contains(skipped, m => m.Contains("(at item[3].request)"));
+        Assert.Contains(skipped, m => m.Contains("(at item[4].request.url)") && m.Contains("isn't text or an object"));
+        Assert.Contains(skipped, m => m.Contains("\"Broken folder\"") && m.Contains("(at item[6].item)"));
+        Assert.Contains("pets.json: The request \"Create user\" has no URL (at item[2].request.url); it was imported without one.", warned);
+        Assert.Contains(warned, m => m.Contains("\"No request\"") && m.Contains("(at item[5])") && m.EndsWith("imported as a blank request."));
+        Assert.Contains(warned, m => m.Contains("\"Inside bad\"") && m.Contains("(at item[7].item[1].request.url)"));
         AssertPlain(result);
     }
 
@@ -193,15 +194,29 @@ public class ImportErrorTests
     }
 
     [Fact]
-    public void An_unexpected_exception_is_reported_as_a_bug_with_the_raw_text_in_details()
+    public void A_key_that_appears_twice_is_a_problem_in_the_file()
     {
-        // Repeated names make System.Text.Json throw ArgumentException when the object is read.
-        var result = Import("""{ "info": { "name": "a", "name": "b" }, "item": [] }""", "dup.json");
+        var result = Import("{\n  \"info\": { \"name\": \"a\", \"name\": \"b\" },\n  \"item\": []\n}", "dup.json");
 
         var error = Assert.Single(result.Errors);
-        Assert.Equal("Hermes couldn't import dup.json. This is a bug; please report it.", error.Summary);
-        Assert.Contains("ArgumentException", error.Details);
-        Assert.Contains("dup.json", error.Details);
+        Assert.Equal(StorageErrorKind.InvalidJson, error.Kind);
+        Assert.Equal("dup.json has a key that appears twice in the same object.", error.Summary);
+        Assert.Contains("'name'", error.Details);
+        Assert.True(result.IsEmpty);
+        AssertPlain(result);
+    }
+
+    [Fact]
+    public void An_unexpected_exception_is_reported_as_a_bug_with_the_raw_text_in_details()
+    {
+        var result = new ImportResult();
+
+        ImportService.Guarded(result, "pets.json", () => throw new NullReferenceException("Object reference not set."));
+
+        var error = Assert.Single(result.Errors);
+        Assert.Equal("Hermes couldn't import pets.json. This is a bug; please report it.", error.Summary);
+        Assert.Contains("NullReferenceException: Object reference not set.", error.Details);
+        Assert.Contains("pets.json", error.Details);
         AssertPlain(result);
     }
 

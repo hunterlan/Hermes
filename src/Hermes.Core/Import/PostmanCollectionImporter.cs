@@ -31,8 +31,10 @@ public static partial class PostmanCollectionImporter
     /// <summary>
     /// Imports a collection. A problem with the whole file throws <see cref="ImportException"/>; a problem with one
     /// item skips just that item, which is added to <paramref name="skipped"/> (dropped silently when that is null).
+    /// A request that has no URL is still imported, as a blank request, and noted in <paramref name="warnings"/>.
     /// </summary>
-    public static CollectionModel Import(JsonNode root, ICollection<ImportException>? skipped = null)
+    public static CollectionModel Import(JsonNode root, ICollection<ImportException>? skipped = null,
+        ICollection<string>? warnings = null)
     {
         if (root is not JsonObject document)
             throw new ImportException("A Postman collection must be a JSON object");
@@ -56,7 +58,7 @@ public static partial class PostmanCollectionImporter
         };
         if (collection.Auth.Type == AuthType.Inherit)
             collection.Auth = AuthConfig.NoAuth();
-        collection.Items.AddRange(ReadItems(items, "item", skipped));
+        collection.Items.AddRange(ReadItems(items, "item", skipped, warnings));
         return collection;
     }
 
@@ -73,7 +75,8 @@ public static partial class PostmanCollectionImporter
     [GeneratedRegex(@"/collection/v(?<version>\d+(\.\d+)*)", RegexOptions.IgnoreCase)]
     private static partial Regex SchemaVersion();
 
-    private static List<CollectionNode> ReadItems(JsonArray items, string path, ICollection<ImportException>? skipped)
+    private static List<CollectionNode> ReadItems(JsonArray items, string path, ICollection<ImportException>? skipped,
+        ICollection<string>? warnings)
     {
         var nodes = new List<CollectionNode>();
         for (var index = 0; index < items.Count; index++)
@@ -82,7 +85,7 @@ public static partial class PostmanCollectionImporter
                 continue;
             try
             {
-                nodes.Add(ReadItem(items[index]!, $"{path}[{index}]", skipped));
+                nodes.Add(ReadItem(items[index]!, $"{path}[{index}]", skipped, warnings));
             }
             catch (ImportException problem)
             {
@@ -92,14 +95,15 @@ public static partial class PostmanCollectionImporter
         return nodes;
     }
 
-    private static CollectionNode ReadItem(JsonNode node, string path, ICollection<ImportException>? skipped)
+    private static CollectionNode ReadItem(JsonNode node, string path, ICollection<ImportException>? skipped,
+        ICollection<string>? warnings)
     {
         if (node is not JsonObject item)
             throw new ImportException("An item must be an object, not a list or a single value", path);
 
         var label = Str(item["name"]) is { Length: > 0 } name ? $"\"{name}\"" : "without a name";
         if (item["item"] is null)
-            return ReadRequest(item, label, path);
+            return ReadRequest(item, label, path, warnings);
 
         if (item["item"] is not JsonArray children)
             throw new ImportException($"The folder {label} has an `item` that isn't a list", $"{path}.item");
@@ -110,11 +114,11 @@ public static partial class PostmanCollectionImporter
             Auth = ReadAuth(item["auth"]) ?? AuthConfig.Inherit(),
             EventsJson = item["event"]?.ToJsonString(),
         };
-        folder.Items.AddRange(ReadItems(children, $"{path}.item", skipped));
+        folder.Items.AddRange(ReadItems(children, $"{path}.item", skipped, warnings));
         return folder;
     }
 
-    private static HttpRequestModel ReadRequest(JsonObject item, string label, string path)
+    private static HttpRequestModel ReadRequest(JsonObject item, string label, string path, ICollection<string>? warnings)
     {
         var model = new HttpRequestModel
         {
@@ -126,7 +130,9 @@ public static partial class PostmanCollectionImporter
         switch (request)
         {
             case null:
-                throw new ImportException($"The item {label} is neither a folder nor a request: it has no `request`", path);
+                warnings?.Add(new ImportException($"The item {label} is neither a folder nor a request: it has no `request`", path).Message
+                    + "; it was imported as a blank request");
+                return model;
             case JsonValue:
                 // v2.1 allows "request": "https://..."
                 model.Url = Str(request) ?? throw new ImportException($"The request {label} must be an object or a URL text", $"{path}.request");
@@ -148,7 +154,8 @@ public static partial class PostmanCollectionImporter
         }
 
         if (string.IsNullOrWhiteSpace(model.Url))
-            throw new ImportException($"The request {label} has no URL", $"{path}.request.url");
+            warnings?.Add(new ImportException($"The request {label} has no URL", $"{path}.request.url").Message
+                + "; it was imported without one");
         return model;
     }
 
