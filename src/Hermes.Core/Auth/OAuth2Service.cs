@@ -180,6 +180,10 @@ public sealed class OAuth2Service : IDisposable
         var separator = authUri.Query.Length > 0 ? "&" : "?";
         var authorizationUrl = new Uri(authUri.AbsoluteUri + separator + string.Join('&', query));
 
+        // HttpListener would start happily next to a program that holds the port on the other loopback address.
+        if (LoopbackPortProbe.FindConflict(redirect.Port) is { } conflict)
+            return new CodeResult(null, OAuth2FailureDescriber.FromCallbackListener(conflict, redirect.Host, redirect.Port));
+
         using var listener = new HttpListener();
         listener.Prefixes.Add($"{redirect.Scheme}://{redirect.Host}:{redirect.Port}/");
         try

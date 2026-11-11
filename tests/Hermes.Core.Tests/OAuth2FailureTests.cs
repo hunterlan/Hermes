@@ -15,8 +15,13 @@ public sealed class OAuth2FailureTests : IDisposable
 
     private readonly OAuth2Service _oauth = new();
 
-    private Task<OAuth2TokenResult> GetTokenAsync(OAuth2Auth config, bool verifySsl = true, SslSettingSource sslSource = SslSettingSource.AppWide) =>
-        _oauth.GetTokenAsync(config, VariableScope.Empty, _ => Task.CompletedTask, verifySsl, TestContext.Current.CancellationToken, sslSource);
+    private async Task<OAuth2TokenResult> GetTokenAsync(OAuth2Auth config, bool verifySsl = true, SslSettingSource sslSource = SslSettingSource.AppWide)
+    {
+        // A flow that wrongly starts waiting for the browser ends as a failed assertion, not as a hung test run.
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        limit.CancelAfter(TimeSpan.FromSeconds(30));
+        return await _oauth.GetTokenAsync(config, VariableScope.Empty, _ => Task.CompletedTask, verifySsl, limit.Token, sslSource);
+    }
 
     private static OAuth2Auth ClientCredentials(string tokenUrl) =>
         new() { GrantType = OAuth2GrantType.ClientCredentials, AccessTokenUrl = tokenUrl, ClientId = "client" };
@@ -69,10 +74,15 @@ public sealed class OAuth2FailureTests : IDisposable
         Assert.Equal([RequestFailureAction.OpenRequestSettings], failure.Actions);
     }
 
-    [Fact]
-    public async Task Callback_port_in_use_asks_for_another_port()
+    // HttpListener binds only one loopback address for "localhost", so the port must be found taken on either.
+    [Theory]
+    [InlineData("127.0.0.1")]
+    [InlineData("::1")]
+    public async Task Callback_port_in_use_asks_for_another_port(string holderAddress)
     {
-        var taken = new TcpListener(IPAddress.Loopback, 0);
+        var holder = IPAddress.Parse(holderAddress);
+        Assert.SkipUnless(holder.AddressFamily == AddressFamily.InterNetwork || Socket.OSSupportsIPv6, "This computer has no IPv6.");
+        var taken = new TcpListener(holder, 0);
         taken.Start();
         try
         {

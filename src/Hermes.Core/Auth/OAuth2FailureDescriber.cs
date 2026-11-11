@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
 
@@ -107,8 +108,8 @@ public static class OAuth2FailureDescriber
         Details = [new FailureDetail("HTTP status", $"{(int)status} {status}"), new FailureDetail("Response", Truncate(body))],
     };
 
-    /// <summary>The callback listener couldn't start.</summary>
-    public static RequestFailure FromCallbackListener(HttpListenerException exception, string host, int port)
+    /// <summary>The callback listener couldn't start, or the callback port is taken on a loopback address.</summary>
+    public static RequestFailure FromCallbackListener(Exception exception, string host, int port)
     {
         var inUse = IsAddressInUse(exception);
         return new RequestFailure
@@ -163,8 +164,12 @@ public static class OAuth2FailureDescriber
         OriginalMessage = ExceptionText.Flatten(exception),
     };
 
-    private static bool IsAddressInUse(HttpListenerException exception) =>
-        exception.ErrorCode is AddressInUseLinux or AddressInUseMac or AlreadyExistsWindows or SharingViolationWindows;
+    private static bool IsAddressInUse(Exception exception) => exception switch
+    {
+        SocketException socket => socket.SocketErrorCode == SocketError.AddressAlreadyInUse,
+        HttpListenerException listener => listener.ErrorCode is AddressInUseLinux or AddressInUseMac or AlreadyExistsWindows or SharingViolationWindows,
+        _ => false,
+    };
 
     private static string Truncate(string text) =>
         text.Length > MaxServerTextLength ? text[..MaxServerTextLength] + "…" : text;
