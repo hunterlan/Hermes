@@ -128,6 +128,7 @@ public static class StorageErrorDescriber
     {
         StorageOperation.Write => "couldn't be saved",
         StorageOperation.Use => "can't be used",
+        StorageOperation.Delete => "couldn't be deleted",
         _ => "couldn't be loaded",
     };
 
@@ -135,6 +136,7 @@ public static class StorageErrorDescriber
     {
         StorageOperation.Write => "Hermes isn't allowed to write to it.",
         StorageOperation.Use => "Hermes isn't allowed to use it.",
+        StorageOperation.Delete => "Hermes isn't allowed to delete it.",
         _ => "Hermes isn't allowed to read it.",
     };
 
@@ -142,6 +144,7 @@ public static class StorageErrorDescriber
     {
         StorageOperation.Write => "Hermes couldn't write it.",
         StorageOperation.Use => "Hermes couldn't open it.",
+        StorageOperation.Delete => "Hermes couldn't delete it.",
         _ => "Hermes couldn't read it.",
     };
 

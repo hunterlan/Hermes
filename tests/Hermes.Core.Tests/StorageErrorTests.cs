@@ -276,6 +276,18 @@ public class StorageErrorTests : IDisposable
     }
 
     [Fact]
+    public void The_delete_wording_says_it_couldn_t_be_deleted()
+    {
+        var denied = StorageErrorDescriber.Describe(new UnauthorizedAccessException("Access to the path '/x/a.json' is denied."),
+            "/x/a.json", "Collection \"Pets\"", StorageOperation.Delete);
+        var other = StorageErrorDescriber.Describe(new IOException("odd"), "/x/a.json", "Collection \"Pets\"", StorageOperation.Delete);
+
+        Assert.Equal("Collection \"Pets\" couldn't be deleted: Hermes isn't allowed to delete it.", denied.Summary);
+        Assert.Equal("Collection \"Pets\" couldn't be deleted: Hermes couldn't delete it.", other.Summary);
+        AssertPlainText(denied);
+    }
+
+    [Fact]
     public void A_corrupt_file_can_be_moved_aside_without_overwriting_an_earlier_one()
     {
         Directory.CreateDirectory(_dir);
