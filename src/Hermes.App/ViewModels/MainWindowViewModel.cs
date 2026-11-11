@@ -22,6 +22,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost
     {
         _services = services;
         services.OpenContainerAsync = OpenContainerAsync;
+        services.OpenSettingsAsync = OpenSettings;
         Collections = new CollectionsPaneViewModel(services.Workspace, services.Dialogs, this);
         Environments = new EnvironmentsPaneViewModel(services.Workspace, services.Dialogs, this);
         History = new HistoryPaneViewModel(services.Workspace, services.Dialogs, this);

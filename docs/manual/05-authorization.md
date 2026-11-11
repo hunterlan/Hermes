@@ -34,4 +34,7 @@ affected. See
 - **Client credentials**
 - **Password**
 
+If getting a token fails, the Auth panel says why and what to try. See
+[OAuth 2.0 token errors](10-troubleshooting.md#oauth-20-token-errors).
+
 Access and refresh tokens are kept in the keychain. See [Secrets](secrets.md).

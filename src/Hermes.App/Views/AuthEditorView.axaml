@@ -3,6 +3,7 @@
              xmlns:vm="using:Hermes.App.ViewModels"
              xmlns:c="using:Hermes.App.Controls"
              xmlns:v="using:Hermes.App.Views"
+             xmlns:core="using:Hermes.Core.Models"
              x:Class="Hermes.App.Views.AuthEditorView"
              x:DataType="vm:AuthEditorViewModel">
   <UserControl.Styles>
@@ -102,14 +103,14 @@
                 <ComboBox Grid.Column="1" ItemsSource="{Binding GrantTypes}" SelectedItem="{Binding SelectedGrantType}" HorizontalAlignment="Stretch" />
 
                 <TextBlock Grid.Row="1" Classes="label" Text="Callback URL" IsVisible="{Binding IsAuthCodeGrant}" />
-                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OAuthRedirectUri}" IsVisible="{Binding IsAuthCodeGrant}"
+                <TextBox Name="CallbackUrlBox" Grid.Row="1" Grid.Column="1" Text="{Binding OAuthRedirectUri}" IsVisible="{Binding IsAuthCodeGrant}"
                          ToolTip.Tip="Must be a loopback URL (http://localhost:PORT/...) so Hermes can receive the code." />
 
                 <TextBlock Grid.Row="2" Classes="label" Text="Auth URL" IsVisible="{Binding IsAuthCodeGrant}" />
                 <c:VariableTextBox Grid.Row="2" Grid.Column="1" IsVisible="{Binding IsAuthCodeGrant}" Classes="bordered" Text="{Binding OAuthAuthUrl}" PlaceholderText="https://example.com/oauth/authorize" />
 
                 <TextBlock Grid.Row="3" Classes="label" Text="Access Token URL" />
-                <c:VariableTextBox Grid.Row="3" Grid.Column="1" Classes="bordered" Text="{Binding OAuthTokenUrl}" PlaceholderText="https://example.com/oauth/token" />
+                <c:VariableTextBox Name="AccessTokenUrlBox" Grid.Row="3" Grid.Column="1" Classes="bordered" Text="{Binding OAuthTokenUrl}" PlaceholderText="https://example.com/oauth/token" />
 
                 <TextBlock Grid.Row="4" Classes="label" Text="Client ID" />
                 <c:VariableTextBox Grid.Row="4" Grid.Column="1" Classes="bordered" Text="{Binding OAuthClientId}" PlaceholderText="Client ID" />
@@ -142,6 +143,52 @@
                   </Panel>
                 </Button>
                 <TextBlock Text="{Binding TokenStatus}" VerticalAlignment="Center" TextWrapping="Wrap" Classes="secondary" MaxWidth="460" />
+              </StackPanel>
+              <!-- why getting a token failed: the same four parts as the response pane's failure, compact -->
+              <StackPanel Name="TokenFailurePanel" Margin="140,6,0,0" MaxWidth="{StaticResource WidthFailureMax}" HorizontalAlignment="Left"
+                          Spacing="{StaticResource Spacing8}" IsVisible="{Binding IsFailureShown}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Spacing8}">
+                  <PathIcon Width="{StaticResource SizeFailureIconInline}" Height="{StaticResource SizeFailureIconInline}" VerticalAlignment="Top"
+                            Data="{Binding FailureIconKey, Converter={x:Static vm:UiConverters.IconFromKey}}" Foreground="{DynamicResource ErrorBrush}" />
+                  <StackPanel Grid.Column="1" Spacing="{StaticResource Spacing2}">
+                    <SelectableTextBlock Name="TokenFailureHeadlineText" Text="{Binding FailureHeadline}" FontSize="{StaticResource FontSizeSubtitle}"
+                                         FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <SelectableTextBlock Name="TokenFailureFactsText" Text="{Binding FailureFacts}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Grid>
+                <StackPanel IsVisible="{Binding IsFailureActionShown}" Spacing="{StaticResource Spacing6}">
+                  <Button Name="TokenFailureActionButton" Classes="outline" HorizontalAlignment="Left" Content="{Binding FailureActionLabel}"
+                          Command="{Binding RunFailureActionCommand}" />
+                  <TextBlock Name="TokenFailureActionCaptionText" Classes="secondary" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap"
+                             Text="{Binding FailureActionCaption}" IsVisible="{Binding IsFailureActionCaptionShown}" />
+                </StackPanel>
+                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" IsVisible="{Binding IsFailureDetailsShown}">
+                  <c:CollapsibleSection Name="TokenFailureDetailsSection" Header="Details" IsExpanded="{Binding FailureDetailsExpanded}">
+                    <StackPanel Spacing="{StaticResource Spacing8}" Margin="0,0,0,4">
+                      <ItemsControl ItemsSource="{Binding FailureDetails}" Grid.IsSharedSizeScope="True">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="core:FailureDetail">
+                            <Grid ColumnSpacing="{StaticResource Spacing12}" Margin="0,2">
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="TokenFailureDetailLabel" />
+                                <ColumnDefinition Width="*" />
+                              </Grid.ColumnDefinitions>
+                              <TextBlock Classes="tertiary" FontSize="{StaticResource FontSizeSmall}" Text="{Binding Label}" />
+                              <SelectableTextBlock Grid.Column="1" FontSize="{StaticResource FontSizeSmall}" Text="{Binding Value}" TextWrapping="Wrap" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <Border IsVisible="{Binding IsFailureOriginalMessageShown}" Background="{DynamicResource BgCodeBrush}"
+                              CornerRadius="{StaticResource RadiusMedium}" Padding="10,8">
+                        <SelectableTextBlock Name="TokenFailureOriginalMessageText" Classes="mono" Text="{Binding FailureOriginalMessage}"
+                                             FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                      </Border>
+                      <Button Name="CopyTokenFailureDetailsButton" Classes="ghost" HorizontalAlignment="Left" Content="Copy details"
+                              FontSize="{StaticResource FontSizeSmall}" Command="{Binding CopyFailureDetailsCommand}" />
+                    </StackPanel>
+                  </c:CollapsibleSection>
+                </Border>
               </StackPanel>
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Spacing8}" Margin="140,6,0,0" MaxWidth="620" HorizontalAlignment="Left"
                     IsVisible="{Binding AuthorizationUrl, Converter={x:Static ObjectConverters.IsNotNull}}">

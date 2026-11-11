@@ -20,4 +20,10 @@ public enum RequestFailureAction
 
     /// <summary>Shows the request's Headers section.</summary>
     ShowHeaders,
+
+    /// <summary>Opens the app's Settings dialog, where the app-wide SSL verification is.</summary>
+    OpenAppSettings,
+
+    /// <summary>Puts the cursor in the OAuth 2.0 Callback URL field.</summary>
+    EditCallbackUrl,
 }

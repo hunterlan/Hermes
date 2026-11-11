@@ -160,13 +160,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     public string? FailureActionCaption => Failure?.ActionCaption;
 
     /// <summary>The resource key of the icon for the failure's kind.</summary>
-    public string FailureIconKey => Failure?.Kind switch
-    {
-        RequestFailureKind.SecureConnectionFailed or RequestFailureKind.PlainHttpAnswered or RequestFailureKind.CertificateExpired or RequestFailureKind.CertificateSelfSigned
-            or RequestFailureKind.CertificateUntrustedAuthority or RequestFailureKind.CertificateNameMismatch => "IconLock",
-        RequestFailureKind.BodyFileUnreadable => "IconFile",
-        _ => "IconAlert",
-    };
+    public string FailureIconKey => RequestFailureIcons.KeyFor(Failure?.Kind);
     public bool IsPretty => ViewMode == ResponseViewMode.Pretty;
     public bool IsRaw => ViewMode == ResponseViewMode.Raw;
     public bool IsPreview => ViewMode == ResponseViewMode.Preview;

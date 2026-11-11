@@ -22,6 +22,13 @@ public sealed partial class AuthEditorViewModel : ObservableObject
         new("OAuth 2.0", AuthType.OAuth2),
     ];
 
+    private static readonly string[] FailureViewProperties =
+    [
+        nameof(IsFailureShown), nameof(FailureHeadline), nameof(FailureFacts), nameof(FailureIconKey), nameof(FailureDetails),
+        nameof(FailureOriginalMessage), nameof(IsFailureOriginalMessageShown), nameof(IsFailureDetailsShown), nameof(FailureActionCaption),
+        nameof(IsFailureActionCaptionShown), nameof(IsFailureActionShown), nameof(FailureActionLabel),
+    ];
+
     private readonly OAuth2Service _oauth;
     private readonly Func<Uri, Task<bool>> _openBrowser;
     private readonly Func<string, Task> _copyText;
@@ -66,6 +73,18 @@ public sealed partial class AuthEditorViewModel : ObservableObject
 
     /// <summary>Whether token requests verify SSL certificates: the setting in effect where the auth is edited.</summary>
     public Func<bool> VerifySslProvider { get; set; } = () => true;
+
+    /// <summary>Where the setting from <see cref="VerifySslProvider"/> comes from: the request's own override, or the app-wide setting.</summary>
+    public Func<SslSettingSource> SslSourceProvider { get; set; } = () => SslSettingSource.AppWide;
+
+    /// <summary>What "Open request settings" does; set by the request tab, which owns the settings.</summary>
+    public Action? OpenRequestSettingsHandler { get; set; }
+
+    /// <summary>What "Open settings" does: shows the app's Settings dialog.</summary>
+    public Func<Task>? OpenAppSettingsHandler { get; set; }
+
+    /// <summary>The view should put the cursor in this field, e.g. the callback URL when its port is taken.</summary>
+    public event Action<AuthEditorField>? FocusRequested;
 
     /// <summary>Supplies the effective auth when "inherit" is selected, for the explanatory text.</summary>
     public Func<EffectiveAuth>? InheritedAuthProvider { get; set; }
@@ -137,6 +156,35 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     [ObservableProperty] public partial string? AuthorizationUrl { get; set; }
 
     [ObservableProperty] public partial bool IsFetchingToken { get; set; }
+
+    /// <summary>Why the last attempt to get a token failed; null while there is no failure to show.</summary>
+    [ObservableProperty] public partial RequestFailure? Failure { get; set; }
+
+    /// <summary>Whether the failure's Details are open; they start closed for each new failure.</summary>
+    [ObservableProperty] public partial bool FailureDetailsExpanded { get; set; }
+
+    public bool IsFailureShown => Failure is not null;
+    public string FailureHeadline => Failure?.Headline ?? "";
+    public string FailureFacts => Failure?.Facts ?? "";
+    public string FailureIconKey => RequestFailureIcons.KeyFor(Failure?.Kind);
+    public IReadOnlyList<FailureDetail> FailureDetails => Failure?.Details ?? [];
+    public string? FailureOriginalMessage => Failure?.OriginalMessage;
+    public bool IsFailureOriginalMessageShown => FailureOriginalMessage is not null;
+    public bool IsFailureDetailsShown => Failure?.HasDetails ?? false;
+    public string? FailureActionCaption => Failure?.ActionCaption;
+    public bool IsFailureActionCaptionShown => !string.IsNullOrEmpty(FailureActionCaption);
+    public bool IsFailureActionShown => Failure is { Actions.Count: > 0 };
+
+    /// <summary>The label of the one next step the failure offers.</summary>
+    public string FailureActionLabel => Failure?.Actions.FirstOrDefault() switch
+    {
+        RequestFailureAction.Retry => "Try again",
+        RequestFailureAction.EditUrl => "Edit token URL",
+        RequestFailureAction.EditCallbackUrl => "Edit callback URL",
+        RequestFailureAction.OpenRequestSettings => "Open request settings",
+        RequestFailureAction.OpenAppSettings => "Open settings",
+        _ => "",
+    };
 
     public bool IsInherit => SelectedType.Value == AuthType.Inherit;
     public bool IsNone => SelectedType.Value == AuthType.None;
@@ -218,10 +266,14 @@ public sealed partial class AuthEditorViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsAuthCodeGrant));
                 OnPropertyChanged(nameof(IsPasswordGrant));
                 break;
+            case nameof(Failure):
+                foreach (var name in FailureViewProperties)
+                    OnPropertyChanged(name);
+                break;
         }
 
-        if (!_loading && e.PropertyName is not (nameof(TokenStatus) or nameof(AuthorizationUrl) or nameof(IsFetchingToken) or nameof(TokenButtonCommand) or nameof(TypeDescription) or nameof(Summary) or nameof(Chain) or nameof(Overrides) or nameof(HasOverrides) or nameof(UsageSummary))
-            && !e.PropertyName!.StartsWith("Is", StringComparison.Ordinal))
+        if (!_loading && e.PropertyName is not (nameof(TokenStatus) or nameof(Failure) or nameof(FailureDetailsExpanded) or nameof(AuthorizationUrl) or nameof(IsFetchingToken) or nameof(TokenButtonCommand) or nameof(TypeDescription) or nameof(Summary) or nameof(Chain) or nameof(Overrides) or nameof(HasOverrides) or nameof(UsageSummary))
+            && !e.PropertyName!.StartsWith("Is", StringComparison.Ordinal) && !e.PropertyName.StartsWith("Failure", StringComparison.Ordinal))
             Changed?.Invoke();
     }
 
@@ -253,6 +305,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
         _refreshToken = o.RefreshToken;
         _expiresAt = o.ExpiresAt;
         TokenStatus = "";
+        Failure = null;
         _loading = false;
         OnPropertyChanged(nameof(TokenExpiry));
     }
@@ -322,12 +375,13 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     private async Task GetNewAccessToken()
     {
         IsFetchingToken = true;
+        Failure = null;
         TokenStatus = IsAuthCodeGrant ? "Waiting for authorization in your browser…" : "Requesting token…";
         _tokenCts = new CancellationTokenSource();
         try
         {
             var scope = ScopeProvider?.Invoke() ?? VariableScope.Empty;
-            var result = await _oauth.GetTokenAsync(ToModel().OAuth2, scope, OpenBrowserAsync, VerifySslProvider(), _tokenCts.Token);
+            var result = await _oauth.GetTokenAsync(ToModel().OAuth2, scope, OpenBrowserAsync, VerifySslProvider(), _tokenCts.Token, SslSourceProvider());
             if (result.IsSuccess)
             {
                 _refreshToken = result.RefreshToken;
@@ -336,14 +390,19 @@ public sealed partial class AuthEditorViewModel : ObservableObject
                 TokenStatus = "Token received.";
                 OnPropertyChanged(nameof(TokenExpiry));
             }
+            else if (result.IsCancelled)
+            {
+                TokenStatus = "Cancelled.";
+            }
             else
             {
-                TokenStatus = "Error: " + result.Error;
+                ShowFailure(result.Failure ?? OAuth2FailureDescriber.FromMessage("No token was received."));
             }
         }
         catch (Exception ex)
         {
-            TokenStatus = "Error: " + ex.Message;
+            // A Hermes bug, or something nobody has met yet. Once logging exists (#92) this should be logged too.
+            ShowFailure(OAuth2FailureDescriber.FromUnexpected(ex));
         }
         finally
         {
@@ -352,6 +411,47 @@ public sealed partial class AuthEditorViewModel : ObservableObject
             _tokenCts.Dispose();
             _tokenCts = null;
         }
+    }
+
+    private void ShowFailure(RequestFailure failure)
+    {
+        TokenStatus = "";
+        FailureDetailsExpanded = false;
+        Failure = failure;
+        // The one thing to change is the callback port, so the cursor goes there.
+        if (failure.Kind == RequestFailureKind.CallbackPortInUse)
+            FocusRequested?.Invoke(AuthEditorField.CallbackUrl);
+    }
+
+    [RelayCommand]
+    private async Task RunFailureAction()
+    {
+        switch (Failure?.Actions.FirstOrDefault())
+        {
+            case RequestFailureAction.Retry:
+                await GetNewAccessTokenCommand.ExecuteAsync(null);
+                break;
+            case RequestFailureAction.EditUrl:
+                FocusRequested?.Invoke(AuthEditorField.AccessTokenUrl);
+                break;
+            case RequestFailureAction.EditCallbackUrl:
+                FocusRequested?.Invoke(AuthEditorField.CallbackUrl);
+                break;
+            case RequestFailureAction.OpenRequestSettings:
+                OpenRequestSettingsHandler?.Invoke();
+                break;
+            case RequestFailureAction.OpenAppSettings:
+                if (OpenAppSettingsHandler is { } openSettings)
+                    await openSettings();
+                break;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CopyFailureDetails()
+    {
+        if (Failure is { } failure)
+            await _copyText(failure.ToClipboardText());
     }
 
     // Without a browser the user can still sign in by opening the address themselves: the callback listener waits
@@ -374,6 +474,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
         _refreshToken = null;
         _expiresAt = null;
         TokenStatus = "";
+        Failure = null;
         OnPropertyChanged(nameof(TokenExpiry));
     }
 }

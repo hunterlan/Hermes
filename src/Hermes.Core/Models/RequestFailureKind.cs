@@ -44,4 +44,16 @@ public enum RequestFailureKind
 
     /// <summary>A header's name or value can't be sent.</summary>
     InvalidHeader,
+
+    /// <summary>The callback port for the sign-in response is taken by another program.</summary>
+    CallbackPortInUse,
+
+    /// <summary>The token server answered with an OAuth error such as invalid_client.</summary>
+    TokenRequestRefused,
+
+    /// <summary>The token server answered, but not with an access token or an OAuth error.</summary>
+    TokenResponseInvalid,
+
+    /// <summary>Something went wrong while getting a token that Hermes has no case for. Likely a bug.</summary>
+    UnexpectedTokenFailure,
 }

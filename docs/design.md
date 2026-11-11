@@ -143,11 +143,13 @@ Margins and paddings use the same steps, plus 20 and 24 for dialog and page edge
 
 ### Failure view
 
-What the response pane shows when a request fails (headline, facts, next step, collapsed details).
+What the response pane shows when a request fails (headline, facts, next step, collapsed details). The Auth panel
+shows the same four parts, compact, when getting a token fails.
 
 | Token | Size | Use for |
 |---|---|---|
 | `SizeFailureIconTile` | 32 | The square tile behind the failure's icon (`ErrorBgBrush`, `RadiusLarge`) |
+| `SizeFailureIconInline` | 16 | The failure's icon without a tile, in the Auth panel |
 | `WidthFailureMax` | 560 | Widest the failure's text runs, so it stays a readable column |
 
 ## The token rule

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
@@ -5,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Hermes.Core.Http;
+using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
 using Hermes.Core.Variables;
 using Hermes.Core.Web;
@@ -22,14 +24,15 @@ public sealed class OAuth2Service : IDisposable
     private readonly HttpClientProvider _clients = new(useCookies: false);
 
     /// <param name="openBrowser">Opens the authorization URL in the system browser (authorization code flow only).</param>
+    /// <param name="sslSource">Where <paramref name="verifySsl"/> comes from, so a certificate failure can say where to change it.</param>
     public async Task<OAuth2TokenResult> GetTokenAsync(OAuth2Auth config, VariableScope scope, Func<Uri, Task> openBrowser,
-        bool verifySsl, CancellationToken cancellationToken)
+        bool verifySsl, CancellationToken cancellationToken, SslSettingSource sslSource = SslSettingSource.AppWide)
     {
         string R(string s) => VariableResolver.Resolve(s, scope).Trim();
 
         var tokenUrl = R(config.AccessTokenUrl);
         if (!Uri.TryCreate(tokenUrl, UriKind.Absolute, out var tokenUri))
-            return Fail("Access Token URL is missing or invalid.");
+            return Fail(OAuth2FailureDescriber.FromMessage("Access Token URL is missing or invalid."));
 
         var fields = new List<KeyValuePair<string, string>>();
         var scopeValue = R(config.Scope);
@@ -49,8 +52,10 @@ public sealed class OAuth2Service : IDisposable
                 var redirectUri = R(config.RedirectUri);
                 var verifier = config.UsePkce ? CreateCodeVerifier() : null;
                 var code = await AuthorizeAsync(config, R, redirectUri, verifier, openBrowser, cancellationToken).ConfigureAwait(false);
-                if (code.Error is not null)
-                    return Fail(code.Error);
+                if (code.Cancelled)
+                    return new OAuth2TokenResult { IsCancelled = true };
+                if (code.Failure is not null)
+                    return Fail(code.Failure);
                 fields.Add(new("grant_type", "authorization_code"));
                 fields.Add(new("code", code.Code!));
                 fields.Add(new("redirect_uri", redirectUri));
@@ -81,19 +86,26 @@ public sealed class OAuth2Service : IDisposable
         request.Content = new FormUrlEncodedContent(fields);
         request.Headers.Accept.ParseAdd("application/json");
 
+        var startTimestamp = Stopwatch.GetTimestamp();
         try
         {
             using var response = await _clients.Get(followRedirects: true, verifySsl).SendAsync(request, cancellationToken).ConfigureAwait(false);
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             return ParseTokenResponse(body, response.StatusCode);
         }
-        catch (HttpRequestException ex)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            return Fail(ex.Message);
+            return new OAuth2TokenResult { IsCancelled = true };
         }
-        catch (Exception ex) when (ex is IOException or SocketException)
+        catch (OperationCanceledException)
         {
-            return Fail(ex.Message);
+            return Fail(OAuth2FailureDescriber.FromTimeout(tokenUri));
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or SocketException)
+        {
+            // A redirect rewrites the request's address, so the request holds the address that failed.
+            var certificateFacts = _clients.CertificateFailures.Find(tokenUri.IdnHost, startTimestamp);
+            return Fail(OAuth2FailureDescriber.FromNetworkFailure(ex, tokenUri, request.RequestUri ?? tokenUri, certificateFacts, sslSource, DateTime.Now));
         }
     }
 
@@ -105,7 +117,7 @@ public sealed class OAuth2Service : IDisposable
         {
             using var doc = JsonDocument.Parse(body);
             if (doc.RootElement.ValueKind != JsonValueKind.Object)
-                return Fail($"Token endpoint returned {(int)status} with an unexpected response: {Truncate(body)}");
+                return Fail(OAuth2FailureDescriber.FromUnexpectedResponse("It answered, but not with a JSON object.", body, status));
             foreach (var p in doc.RootElement.EnumerateObject())
                 values[p.Name] = p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString()! : p.Value.GetRawText();
         }
@@ -119,10 +131,10 @@ public sealed class OAuth2Service : IDisposable
         if (values.TryGetValue("error", out var error))
         {
             values.TryGetValue("error_description", out var description);
-            return Fail(description is null ? error : $"{error}: {description}");
+            return Fail(OAuth2FailureDescriber.FromServerError(error, description, status));
         }
         if (!values.TryGetValue("access_token", out var token) || token.Length == 0)
-            return Fail($"Token endpoint returned {(int)status} without an access_token: {Truncate(body)}");
+            return Fail(OAuth2FailureDescriber.FromUnexpectedResponse("It answered, but the answer has no access token.", body, status));
 
         DateTimeOffset? expiresAt = values.TryGetValue("expires_in", out var expires) && int.TryParse(expires, out var seconds)
             ? DateTimeOffset.Now.AddSeconds(seconds)
@@ -136,15 +148,15 @@ public sealed class OAuth2Service : IDisposable
         };
     }
 
-    private readonly record struct CodeResult(string? Code, string? Error);
+    private readonly record struct CodeResult(string? Code, RequestFailure? Failure, bool Cancelled = false);
 
     private static async Task<CodeResult> AuthorizeAsync(OAuth2Auth config, Func<string, string> resolve, string redirectUri,
         string? verifier, Func<Uri, Task> openBrowser, CancellationToken cancellationToken)
     {
         if (!Uri.TryCreate(resolve(config.AuthUrl), UriKind.Absolute, out var authUri))
-            return new CodeResult(null, "Auth URL is missing or invalid.");
+            return new CodeResult(null, OAuth2FailureDescriber.FromMessage("Auth URL is missing or invalid."));
         if (!Uri.TryCreate(redirectUri, UriKind.Absolute, out var redirect) || redirect.Scheme != Uri.UriSchemeHttp || !redirect.IsLoopback)
-            return new CodeResult(null, "Callback URL must be a loopback address such as http://localhost:5577/callback so Hermes can receive the authorization code.");
+            return new CodeResult(null, OAuth2FailureDescriber.FromMessage("Callback URL must be a loopback address such as http://localhost:5577/callback so Hermes can receive the authorization code."));
 
         var state = resolve(config.State);
         if (state.Length == 0)
@@ -176,7 +188,7 @@ public sealed class OAuth2Service : IDisposable
         }
         catch (HttpListenerException ex)
         {
-            return new CodeResult(null, $"Couldn't listen on {redirect.Host}:{redirect.Port}: {ex.Message}");
+            return new CodeResult(null, OAuth2FailureDescriber.FromCallbackListener(ex, redirect.Host, redirect.Port));
         }
 
         await openBrowser(authorizationUrl).ConfigureAwait(false);
@@ -194,7 +206,9 @@ public sealed class OAuth2Service : IDisposable
             }
             catch (Exception) when (timeout.IsCancellationRequested)
             {
-                return new CodeResult(null, cancellationToken.IsCancellationRequested ? "Cancelled." : "Timed out waiting for authorization.");
+                return cancellationToken.IsCancellationRequested
+                    ? new CodeResult(null, null, Cancelled: true)
+                    : new CodeResult(null, OAuth2FailureDescriber.FromMessage("Timed out waiting for authorization.", offerRetry: true));
             }
 
             if (!string.Equals(context.Request.Url?.AbsolutePath.TrimEnd('/'), redirect.AbsolutePath.TrimEnd('/'), StringComparison.Ordinal))
@@ -206,16 +220,16 @@ public sealed class OAuth2Service : IDisposable
 
             var parameters = context.Request.QueryString;
             var result = parameters["error"] is { } error
-                ? new CodeResult(null, parameters["error_description"] is { } d ? $"{error}: {d}" : error)
+                ? new CodeResult(null, OAuth2FailureDescriber.FromAuthorizationError(error, parameters["error_description"]))
                 : parameters["state"] != state
-                    ? new CodeResult(null, "State mismatch in the authorization response.")
+                    ? new CodeResult(null, OAuth2FailureDescriber.FromMessage("State mismatch in the authorization response."))
                     : parameters["code"] is { Length: > 0 } code
                         ? new CodeResult(code, null)
-                        : new CodeResult(null, "Authorization response did not contain a code.");
+                        : new CodeResult(null, OAuth2FailureDescriber.FromMessage("Authorization response did not contain a code."));
 
-            var html = result.Error is null
+            var html = result.Failure is null
                 ? "<html><body style=\"font-family:sans-serif\"><h2>Authorization complete</h2><p>You can close this window and return to Hermes.</p></body></html>"
-                : $"<html><body style=\"font-family:sans-serif\"><h2>Authorization failed</h2><p>{WebUtility.HtmlEncode(result.Error)}</p></body></html>";
+                : $"<html><body style=\"font-family:sans-serif\"><h2>Authorization failed</h2><p>{WebUtility.HtmlEncode($"{result.Failure.Headline}. {result.Failure.Facts}")}</p></body></html>";
             var bytes = Encoding.UTF8.GetBytes(html);
             context.Response.ContentType = "text/html; charset=utf-8";
             context.Response.ContentLength64 = bytes.Length;
@@ -232,9 +246,7 @@ public sealed class OAuth2Service : IDisposable
     private static string Base64Url(byte[] bytes) =>
         Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
-    private static string Truncate(string s) => s.Length > 300 ? s[..300] + "…" : s;
-
-    private static OAuth2TokenResult Fail(string error) => new() { Error = error };
+    private static OAuth2TokenResult Fail(RequestFailure failure) => new() { Failure = failure };
 
     public void Dispose() => _clients.Dispose();
 }
