@@ -18,7 +18,7 @@
                 <TextBlock Classes="secondary" Text="{Binding NextStep}" TextWrapping="Wrap" IsVisible="{Binding HasNextStep}" />
                 <TextBlock Classes="secondary" Text="{Binding Outcome}" TextWrapping="Wrap" IsVisible="{Binding HasOutcome}" />
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
-                  <Button Classes="outline" Content="Reveal file" Command="{Binding RevealCommand}" IsVisible="{Binding CanReveal}" />
+                  <Button Classes="outline" Content="{Binding RevealText}" Command="{Binding RevealCommand}" IsVisible="{Binding CanReveal}" />
                   <Button Classes="outline" Content="Move aside" Command="{Binding MoveAsideCommand}" IsVisible="{Binding CanMoveAside}" />
                 </StackPanel>
               </StackPanel>

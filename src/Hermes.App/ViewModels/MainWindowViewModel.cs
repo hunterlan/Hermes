@@ -6,6 +6,7 @@ using Hermes.App.Services;
 using Hermes.App.ViewModels.Sidebar;
 using Hermes.Core.Models;
 using Hermes.Core.Serialization;
+using Hermes.Core.Storage;
 using Hermes.Core.Variables;
 
 namespace Hermes.App.ViewModels;
@@ -64,7 +65,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
             OnPropertyChanged(nameof(SecretsWarning));
         });
         Workspace.CollectionsListChanged += NotifyWorkspaceChanged;
-        Workspace.StorageProblem += error => Dispatcher.UIThread.Post(() => _ = Dialogs.ShowStorageErrorsAsync("Storage problem", [error]));
+        Workspace.StorageProblem += ShowStorageProblem;
+        _services.Settings.StorageProblem += ShowStorageProblem;
         RefreshEnvironmentOptions();
         CommandPalette = new CommandPaletteViewModel(PaletteItems);
 
@@ -72,6 +74,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
     }
 
     public CommandPaletteViewModel CommandPalette { get; }
+
+    // Reported from any thread. Nothing is shown once the window is closing: there is no one left to read it.
+    private void ShowStorageProblem(StorageError error) => Dispatcher.UIThread.Post(() =>
+    {
+        if (Dialogs.Owner is { IsVisible: true })
+            _ = Dialogs.ShowStorageErrorsAsync("Storage problem", [error]);
+    });
 
     [RelayCommand]
     private void OpenCommandPalette() => CommandPalette.Open();
@@ -600,10 +609,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
     /// <summary>Adds imported collections/environments to the workspace and opens imported cURL requests.</summary>
     public async Task ApplyImportAsync(Core.Import.ImportResult result)
     {
+        // Ones that can't be written are left out of the workspace and listed with the import's own errors.
+        var errors = result.Errors.ToList();
         foreach (var collection in result.Collections)
-            Workspace.AddCollection(collection);
+            if (Workspace.TryAddCollection(collection) is { } error)
+                errors.Add(error);
         foreach (var environment in result.Environments)
-            Workspace.AddEnvironment(environment);
+            if (Workspace.TryAddEnvironment(environment) is { } error)
+                errors.Add(error);
         foreach (var request in result.Requests)
         {
             // With tabs off each draft replaces the last; cancelling a save prompt stops opening the rest.
@@ -627,8 +640,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
             IsSidebarVisible = true;
         }
 
-        if (result.Errors.Count > 0)
-            await Dialogs.ShowStorageErrorsAsync("Some items couldn't be imported", result.Errors);
+        if (errors.Count > 0)
+            await Dialogs.ShowStorageErrorsAsync("Some items couldn't be imported", errors);
     }
 
     [RelayCommand]
@@ -654,23 +667,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
     [ObservableProperty] public partial double SidebarWidth { get; set; } = 300;
 
     /// <summary>Persists open tabs (including unsaved drafts), the active environment and layout.</summary>
-    public void SaveSession()
-    {
-        try
+    public void SaveSession() =>
+        Workspace.SaveSession(new SessionState
         {
-            Workspace.SaveSession(new SessionState
-            {
-                Tabs = Tabs.Select(t => t.ToSession()).ToList(),
-                ActiveTabIndex = ActiveTab is null ? 0 : Tabs.IndexOf(ActiveTab),
-                ActiveEnvironmentId = Workspace.ActiveEnvironment?.Id,
-                SidebarWidth = SidebarWidth,
-            });
-        }
-        catch (IOException)
-        {
-            // Losing the session is not worth crashing over.
-        }
-    }
+            Tabs = Tabs.Select(t => t.ToSession()).ToList(),
+            ActiveTabIndex = ActiveTab is null ? 0 : Tabs.IndexOf(ActiveTab),
+            ActiveEnvironmentId = Workspace.ActiveEnvironment?.Id,
+            SidebarWidth = SidebarWidth,
+        });
 
     private void RestoreSession()
     {

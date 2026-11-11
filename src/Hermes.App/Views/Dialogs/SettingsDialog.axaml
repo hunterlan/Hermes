@@ -11,7 +11,7 @@
       <Setter Property="Margin" Value="0,0,0,16" />
     </Style>
   </Window.Styles>
-  <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+  <Grid RowDefinitions="Auto,*,Auto,Auto" Margin="20">
     <c:DialogHeader Title="Settings" Margin="0,0,0,16" />
     <ScrollViewer Grid.Row="1">
       <StackPanel Margin="0,0,12,0">
@@ -75,7 +75,9 @@
                    IsVisible="{Binding DataDirectoryChanged}" Margin="0,-8,0,8" />
       </StackPanel>
     </ScrollViewer>
-    <c:DialogFooter Grid.Row="2">
+    <TextBlock Grid.Row="2" Text="{Binding SaveError}" Margin="0,10,0,0" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap"
+               Foreground="{DynamicResource ErrorBrush}" IsVisible="{Binding SaveError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    <c:DialogFooter Grid.Row="3">
       <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
         <Button Content="Cancel" Command="{Binding CancelCommand}" IsCancel="True" />
         <Button Classes="accent" Content="Save" Command="{Binding SaveCommand}" IsDefault="True" />

@@ -14,6 +14,9 @@ public sealed partial class StorageErrorItemViewModel(StorageError error, Func<s
     public bool HasNextStep => Error.NextStep is not null;
     public bool CanReveal => Error.Location is not null;
 
+    /// <summary>"Reveal file" when there is a file to select; otherwise the file manager opens its folder.</summary>
+    public string RevealText => Error.Location is { } location && File.Exists(location) ? "Reveal file" : "Reveal folder";
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasOutcome))]
     public partial string? Outcome { get; private set; }
