@@ -22,13 +22,6 @@ public sealed partial class AuthEditorViewModel : ObservableObject
         new("OAuth 2.0", AuthType.OAuth2),
     ];
 
-    private static readonly string[] FailureViewProperties =
-    [
-        nameof(IsFailureShown), nameof(FailureHeadline), nameof(FailureFacts), nameof(FailureIconKey), nameof(FailureDetails),
-        nameof(FailureOriginalMessage), nameof(IsFailureOriginalMessageShown), nameof(IsFailureDetailsShown), nameof(FailureActionCaption),
-        nameof(IsFailureActionCaptionShown), nameof(IsFailureActionShown), nameof(FailureActionLabel),
-    ];
-
     private readonly OAuth2Service _oauth;
     private readonly Func<Uri, Task<bool>> _openBrowser;
     private readonly Func<string, Task> _copyText;
@@ -158,25 +151,10 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     [ObservableProperty] public partial bool IsFetchingToken { get; set; }
 
     /// <summary>Why the last attempt to get a token failed; null while there is no failure to show.</summary>
-    [ObservableProperty] public partial RequestFailure? Failure { get; set; }
-
-    /// <summary>Whether the failure's Details are open; they start closed for each new failure.</summary>
-    [ObservableProperty] public partial bool FailureDetailsExpanded { get; set; }
-
-    public bool IsFailureShown => Failure is not null;
-    public string FailureHeadline => Failure?.Headline ?? "";
-    public string FailureFacts => Failure?.Facts ?? "";
-    public string FailureIconKey => RequestFailureIcons.KeyFor(Failure?.Kind);
-    public IReadOnlyList<FailureDetail> FailureDetails => Failure?.Details ?? [];
-    public string? FailureOriginalMessage => Failure?.OriginalMessage;
-    public bool IsFailureOriginalMessageShown => FailureOriginalMessage is not null;
-    public bool IsFailureDetailsShown => Failure?.HasDetails ?? false;
-    public string? FailureActionCaption => Failure?.ActionCaption;
-    public bool IsFailureActionCaptionShown => !string.IsNullOrEmpty(FailureActionCaption);
-    public bool IsFailureActionShown => Failure is { Actions.Count: > 0 };
+    [ObservableProperty] public partial RequestFailureViewModel? Failure { get; set; }
 
     /// <summary>The label of the one next step the failure offers.</summary>
-    public string FailureActionLabel => Failure?.Actions.FirstOrDefault() switch
+    public string FailureActionLabel => Failure?.Model.Actions.FirstOrDefault() switch
     {
         RequestFailureAction.Retry => "Try again",
         RequestFailureAction.EditUrl => "Edit token URL",
@@ -267,12 +245,11 @@ public sealed partial class AuthEditorViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsPasswordGrant));
                 break;
             case nameof(Failure):
-                foreach (var name in FailureViewProperties)
-                    OnPropertyChanged(name);
+                OnPropertyChanged(nameof(FailureActionLabel));
                 break;
         }
 
-        if (!_loading && e.PropertyName is not (nameof(TokenStatus) or nameof(Failure) or nameof(FailureDetailsExpanded) or nameof(AuthorizationUrl) or nameof(IsFetchingToken) or nameof(TokenButtonCommand) or nameof(TypeDescription) or nameof(Summary) or nameof(Chain) or nameof(Overrides) or nameof(HasOverrides) or nameof(UsageSummary))
+        if (!_loading && e.PropertyName is not (nameof(TokenStatus) or nameof(Failure) or nameof(AuthorizationUrl) or nameof(IsFetchingToken) or nameof(TokenButtonCommand) or nameof(TypeDescription) or nameof(Summary) or nameof(Chain) or nameof(Overrides) or nameof(HasOverrides) or nameof(UsageSummary))
             && !e.PropertyName!.StartsWith("Is", StringComparison.Ordinal) && !e.PropertyName.StartsWith("Failure", StringComparison.Ordinal))
             Changed?.Invoke();
     }
@@ -416,8 +393,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     private void ShowFailure(RequestFailure failure)
     {
         TokenStatus = "";
-        FailureDetailsExpanded = false;
-        Failure = failure;
+        Failure = new RequestFailureViewModel(failure, _copyText);
         // The one thing to change is the callback port, so the cursor goes there.
         if (failure.Kind == RequestFailureKind.CallbackPortInUse)
             FocusRequested?.Invoke(AuthEditorField.CallbackUrl);
@@ -426,7 +402,7 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     [RelayCommand]
     private async Task RunFailureAction()
     {
-        switch (Failure?.Actions.FirstOrDefault())
+        switch (Failure?.Model.Actions.FirstOrDefault())
         {
             case RequestFailureAction.Retry:
                 await GetNewAccessTokenCommand.ExecuteAsync(null);
@@ -445,13 +421,6 @@ public sealed partial class AuthEditorViewModel : ObservableObject
                     await openSettings();
                 break;
         }
-    }
-
-    [RelayCommand]
-    private async Task CopyFailureDetails()
-    {
-        if (Failure is { } failure)
-            await _copyText(failure.ToClipboardText());
     }
 
     // Without a browser the user can still sign in by opening the address themselves: the callback listener waits

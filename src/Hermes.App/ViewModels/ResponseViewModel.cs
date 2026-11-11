@@ -20,22 +20,11 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     private readonly HeaderRevealState _revealState = new(dialogs.CopyTextAsync);
     private ResponseModel? _response;
 
-    private static readonly string[] FailureViewProperties =
-    [
-        nameof(HasFailure), nameof(FailureHeadline), nameof(FailureFacts), nameof(FailureNothingWasSent), nameof(FailureDetails),
-        nameof(FailureOriginalMessage), nameof(HasFailureDetails), nameof(HasFailureOriginalMessage), nameof(CanTurnOffVerification),
-        nameof(CanOpenRequestSettings), nameof(CanEditUrl), nameof(CanRetry), nameof(CanChooseFile), nameof(CanShowHeaders),
-        nameof(HasFailureActions), nameof(FailureActionCaption), nameof(FailureIconKey),
-    ];
-
     [ObservableProperty] public partial bool IsLoading { get; set; }
     [ObservableProperty] public partial bool HasResponse { get; set; }
 
     /// <summary>Why there is no response; null while there is one, or none was asked for yet.</summary>
-    [ObservableProperty] public partial RequestFailure? Failure { get; set; }
-
-    /// <summary>Whether the failure's Details are open; they start closed for each new failure.</summary>
-    [ObservableProperty] public partial bool FailureDetailsExpanded { get; set; }
+    [ObservableProperty] public partial RequestFailureViewModel? Failure { get; set; }
 
     [ObservableProperty] public partial ResponseViewMode ViewMode { get; set; } = ResponseViewMode.Pretty;
 
@@ -142,25 +131,13 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     /// <summary>Raised when the person picks a next step on the failure. The request tab handles it, since it owns the request.</summary>
     public event EventHandler<RequestFailureActionEventArgs>? FailureActionRequested;
 
-    public bool HasFailure => Failure is not null;
-    public string FailureHeadline => Failure?.Headline ?? "";
-    public string FailureFacts => Failure?.Facts ?? "";
-    public bool FailureNothingWasSent => Failure?.NothingWasSent ?? false;
-    public IReadOnlyList<FailureDetail> FailureDetails => Failure?.Details ?? [];
-    public string? FailureOriginalMessage => Failure?.OriginalMessage;
-    public bool HasFailureDetails => Failure?.HasDetails ?? false;
-    public bool HasFailureOriginalMessage => FailureOriginalMessage is not null;
-    public bool CanTurnOffVerification => Failure?.Actions.Contains(RequestFailureAction.TurnOffSslVerification) ?? false;
-    public bool CanOpenRequestSettings => Failure?.Actions.Contains(RequestFailureAction.OpenRequestSettings) ?? false;
-    public bool CanEditUrl => Failure?.Actions.Contains(RequestFailureAction.EditUrl) ?? false;
-    public bool CanRetry => Failure?.Actions.Contains(RequestFailureAction.Retry) ?? false;
-    public bool CanChooseFile => Failure?.Actions.Contains(RequestFailureAction.ChooseFile) ?? false;
-    public bool CanShowHeaders => Failure?.Actions.Contains(RequestFailureAction.ShowHeaders) ?? false;
-    public bool HasFailureActions => Failure is { Actions.Count: > 0 };
-    public string? FailureActionCaption => Failure?.ActionCaption;
+    public bool CanTurnOffVerification => Failure?.OffersAction(RequestFailureAction.TurnOffSslVerification) ?? false;
+    public bool CanOpenRequestSettings => Failure?.OffersAction(RequestFailureAction.OpenRequestSettings) ?? false;
+    public bool CanEditUrl => Failure?.OffersAction(RequestFailureAction.EditUrl) ?? false;
+    public bool CanRetry => Failure?.OffersAction(RequestFailureAction.Retry) ?? false;
+    public bool CanChooseFile => Failure?.OffersAction(RequestFailureAction.ChooseFile) ?? false;
+    public bool CanShowHeaders => Failure?.OffersAction(RequestFailureAction.ShowHeaders) ?? false;
 
-    /// <summary>The resource key of the icon for the failure's kind.</summary>
-    public string FailureIconKey => RequestFailureIcons.KeyFor(Failure?.Kind);
     public bool IsPretty => ViewMode == ResponseViewMode.Pretty;
     public bool IsRaw => ViewMode == ResponseViewMode.Raw;
     public bool IsPreview => ViewMode == ResponseViewMode.Preview;
@@ -201,8 +178,12 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
                 break;
             case nameof(Failure):
                 OnPropertyChanged(nameof(IsEmpty));
-                foreach (var name in FailureViewProperties)
-                    OnPropertyChanged(name);
+                OnPropertyChanged(nameof(CanTurnOffVerification));
+                OnPropertyChanged(nameof(CanOpenRequestSettings));
+                OnPropertyChanged(nameof(CanEditUrl));
+                OnPropertyChanged(nameof(CanRetry));
+                OnPropertyChanged(nameof(CanChooseFile));
+                OnPropertyChanged(nameof(CanShowHeaders));
                 break;
             case nameof(PreviewImage):
                 OnPropertyChanged(nameof(HasPreviewImage));
@@ -278,8 +259,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         IsLoading = false;
         HasResponse = false;
         _response = null;
-        FailureDetailsExpanded = false;
-        Failure = failure;
+        Failure = new RequestFailureViewModel(failure, dialogs.CopyTextAsync);
     }
 
     /// <param name="sentWith">The environment the request was resolved with; null for none or a saved response, which doesn't record it.</param>
@@ -349,14 +329,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     private void RunFailureAction(RequestFailureAction action)
     {
         if (Failure is { } failure)
-            FailureActionRequested?.Invoke(this, new RequestFailureActionEventArgs(action, failure));
-    }
-
-    [RelayCommand]
-    private async Task CopyFailureDetails()
-    {
-        if (Failure is { } failure)
-            await dialogs.CopyTextAsync(failure.ToClipboardText());
+            FailureActionRequested?.Invoke(this, new RequestFailureActionEventArgs(action, failure.Model));
     }
 
     [RelayCommand]

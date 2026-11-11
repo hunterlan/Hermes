@@ -35,7 +35,7 @@ public class CertificateFailureViewTests
         var (window, tab) = await SendToSelfSignedServerAsync(server);
 
         Assert.False(tab.Response.HasResponse);
-        Assert.Equal(RequestFailureKind.CertificateSelfSigned, tab.Response.Failure?.Kind);
+        Assert.Equal(RequestFailureKind.CertificateSelfSigned, tab.Response.Failure?.Model.Kind);
         Assert.Equal("Certificate is self-signed", Find<SelectableTextBlock>(window, "FailureHeadlineText").Text);
         Assert.StartsWith("Signed by the server itself", Find<SelectableTextBlock>(window, "FailureFactsText").Text);
         Assert.True(Find<Button>(window, "TurnOffVerificationButton").IsEffectivelyVisible);
@@ -111,7 +111,7 @@ public class CertificateFailureViewTests
         await tab.SendCommand.ExecuteAsync(null);
         UiTestHelpers.Pump();
 
-        Assert.Equal(RequestFailureKind.PlainHttpAnswered, tab.Response.Failure?.Kind);
+        Assert.Equal(RequestFailureKind.PlainHttpAnswered, tab.Response.Failure?.Model.Kind);
         Find<CollapsibleSection>(window, "FailureDetailsSection").IsExpanded = true;
         UiTestHelpers.Pump();
         var originalMessage = Find<SelectableTextBlock>(window, "FailureOriginalMessageText");

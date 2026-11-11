@@ -38,7 +38,7 @@ public class RequestFailureViewTests
         var port = ClosedPort.Find();
         var (window, tab) = await SendAsync($"http://127.0.0.1:{port}/");
 
-        Assert.Equal(RequestFailureKind.ConnectionRefused, tab.Response.Failure?.Kind);
+        Assert.Equal(RequestFailureKind.ConnectionRefused, tab.Response.Failure?.Model.Kind);
         Assert.Equal("Server isn't accepting connections", Find<SelectableTextBlock>(window, "FailureHeadlineText").Text);
         Assert.StartsWith("Nothing is listening on", Find<SelectableTextBlock>(window, "FailureFactsText").Text);
         Assert.True(Find<Button>(window, "RetryButton").IsEffectivelyVisible);
@@ -48,7 +48,7 @@ public class RequestFailureViewTests
         Click(window, "RetryButton");
         await UiTestHelpers.WaitUntil(() => !ReferenceEquals(tab.Response.Failure, first) && !tab.IsSending);
 
-        Assert.Equal(RequestFailureKind.ConnectionRefused, tab.Response.Failure?.Kind);
+        Assert.Equal(RequestFailureKind.ConnectionRefused, tab.Response.Failure?.Model.Kind);
         window.Close();
     }
 
@@ -59,7 +59,7 @@ public class RequestFailureViewTests
         var focusRequests = 0;
         tab.UrlFocusRequested += () => focusRequests++;
 
-        Assert.Equal(RequestFailureKind.InvalidUrl, tab.Response.Failure?.Kind);
+        Assert.Equal(RequestFailureKind.InvalidUrl, tab.Response.Failure?.Model.Kind);
         Assert.True(Find<Button>(window, "EditUrlButton").IsEffectivelyVisible);
         Assert.Contains("Hermes stopped before sending anything.", window.GetVisualDescendants().OfType<TextBlock>().Select(text => text.Text));
 
@@ -77,7 +77,7 @@ public class RequestFailureViewTests
         tab.HeadersRevealRequested += () => revealRequests++;
         tab.HeadersExpanded = false;
 
-        Assert.Equal(RequestFailureKind.InvalidHeader, tab.Response.Failure?.Kind);
+        Assert.Equal(RequestFailureKind.InvalidHeader, tab.Response.Failure?.Model.Kind);
         Click(window, "ShowHeadersButton");
 
         Assert.True(tab.HeadersExpanded);
@@ -96,7 +96,7 @@ public class RequestFailureViewTests
             t.BinaryFilePath = path;
         });
 
-        Assert.Equal(RequestFailureKind.BodyFileUnreadable, tab.Response.Failure?.Kind);
+        Assert.Equal(RequestFailureKind.BodyFileUnreadable, tab.Response.Failure?.Model.Kind);
         Assert.Equal($"{path} doesn't exist.", Find<SelectableTextBlock>(window, "FailureFactsText").Text);
         Assert.True(Find<Button>(window, "ChooseFileButton").IsEffectivelyVisible);
         Assert.False(Find<Controls.CollapsibleSection>(window, "FailureDetailsSection").IsExpanded);
