@@ -4,6 +4,7 @@ using Avalonia.VisualTree;
 using Hermes.App.Services;
 using Hermes.App.ViewModels;
 using Hermes.App.Views.Dialogs;
+using Hermes.Core.Storage;
 
 namespace Hermes.App.Tests;
 
@@ -12,36 +13,50 @@ public class UnexpectedErrorHandlerTests
     private static StorageErrorDialog? DialogOf(Window owner) =>
         owner.OwnedWindows.OfType<StorageErrorDialog>().SingleOrDefault();
 
-    [AvaloniaFact]
-    public async Task A_bug_is_shown_as_something_went_wrong_with_the_exception_under_details_and_copy_details()
+    private static (Window Window, UnexpectedErrorHandler Handler, Func<int> Quits) Create(bool withWindow = true)
     {
         var window = new Window { Width = 800, Height = 600 };
-        window.Show();
-        var handler = new UnexpectedErrorHandler(new DialogService { Owner = window });
+        if (withWindow)
+            window.Show();
+        var quits = 0;
+        var handler = new UnexpectedErrorHandler(withWindow ? new DialogService { Owner = window } : new DialogService(), () => quits++);
+        return (window, handler, () => quits);
+    }
 
-        var carryOn = handler.OnUiThreadException(new InvalidOperationException("the cat is out of the bag"));
+    [AvaloniaFact]
+    public async Task A_bug_is_shown_with_details_and_copy_details_and_the_app_quits_when_it_closes()
+    {
+        var (window, handler, quits) = Create();
+
+        var handled = handler.OnUiThreadException(new InvalidOperationException("the cat is out of the bag"));
         await UiTestHelpers.WaitUntil(() => DialogOf(window) is not null);
 
-        Assert.True(carryOn);
+        Assert.True(handled);
+        Assert.True(handler.IsQuitting);
+        Assert.Equal(0, quits());
         var dialog = DialogOf(window)!;
         Assert.Equal("Something went wrong", dialog.Title);
         var viewModel = (StorageErrorDialogViewModel)dialog.DataContext!;
         Assert.Contains("the cat is out of the bag", viewModel.DetailsText);
-        Assert.Contains("InvalidOperationException", viewModel.DetailsText);
-        Assert.Contains(dialog.GetVisualDescendants().OfType<Button>(), b => Equals(b.Content, "Copy details"));
+        var buttons = dialog.GetVisualDescendants().OfType<Button>().Select(b => b.Content).ToList();
+        Assert.Contains("Copy details", buttons);
+        Assert.Contains("Quit", buttons);
+        var texts = dialog.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
+        Assert.DoesNotContain(texts, text => text?.Contains("keep running") == true);
+        Assert.Contains(texts, text => text?.Contains("Hermes will close") == true);
+
         dialog.Close();
+        await UiTestHelpers.WaitUntil(() => quits() == 1);
         window.Close();
     }
 
     [AvaloniaFact]
-    public async Task An_error_that_repeats_does_not_pile_dialogs_up()
+    public async Task A_second_error_while_the_dialog_is_open_is_ignored()
     {
-        var window = new Window { Width = 800, Height = 600 };
-        window.Show();
-        var handler = new UnexpectedErrorHandler(new DialogService { Owner = window });
+        var (window, handler, quits) = Create();
 
-        handler.OnUiThreadException(new InvalidOperationException("first"));
-        handler.OnUiThreadException(new InvalidOperationException("second"));
+        handler.Fail(new InvalidOperationException("first"));
+        handler.Fail(new InvalidOperationException("second"));
         handler.OnUiThreadException(new InvalidOperationException("third"));
         await UiTestHelpers.WaitUntil(() => DialogOf(window) is not null);
         UiTestHelpers.Pump();
@@ -49,37 +64,39 @@ public class UnexpectedErrorHandlerTests
         var dialog = DialogOf(window)!;
         Assert.Contains("first", ((StorageErrorDialogViewModel)dialog.DataContext!).DetailsText);
         dialog.Close();
+        await UiTestHelpers.WaitUntil(() => quits() >= 1);
+        UiTestHelpers.Pump();
+        Assert.Equal(1, quits());
         window.Close();
     }
 
     [AvaloniaFact]
-    public void Running_out_of_memory_is_left_to_end_the_app()
+    public void Running_out_of_memory_is_left_to_end_the_process()
     {
-        var window = new Window();
-        var handler = new UnexpectedErrorHandler(new DialogService { Owner = window });
+        var (window, handler, quits) = Create();
 
         Assert.False(handler.OnUiThreadException(new OutOfMemoryException()));
         UiTestHelpers.Pump();
 
         Assert.Null(DialogOf(window));
+        Assert.Equal(0, quits());
+        window.Close();
     }
 
     [AvaloniaFact]
-    public async Task Without_a_window_nothing_is_shown_and_nothing_is_thrown()
+    public async Task When_the_dialog_cannot_be_shown_the_app_quits_anyway()
     {
-        var handler = new UnexpectedErrorHandler(new DialogService());
+        var (_, handler, quits) = Create(withWindow: false);
 
         Assert.True(handler.OnUiThreadException(new InvalidOperationException("early")));
-        UiTestHelpers.Pump();
-        await Task.Delay(20, TestContext.Current.CancellationToken);
-        UiTestHelpers.Pump();
+
+        await UiTestHelpers.WaitUntil(() => quits() == 1);
     }
 
     [AvaloniaFact]
-    public async Task An_unobserved_task_error_is_ignored_without_a_dialog()
+    public async Task An_unobserved_task_error_is_ignored_without_a_dialog_or_a_quit()
     {
-        var window = new Window { Width = 800, Height = 600 };
-        window.Show();
+        var (window, handler, quits) = Create();
         var args = new UnobservedTaskExceptionEventArgs(new AggregateException(new InvalidOperationException("in a task")));
 
         UnexpectedErrorHandler.IgnoreUnobservedTaskException(args);
@@ -88,7 +105,9 @@ public class UnexpectedErrorHandlerTests
         UiTestHelpers.Pump();
 
         Assert.True(args.Observed);
+        Assert.False(handler.IsQuitting);
         Assert.Null(DialogOf(window));
+        Assert.Equal(0, quits());
         window.Close();
     }
 }

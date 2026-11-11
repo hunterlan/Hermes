@@ -29,7 +29,7 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            UnexpectedErrorHandler.Install(Services.GetRequiredService<DialogService>());
+            UnexpectedErrorHandler.Install(Services.GetRequiredService<UnexpectedErrorHandler>());
             StartMainWindow(desktop, showWindow: false);
         }
 
@@ -124,6 +124,10 @@ public partial class App : Application
             window.Show();
     }
 
+    // Not the main window's close path: that would ask to save and write a session from a state nobody can vouch for.
+    private static void QuitAfterUnexpectedError() =>
+        (Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown(1);
+
     private static ServiceProvider ConfigureServices()
     {
         var services = new ServiceCollection();
@@ -139,6 +143,7 @@ public partial class App : Application
         services.AddSingleton<RequestExecutor>();
         services.AddSingleton<OAuth2Service>();
         services.AddSingleton<DialogService>();
+        services.AddSingleton(sp => new UnexpectedErrorHandler(sp.GetRequiredService<DialogService>(), QuitAfterUnexpectedError));
         services.AddSingleton<ManualService>();
         services.AddSingleton<TabServices>();
         services.AddSingleton<MainWindowViewModel>();

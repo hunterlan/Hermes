@@ -4,21 +4,24 @@ namespace Hermes.App.Services;
 
 /// <summary>
 /// The last line of defence for bugs: an exception nobody caught on the UI thread is shown in a "Something went
-/// wrong" dialog instead of ending the app without a word. Exceptions left unobserved in a task are ignored for now.
-/// It is not how Hermes handles expected failures; storage errors are caught where they happen and explained in their
-/// own words.
+/// wrong" dialog, and Hermes quits when the dialog closes. Exceptions left unobserved in a task are ignored for now.
+/// Code that runs after a bug can't be trusted, so quitting skips the usual close path: no prompt to save, no final
+/// session write. The session the timer saved last stays as it is. This is not how Hermes handles expected failures;
+/// storage errors are caught where they happen and explained in their own words.
 /// </summary>
-public sealed class UnexpectedErrorHandler(DialogService dialogs)
+/// <param name="dialogs">Shows the dialog.</param>
+/// <param name="quit">Ends the app without asking anything. A seam so tests don't end the test host.</param>
+public sealed class UnexpectedErrorHandler(DialogService dialogs, Action quit)
 {
-    private bool _showing;
+    /// <summary>True once a bug was caught. The window then closes without prompting or saving the session.</summary>
+    public bool IsQuitting { get; private set; }
 
     /// <summary>Hooks the handler up to the UI thread and to tasks nobody awaited (only to ignore them).</summary>
-    public static void Install(DialogService dialogs)
+    public static void Install(UnexpectedErrorHandler handler)
     {
-        var handler = new UnexpectedErrorHandler(dialogs);
         Dispatcher.UIThread.UnhandledException += (_, e) => e.Handled = handler.OnUiThreadException(e.Exception);
         // These arrive late, when the garbage collector runs, and have nothing to do with what the user is doing, so
-        // they don't show the dialog. They are left for logging in #92.
+        // they neither show the dialog nor quit. They are left for logging in #92.
         TaskScheduler.UnobservedTaskException += (_, e) => IgnoreUnobservedTaskException(e);
     }
 
@@ -26,36 +29,39 @@ public sealed class UnexpectedErrorHandler(DialogService dialogs)
     public static void IgnoreUnobservedTaskException(UnobservedTaskExceptionEventArgs e) => e.SetObserved();
 
     /// <summary>
-    /// Shows the exception, and says whether the app may carry on. It does, unless the process is out of memory, where
-    /// even the dialog may not open.
+    /// Handles an exception from the UI thread. The result is for <c>Handled</c>: true only so the dialog can be shown
+    /// before quitting. Out of memory is left to end the process, where even the dialog may not open.
     /// </summary>
     public bool OnUiThreadException(Exception exception)
     {
         if (exception is OutOfMemoryException)
             return false;
-        Show(exception);
+        Fail(exception);
         return true;
     }
 
-    /// <summary>Shows the dialog on the UI thread. One at a time: an error that repeats must not pile dialogs up.</summary>
-    public void Show(Exception exception)
+    /// <summary>
+    /// Shows the dialog on the UI thread, then quits, even when the dialog couldn't be shown. A second error while
+    /// the first is being handled is ignored: the app is quitting anyway.
+    /// </summary>
+    public void Fail(Exception exception)
     {
+        if (IsQuitting)
+            return;
+        IsQuitting = true;
         Dispatcher.UIThread.Post(async () =>
         {
-            if (_showing)
-                return;
-            _showing = true;
             try
             {
                 await dialogs.ShowUnexpectedErrorAsync(exception);
             }
-            catch (InvalidOperationException)
+            catch (Exception)
             {
-                // No window to show it in (the app is starting or closing).
+                // Nothing else can report it, and an exception leaving here would come back as another bug.
             }
             finally
             {
-                _showing = false;
+                quit();
             }
         });
     }

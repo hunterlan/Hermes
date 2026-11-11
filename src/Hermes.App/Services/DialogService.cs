@@ -161,14 +161,14 @@ public sealed class DialogService
 
     /// <summary>
     /// The "Something went wrong" dialog for a bug: a plain sentence, with the exception under Details and Copy details.
-    /// The last-line handler uses it; handlers of <c>async void</c> methods may call it too.
+    /// The last-line handler uses it, and quits once it closes (the button reads Quit).
     /// </summary>
     public async Task ShowUnexpectedErrorAsync(Exception exception)
     {
         var error = StorageError.Plain("Hermes ran into a problem it didn't expect.",
-            "Hermes can keep running, but if something looks wrong, save your work and restart it. If it keeps happening, copy the details when you report it.",
+            "Hermes will close. Drafts saved in the session are restored the next time you start it. Copy the details when you report the problem.",
             details: exception.ToString());
-        await ShowDialogAsync<StorageDialogResult>(new StorageErrorDialog("Something went wrong", [error], []));
+        await ShowDialogAsync<StorageDialogResult>(new StorageErrorDialog("Something went wrong", [error], [], closeText: "Quit"));
     }
 
     public static FilePickerFileType JsonFiles { get; } = new("JSON files") { Patterns = ["*.json"], MimeTypes = ["application/json"] };

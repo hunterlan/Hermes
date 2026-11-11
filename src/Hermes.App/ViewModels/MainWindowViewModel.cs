@@ -14,6 +14,9 @@ namespace Hermes.App.ViewModels;
 public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, IDisposable
 {
     private readonly TabServices _services;
+    private readonly List<StorageError> _problemsBeforeWindowOpened = [];
+    private bool _windowOpened;
+    private bool _windowClosed;
     private bool _syncingEnvironment;
 
     /// <summary>The last History draft opened and its content then; with tabs off an untouched one is replaced without asking.</summary>
@@ -65,8 +68,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
             OnPropertyChanged(nameof(SecretsWarning));
         });
         Workspace.CollectionsListChanged += NotifyWorkspaceChanged;
-        Workspace.StorageProblem += ShowStorageProblem;
-        _services.Settings.StorageProblem += ShowStorageProblem;
+        Workspace.StorageProblem += ReportStorageProblem;
+        _services.Settings.StorageProblem += ReportStorageProblem;
         RefreshEnvironmentOptions();
         CommandPalette = new CommandPaletteViewModel(PaletteItems);
 
@@ -75,12 +78,33 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
 
     public CommandPaletteViewModel CommandPalette { get; }
 
-    // Reported from any thread. Nothing is shown once the window is closing: there is no one left to read it.
-    private void ShowStorageProblem(StorageError error) => Dispatcher.UIThread.Post(() =>
+    /// <summary>
+    /// Shows a storage problem, from any thread. Before the window is open it is kept and shown when it opens; once the
+    /// window has closed there is no one left to read it, so it is dropped.
+    /// </summary>
+    public void ReportStorageProblem(StorageError error) => Dispatcher.UIThread.Post(() =>
     {
-        if (Dialogs.Owner is { IsVisible: true })
+        if (_windowClosed)
+            return;
+        if (_windowOpened)
             _ = Dialogs.ShowStorageErrorsAsync("Storage problem", [error]);
+        else
+            _problemsBeforeWindowOpened.Add(error);
     });
+
+    /// <summary>The main window is open: shows what was reported before.</summary>
+    public void OnWindowOpened()
+    {
+        _windowOpened = true;
+        if (_problemsBeforeWindowOpened.Count == 0)
+            return;
+        var problems = _problemsBeforeWindowOpened.ToList();
+        _problemsBeforeWindowOpened.Clear();
+        _ = Dialogs.ShowStorageErrorsAsync("Storage problem", problems);
+    }
+
+    /// <summary>The main window has closed: later problems are no longer shown.</summary>
+    public void OnWindowClosed() => _windowClosed = true;
 
     [RelayCommand]
     private void OpenCommandPalette() => CommandPalette.Open();

@@ -124,10 +124,7 @@ another program has the file open), a **Couldn't save** dialog says which one an
 
 ## Something went wrong
 
-If Hermes hits a problem it didn't expect, it shows a **Something went wrong** dialog instead of closing. Hermes can
-keep running, but if something looks wrong, save your work and restart it. Choose **Copy details** and include them
-when you report the problem.
-
-If Hermes can't use the data folder when it starts, it says which folder and why. Choose **Use default folder** to
-go back to the default location, or **Choose another folder** to pick one. Your files in the old folder are not
-touched.
+If Hermes hits a problem it didn't expect, it shows a **Something went wrong** dialog and then closes when you choose
+**Quit**. It doesn't ask to save and doesn't write the session again, because it can't tell what state it is in. Tabs
+and drafts as of the last automatic save (every half minute) come back the next time you start Hermes. Choose **Copy
+details** and include them when you report the problem.
