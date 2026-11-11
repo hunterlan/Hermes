@@ -2,6 +2,7 @@ using System.Net;
 using Hermes.Core.Auth;
 using Hermes.Core.Formatting;
 using Hermes.Core.Http;
+using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
 using Hermes.TestSupport;
 
@@ -60,13 +61,14 @@ public class FormatterAndOAuthTests
         Assert.Equal("abc", form.AccessToken);
 
         var error = OAuth2Service.ParseTokenResponse("{\"error\":\"invalid_client\",\"error_description\":\"bad\"}", HttpStatusCode.BadRequest);
-        Assert.Equal("invalid_client: bad", error.Error);
+        Assert.Equal(RequestFailureKind.TokenRequestRefused, error.Failure?.Kind);
+        Assert.Contains("bad", error.Failure?.Facts);
     }
 
     [Fact]
     public void Odd_token_responses_are_failures_not_exceptions()
     {
-        Assert.NotNull(OAuth2Service.ParseTokenResponse("[1, 2]", HttpStatusCode.OK).Error);
+        Assert.Equal(RequestFailureKind.TokenResponseInvalid, OAuth2Service.ParseTokenResponse("[1, 2]", HttpStatusCode.OK).Failure?.Kind);
         Assert.Equal("second", OAuth2Service.ParseTokenResponse("{\"access_token\":\"first\",\"access_token\":\"second\"}", HttpStatusCode.OK).AccessToken);
         Assert.Equal("b", OAuth2Service.ParseTokenResponse("access_token=a&access_token=b", HttpStatusCode.OK).AccessToken);
     }
@@ -106,7 +108,7 @@ public class FormatterAndOAuthTests
             new OAuth2Auth { GrantType = OAuth2GrantType.ClientCredentials, AccessTokenUrl = $"http://127.0.0.1:{port.Port}/token", ClientId = "c" },
             Variables.VariableScope.Empty, _ => Task.CompletedTask, verifySsl: true, TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result.Error);
+        Assert.NotNull(result.Failure);
         Assert.Null(result.AccessToken);
     }
 }

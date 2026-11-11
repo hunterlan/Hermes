@@ -43,6 +43,25 @@ and the original message. **Copy details** puts all of it on the clipboard for a
 To turn verification off for every request instead, use **SSL certificate verification** in
 [Settings](09-settings.md).
 
+## OAuth 2.0 token errors
+
+When **Get New Access Token** fails, the Auth panel shows the same four parts as a failed request: a headline, the
+facts, one button for the next step, and a collapsed **Details** with **Copy details**.
+
+| Headline | Meaning | Next step |
+|---|---|---|
+| Couldn't find the server, Server isn't accepting connections, Server didn't answer | The token URL can't be reached. They read as for requests above. | Edit token URL, or Try again |
+| Certificate ... | The token server's certificate failed its check. See below. | Open settings |
+| Port 8080 is already in use | Another program uses the callback port. Choose another port in **Callback URL**; the field is selected for you. | Edit callback URL |
+| The token server doesn't accept this client, ... rejected the authorization, ... rejected the scope | The server answered with an OAuth error such as `invalid_client`, `invalid_grant` or `invalid_scope`. The facts say what to check and quote the server's own description. | Try again, when it helps |
+| The token server refused the request | An error code Hermes has no wording for. The facts show the code and the server's description. | |
+| Couldn't get a token | Something unexpected happened. Open **Details** and use **Copy details** when you report it. | |
+
+Token requests follow the SSL setting in effect where you edit the auth. On a request that has its own **Enable SSL
+certificate verification** switch in its Settings section, that switch applies and the error offers **Open request
+settings**. Everywhere else, including folders, collections and requests with no setting of their own, the app-wide
+**SSL certificate verification** in [Settings](09-settings.md) applies, and the error offers **Open settings**.
+
 ## Timeouts
 
 A request that takes longer than **Request timeout** fails. Raise the value in [Settings](09-settings.md), or set it

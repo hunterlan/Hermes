@@ -28,6 +28,13 @@ public sealed class TabServices(
     /// </summary>
     public Func<Guid, Task>? OpenContainerAsync { get; set; }
 
+    /// <summary>Opens the app's Settings dialog. Set by the main window, like <see cref="OpenContainerAsync"/>.</summary>
+    public Func<Task>? OpenSettingsAsync { get; set; }
+
     public AuthEditorViewModel CreateAuthEditor(bool allowInherit) =>
-        new(OAuth, Dialogs.OpenUrlAsync, Dialogs.CopyTextAsync, allowInherit) { VerifySslProvider = () => Settings.Current.VerifySsl };
+        new(OAuth, Dialogs.OpenUrlAsync, Dialogs.CopyTextAsync, allowInherit)
+        {
+            VerifySslProvider = () => Settings.Current.VerifySsl,
+            OpenAppSettingsHandler = () => OpenSettingsAsync?.Invoke() ?? Task.CompletedTask,
+        };
 }

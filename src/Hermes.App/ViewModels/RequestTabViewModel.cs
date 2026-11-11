@@ -68,6 +68,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         Auth.Changed += OnAnyChanged;
         Auth.ScopeProvider = () => CreateContext().BuildScope();
         Auth.VerifySslProvider = () => VerifySsl;
+        Auth.SslSourceProvider = () => VerifySslOverride is null ? SslSettingSource.AppWide : SslSettingSource.Request;
+        Auth.OpenRequestSettingsHandler = RevealSettings;
         Auth.InheritedAuthProvider = () => CreateContext().ResolveAuth(AuthConfig.Inherit());
         Auth.ChainProvider = () => (AuthInheritance.OuterLevels(CreateContext()), "Request", Name);
 

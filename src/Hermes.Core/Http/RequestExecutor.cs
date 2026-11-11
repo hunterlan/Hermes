@@ -142,7 +142,7 @@ public sealed class RequestExecutor(HttpClientProvider clients)
     }
 
     /// <summary>The message of the TLS exception itself, which says more than the "see inner exception" around it.</summary>
-    private static string FindTlsMessage(Exception ex)
+    internal static string FindTlsMessage(Exception ex)
     {
         for (var current = ex; current is not null; current = current.InnerException)
         {
