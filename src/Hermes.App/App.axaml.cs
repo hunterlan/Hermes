@@ -29,6 +29,7 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            UnexpectedErrorHandler.Install(Services.GetRequiredService<DialogService>());
             StartMainWindow(desktop, showWindow: false);
         }
 
@@ -104,14 +105,9 @@ public partial class App : Application
         }
         var settings = Services.GetRequiredService<SettingsService>();
         var chosenFolder = result.ChoiceId == StartupFolderChoices.ChooseFolder ? result.Folder : null;
-        try
+        settings.Current.DataDirectory = chosenFolder;
+        if (settings.Update(settings.Current) is { } failure)
         {
-            settings.Current.DataDirectory = chosenFolder;
-            settings.Update(settings.Current);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            var failure = StorageErrorDescriber.Describe(ex, AppPaths.SettingsFile, "Settings", StorageOperation.Write);
             var notice = new StorageErrorDialog("Hermes can't start", [failure], [], closeText: "Quit");
             notice.Closed += (_, _) => desktop.Shutdown();
             SetMainWindow(desktop, notice, showWindow: true);
