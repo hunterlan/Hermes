@@ -18,6 +18,7 @@ public sealed partial class CollectionTabViewModel : TabViewModelBase
     {
         _collection = collection;
         Auth = services.CreateAuthEditor(allowInherit: false);
+        Auth.FailureActionRequested += OnAuthFailureActionRequested;
         Auth.ScopeProvider = BuildScope;
         Auth.ChainProvider = () => ([], "Collection", Name);
         Auth.ContainedItemsProvider = () => _collection.Items;

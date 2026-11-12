@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Hermes.Core.Models;
 
 namespace Hermes.App.ViewModels;
@@ -22,6 +24,26 @@ public abstract partial class TabViewModelBase(TabServices services) : Observabl
 
     /// <summary>Name of the collection the tab's entity lives in, used to tell same-named tabs apart.</summary>
     public virtual string? CollectionName => null;
+
+    /// <summary>Shows the app's Settings dialog.</summary>
+    [RelayCommand]
+    private Task OpenAppSettings() => Services.OpenSettingsAsync?.Invoke() ?? Task.CompletedTask;
+
+    /// <summary>
+    /// The next steps of an Auth panel's failure that a tab without request settings can take. A tab with its own
+    /// handler for them, like a request, doesn't use this.
+    /// </summary>
+    protected void OnAuthFailureActionRequested(object? sender, RequestFailureActionEventArgs args)
+    {
+        switch (args.Action)
+        {
+            case RequestFailureAction.OpenAppSettings:
+                OpenAppSettingsCommand.Execute(null);
+                break;
+            default:
+                throw new UnreachableException($"Unhandled failure action {args.Action}");
+        }
+    }
 
     partial void OnIsActiveChanged(bool value) => OnActiveChanged(value);
 

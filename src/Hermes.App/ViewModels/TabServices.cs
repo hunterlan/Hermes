@@ -35,6 +35,5 @@ public sealed class TabServices(
         new(OAuth, Dialogs.OpenUrlAsync, Dialogs.CopyTextAsync, allowInherit)
         {
             VerifySslProvider = () => Settings.Current.VerifySsl,
-            OpenAppSettingsHandler = () => OpenSettingsAsync?.Invoke() ?? Task.CompletedTask,
         };
 }

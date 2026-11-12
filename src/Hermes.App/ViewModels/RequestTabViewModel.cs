@@ -69,7 +69,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         Auth.ScopeProvider = () => CreateContext().BuildScope();
         Auth.VerifySslProvider = () => VerifySsl;
         Auth.SslSourceProvider = () => VerifySslOverride is null ? SslSettingSource.AppWide : SslSettingSource.Request;
-        Auth.OpenRequestSettingsHandler = RevealSettings;
+        Auth.FailureActionRequested += OnFailureActionRequested;
         Auth.InheritedAuthProvider = () => CreateContext().ResolveAuth(AuthConfig.Inherit());
         Auth.ChainProvider = () => (AuthInheritance.OuterLevels(CreateContext()), "Request", Name);
 
@@ -797,6 +797,12 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
                 break;
             case RequestFailureAction.ShowHeaders:
                 RevealHeaders();
+                break;
+            case RequestFailureAction.OpenAppSettings:
+                OpenAppSettingsCommand.Execute(null);
+                break;
+            case RequestFailureAction.EditCallbackUrl:
+                Auth.RequestFocus(AuthEditorField.CallbackUrl);
                 break;
             default:
                 throw new UnreachableException($"Unhandled failure action {args.Action}");

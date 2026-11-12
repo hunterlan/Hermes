@@ -70,14 +70,17 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     /// <summary>Where the setting from <see cref="VerifySslProvider"/> comes from: the request's own override, or the app-wide setting.</summary>
     public Func<SslSettingSource> SslSourceProvider { get; set; } = () => SslSettingSource.AppWide;
 
-    /// <summary>What "Open request settings" does; set by the request tab, which owns the settings.</summary>
-    public Action? OpenRequestSettingsHandler { get; set; }
-
-    /// <summary>What "Open settings" does: shows the app's Settings dialog.</summary>
-    public Func<Task>? OpenAppSettingsHandler { get; set; }
+    /// <summary>
+    /// Raised for a next step this editor can't carry out itself: opening the request's settings or the app's. The tab
+    /// that owns the editor handles it, in the same place as the next steps of a response.
+    /// </summary>
+    public event EventHandler<RequestFailureActionEventArgs>? FailureActionRequested;
 
     /// <summary>The view should put the cursor in this field, e.g. the callback URL when its port is taken.</summary>
     public event Action<AuthEditorField>? FocusRequested;
+
+    /// <summary>Asks the view to put the cursor in <paramref name="field"/>.</summary>
+    public void RequestFocus(AuthEditorField field) => FocusRequested?.Invoke(field);
 
     /// <summary>Supplies the effective auth when "inherit" is selected, for the explanatory text.</summary>
     public Func<EffectiveAuth>? InheritedAuthProvider { get; set; }
@@ -405,7 +408,11 @@ public sealed partial class AuthEditorViewModel : ObservableObject
     [RelayCommand]
     private async Task RunFailureAction()
     {
-        switch (Failure?.Model.Actions.FirstOrDefault())
+        if (Failure is not { } failure)
+            return;
+
+        var action = failure.Model.Actions.FirstOrDefault();
+        switch (action)
         {
             case RequestFailureAction.Retry:
                 await GetNewAccessTokenCommand.ExecuteAsync(null);
@@ -417,11 +424,8 @@ public sealed partial class AuthEditorViewModel : ObservableObject
                 FocusRequested?.Invoke(AuthEditorField.CallbackUrl);
                 break;
             case RequestFailureAction.OpenRequestSettings:
-                OpenRequestSettingsHandler?.Invoke();
-                break;
             case RequestFailureAction.OpenAppSettings:
-                if (OpenAppSettingsHandler is { } openSettings)
-                    await openSettings();
+                FailureActionRequested?.Invoke(this, new RequestFailureActionEventArgs(action, failure.Model));
                 break;
         }
     }
