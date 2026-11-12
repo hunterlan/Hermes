@@ -41,7 +41,7 @@ public static class WorkspaceIdentity
         catch (System.Text.Json.JsonException ex)
         {
             // Treated like any unreadable file: a new id here would cut the folder off from its secrets.
-            throw new IOException($"{file} is not valid: {ex.Message}", ex);
+            throw new IOException(StorageErrorDescriber.Describe(ex, file, "The data folder's id file").Summary, ex);
         }
     }
 

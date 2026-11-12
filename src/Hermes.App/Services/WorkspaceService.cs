@@ -26,7 +26,8 @@ public sealed class WorkspaceService : IDisposable
     {
         _repository = repository;
         _timeProvider = timeProvider;
-        _historyWriter.Failed += ex => StorageProblem?.Invoke($"History couldn't be saved: {ex.Message}");
+        _historyWriter.Failed += ex => StorageProblem?.Invoke(
+            StorageErrorDescriber.Describe(ex, Path.Combine(repository.Root, "history"), "History", StorageOperation.Write));
         Settings = settings;
         Collections = repository.LoadCollections();
         Environments = repository.LoadEnvironments();
@@ -42,7 +43,7 @@ public sealed class WorkspaceService : IDisposable
     public List<EnvironmentModel> Environments { get; }
     public EnvironmentModel Globals { get; }
     public HistoryCollection History { get; }
-    public IReadOnlyList<string> LoadErrors => _repository.LoadErrors;
+    public IReadOnlyList<StorageError> LoadErrors => _repository.LoadErrors;
     public string DataDirectory => _repository.Root;
     public SecretStore Secrets => _repository.Secrets;
 
@@ -67,7 +68,7 @@ public sealed class WorkspaceService : IDisposable
     public event Action? VariablesChanged;
 
     /// <summary>Something couldn't be read or written. May be raised on a background thread.</summary>
-    public event Action<string>? StorageProblem;
+    public event Action<StorageError>? StorageProblem;
 
     // ---- lookup ----
 
@@ -328,7 +329,7 @@ public sealed class WorkspaceService : IDisposable
     {
         var loaded = _repository.LoadResponses(requestId);
         foreach (var error in loaded.Errors)
-            StorageProblem?.Invoke($"A saved response couldn't be read and was skipped: {error}");
+            StorageProblem?.Invoke(error);
         return loaded.Items;
     }
 
@@ -341,7 +342,8 @@ public sealed class WorkspaceService : IDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            StorageProblem?.Invoke($"The response couldn't be saved: {ex.Message}");
+            StorageProblem?.Invoke(StorageErrorDescriber.Describe(ex, Path.Combine(_repository.Root, "responses", requestId.ToString()),
+                "The response", StorageOperation.Write));
             return null;
         }
     }

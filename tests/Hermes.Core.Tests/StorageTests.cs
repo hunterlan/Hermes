@@ -88,7 +88,7 @@ public class StorageTests : IDisposable
         var loaded = repo.LoadResponses(id);
 
         Assert.Equal(201, Assert.Single(loaded.Items).Response.StatusCode);
-        Assert.Contains(corrupt, Assert.Single(loaded.Errors));
+        Assert.Equal(corrupt, Assert.Single(loaded.Errors).Location);
         Assert.Equal("{ cut short", File.ReadAllText(corrupt));
     }
 

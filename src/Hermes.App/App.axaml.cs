@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Hermes.App.Services;
@@ -28,41 +29,101 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Before anything opens the folder's files or its keychain entry.
-            var dataDirectory = DataDirectoryOf(Services.GetRequiredService<SettingsService>());
-            string? problem;
-            try
-            {
-                _dataFolderLock = DataFolderLock.TryAcquire(dataDirectory);
-                problem = _dataFolderLock is null
-                    ? $"Another Hermes window is using the data folder {dataDirectory}. Switch to that window, or close it and start Hermes again."
-                    : null;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                problem = $"The data folder {dataDirectory} can't be used: {ex.Message}";
-            }
-            if (problem is not null)
-            {
-                desktop.MainWindow = new MessageDialog("Hermes can't start", problem, [("OK", "ok", "accent")]);
-                base.OnFrameworkInitializationCompleted();
-                return;
-            }
-
-            var window = new MainWindow { DataContext = Services.GetRequiredService<MainWindowViewModel>() };
-            Services.GetRequiredService<DialogService>().Owner = window;
-            desktop.MainWindow = window;
-            // Exit, not ShutdownRequested: a shutdown request can still be cancelled.
-            desktop.Exit += (_, _) =>
-            {
-                // Give queued history writes a moment to land; a slow disk mustn't hold the app open.
-                Services.GetRequiredService<WorkspaceService>().FlushHistoryAsync().Wait(TimeSpan.FromSeconds(2));
-                (Services as IDisposable)?.Dispose();
-                _dataFolderLock!.Dispose();
-            };
+            StartMainWindow(desktop, showWindow: false);
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// Takes the data folder's lock and opens the main window; when the folder can't be used, shows why instead and
+    /// lets the user pick another folder. <paramref name="showWindow"/> is true once the app is running, when setting
+    /// <see cref="IClassicDesktopStyleApplicationLifetime.MainWindow"/> no longer shows the window by itself.
+    /// </summary>
+    private void StartMainWindow(IClassicDesktopStyleApplicationLifetime desktop, bool showWindow)
+    {
+        // Before anything opens the folder's files or its keychain entry.
+        var dataDirectory = DataDirectoryOf(Services.GetRequiredService<SettingsService>());
+        try
+        {
+            _dataFolderLock = DataFolderLock.TryAcquire(dataDirectory);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ShowStartupProblem(desktop, dataDirectory,
+                StorageErrorDescriber.Describe(ex, dataDirectory, $"Data folder \"{dataDirectory}\"", StorageOperation.Use), showWindow);
+            return;
+        }
+        if (_dataFolderLock is null)
+        {
+            var message = $"Another Hermes window is using the data folder {dataDirectory}. Switch to that window, or close it and start Hermes again.";
+            SetMainWindow(desktop, new MessageDialog("Hermes can't start", message, [("OK", "ok", "accent")]), showWindow);
+            return;
+        }
+
+        if (DataFolderCheck.FindUnusableSubfolder(dataDirectory) is { } unusableSubfolder)
+        {
+            // Released so the folder isn't held by a start that didn't happen.
+            _dataFolderLock.Dispose();
+            _dataFolderLock = null;
+            ShowStartupProblem(desktop, dataDirectory, unusableSubfolder, showWindow);
+            return;
+        }
+
+        var window = new MainWindow { DataContext = Services.GetRequiredService<MainWindowViewModel>() };
+        Services.GetRequiredService<DialogService>().Owner = window;
+        SetMainWindow(desktop, window, showWindow);
+        // Exit, not ShutdownRequested: a shutdown request can still be cancelled.
+        desktop.Exit += (_, _) =>
+        {
+            // Give queued history writes a moment to land; a slow disk mustn't hold the app open.
+            Services.GetRequiredService<WorkspaceService>().FlushHistoryAsync().Wait(TimeSpan.FromSeconds(2));
+            (Services as IDisposable)?.Dispose();
+            _dataFolderLock!.Dispose();
+        };
+    }
+
+    private void ShowStartupProblem(IClassicDesktopStyleApplicationLifetime desktop, string dataDirectory, StorageError error, bool showWindow)
+    {
+        var dialog = new StorageErrorDialog("Hermes can't start", [error],
+            StartupFolderChoices.For(dataDirectory), closeText: "Quit");
+        // The dialog is the only window; closing it to pick a folder mustn't end the app.
+        desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        dialog.Closed += (_, _) => OnStartupProblemClosed(desktop, dialog.Result);
+        SetMainWindow(desktop, dialog, showWindow);
+    }
+
+    private void OnStartupProblemClosed(IClassicDesktopStyleApplicationLifetime desktop, StorageDialogResult? result)
+    {
+        if (result is null)
+        {
+            desktop.Shutdown();
+            return;
+        }
+        var settings = Services.GetRequiredService<SettingsService>();
+        var chosenFolder = result.ChoiceId == StartupFolderChoices.ChooseFolder ? result.Folder : null;
+        try
+        {
+            settings.Current.DataDirectory = chosenFolder;
+            settings.Update(settings.Current);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            var failure = StorageErrorDescriber.Describe(ex, AppPaths.SettingsFile, "Settings", StorageOperation.Write);
+            var notice = new StorageErrorDialog("Hermes can't start", [failure], [], closeText: "Quit");
+            notice.Closed += (_, _) => desktop.Shutdown();
+            SetMainWindow(desktop, notice, showWindow: true);
+            return;
+        }
+        desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;
+        StartMainWindow(desktop, showWindow: true);
+    }
+
+    private static void SetMainWindow(IClassicDesktopStyleApplicationLifetime desktop, Window window, bool showWindow)
+    {
+        desktop.MainWindow = window;
+        if (showWindow)
+            window.Show();
     }
 
     private static ServiceProvider ConfigureServices()

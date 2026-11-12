@@ -26,29 +26,34 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
     /// <inheritdoc cref="SavedResponseStore.MaxBodyBytes"/>
     public const long MaxSavedBodyBytes = SavedResponseStore.MaxBodyBytes;
 
+    public const string CollectionsFolderName = "collections";
+    public const string EnvironmentsFolderName = "environments";
+    public const string HistoryFolderName = "history";
+    public const string ResponsesFolderName = "responses";
+
     private const string GlobalsOwner = "globals";
     private const string SessionOwner = "session";
     private static readonly Dictionary<string, string> NoSecrets = [];
 
-    private readonly HistoryStore _history = new(Path.Combine(root, "history"), timeProvider);
-    private readonly SavedResponseStore _responses = new(Path.Combine(root, "responses"));
+    private readonly HistoryStore _history = new(Path.Combine(root, HistoryFolderName), timeProvider);
+    private readonly SavedResponseStore _responses = new(Path.Combine(root, ResponsesFolderName));
 
     public string Root { get; } = root;
 
     public SecretStore Secrets { get; } = secrets ?? SecretStore.Unprotected("No secret store configured.");
 
-    private string CollectionsDir => Path.Combine(Root, "collections");
-    private string EnvironmentsDir => Path.Combine(Root, "environments");
+    private string CollectionsDir => Path.Combine(Root, CollectionsFolderName);
+    private string EnvironmentsDir => Path.Combine(Root, EnvironmentsFolderName);
     private string GlobalsFile => Path.Combine(Root, "globals.json");
     private string SessionFile => Path.Combine(Root, "session.json");
 
     /// <summary>Files that failed to load, with the reason. Shown to the user instead of crashing.</summary>
-    public List<string> LoadErrors { get; } = [];
+    public List<StorageError> LoadErrors { get; } = [];
 
     // ---- collections ----
 
     public List<CollectionModel> LoadCollections() =>
-        LoadAll(CollectionsDir, p => JsonFileStore.Read(p, HermesJsonContext.Default.CollectionModel))
+        LoadAll(CollectionsDir, DataFolderCheck.CollectionsSubject, "Collection", p => JsonFileStore.Read(p, HermesJsonContext.Default.CollectionModel))
             .Select(c =>
             {
                 SecretFields.Restore(c, Secrets.Get(CollectionOwner(c.Id)));
@@ -71,7 +76,7 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
     // ---- environments ----
 
     public List<EnvironmentModel> LoadEnvironments() =>
-        LoadAll(EnvironmentsDir, p => JsonFileStore.Read(p, HermesJsonContext.Default.EnvironmentModel))
+        LoadAll(EnvironmentsDir, DataFolderCheck.EnvironmentsSubject, "Environment", p => JsonFileStore.Read(p, HermesJsonContext.Default.EnvironmentModel))
             .Select(e =>
             {
                 SecretFields.Restore(e, Secrets.Get(EnvironmentOwner(e.Id)));
@@ -102,7 +107,7 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
         }
         catch (Exception ex)
         {
-            LoadErrors.Add($"{GlobalsFile}: {ex.Message}");
+            LoadErrors.Add(StorageErrorDescriber.Describe(ex, GlobalsFile, "Global variables"));
             return new EnvironmentModel { Name = "Globals" };
         }
     }
@@ -160,7 +165,7 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
         }
         catch (Exception ex)
         {
-            LoadErrors.Add($"{SessionFile}: {ex.Message}");
+            LoadErrors.Add(StorageErrorDescriber.Describe(ex, SessionFile, "Session (open tabs and drafts)"));
             return new SessionState();
         }
     }
@@ -193,12 +198,24 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
 
     // ---- helpers ----
 
-    private List<T> LoadAll<T>(string dir, Func<string, T?> read) where T : class
+    /// <param name="folderSubject">How <paramref name="dir"/> is named when it can't be listed.</param>
+    /// <param name="label">What the files hold (<c>Collection</c>, <c>Environment</c>), to name the one that failed.</param>
+    private List<T> LoadAll<T>(string dir, string folderSubject, string label, Func<string, T?> read) where T : class
     {
         var list = new List<T>();
         if (!Directory.Exists(dir))
             return list;
-        foreach (var file in Directory.EnumerateFiles(dir, "*.json"))
+        List<string> files;
+        try
+        {
+            files = Directory.EnumerateFiles(dir, "*.json").ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LoadErrors.Add(StorageErrorDescriber.Describe(ex, dir, $"{folderSubject} \"{dir}\""));
+            return list;
+        }
+        foreach (var file in files)
         {
             try
             {
@@ -207,7 +224,9 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
             }
             catch (Exception ex)
             {
-                LoadErrors.Add($"{file}: {ex.Message}");
+                var name = ex is JsonException ? JsonNameProbe.TryReadName(file) : null;
+                var subject = name is null ? $"{label} file \"{Path.GetFileName(file)}\"" : $"{label} \"{name}\"";
+                LoadErrors.Add(StorageErrorDescriber.Describe(ex, file, subject));
             }
         }
         return list;

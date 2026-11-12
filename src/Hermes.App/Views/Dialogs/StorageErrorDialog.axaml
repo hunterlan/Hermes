@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hermes.App.ViewModels"
+        xmlns:c="using:Hermes.App.Controls"
+        x:Class="Hermes.App.Views.Dialogs.StorageErrorDialog"
+        x:DataType="vm:StorageErrorDialogViewModel"
+        Width="520" SizeToContent="Height" MaxHeight="640" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+  <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+    <c:DialogHeader Name="Header" />
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="{StaticResource Spacing12}">
+        <ItemsControl ItemsSource="{Binding Items}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StorageErrorItemViewModel">
+              <StackPanel Spacing="{StaticResource Spacing6}" Margin="0,0,0,12">
+                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
+                <TextBlock Classes="secondary" Text="{Binding NextStep}" TextWrapping="Wrap" IsVisible="{Binding HasNextStep}" />
+                <TextBlock Classes="secondary" Text="{Binding Outcome}" TextWrapping="Wrap" IsVisible="{Binding HasOutcome}" />
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
+                  <Button Classes="outline" Content="Reveal file" Command="{Binding RevealCommand}" IsVisible="{Binding CanReveal}" />
+                  <Button Classes="outline" Content="Move aside" Command="{Binding MoveAsideCommand}" IsVisible="{Binding CanMoveAside}" />
+                </StackPanel>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <c:CollapsibleSection Header="Details">
+          <TextBox Classes="mono" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                   Text="{Binding DetailsText, Mode=OneWay}" Background="{DynamicResource BgCodeBrush}" />
+        </c:CollapsibleSection>
+      </StackPanel>
+    </ScrollViewer>
+    <c:DialogFooter Grid.Row="2" Name="Footer">
+      <c:DialogFooter.Leading>
+        <Button Classes="outline" Content="{Binding CopyDetailsText}" Command="{Binding CopyDetailsCommand}" />
+      </c:DialogFooter.Leading>
+      <StackPanel Name="ChoicePanel" Orientation="Horizontal" Spacing="{StaticResource Spacing8}" />
+    </c:DialogFooter>
+  </Grid>
+</Window>

@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using Hermes.App.Views.Dialogs;
+using Hermes.Core.Storage;
 
 namespace Hermes.App.Services;
 
@@ -43,6 +44,13 @@ public sealed class DialogService
         var dialog = new MessageDialog(title, message, [("OK", "ok", "accent")]);
         await ShowDialogAsync<string>(dialog);
     }
+
+    /// <summary>
+    /// Shows storage errors in plain words with their next steps, Reveal file / Move aside where they apply, and the
+    /// raw text under Details / Copy details. Use this for every storage error the user should see.
+    /// </summary>
+    public async Task ShowStorageErrorsAsync(string title, IReadOnlyList<StorageError> errors) =>
+        await ShowDialogAsync<StorageDialogResult>(new StorageErrorDialog(title, errors, []));
 
     public async Task<SaveChangesResult> AskSaveChangesAsync(string name)
     {
