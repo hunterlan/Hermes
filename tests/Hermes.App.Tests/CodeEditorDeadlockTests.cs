@@ -24,6 +24,7 @@ public class CodeEditorDeadlockTests
         var editor = new CodeEditor { Language = "json" };
         var window = new Window { Width = 800, Height = 600, Content = editor };
         window.Show();
+        var inner = Assert.IsType<TextEditor>(editor.Content);
 
         var progress = 0;
         var finished = false;
@@ -56,10 +57,13 @@ public class CodeEditorDeadlockTests
             {
                 editor.Language = "json";
                 editor.Text = largeJson;
+                // Every Text set is an undo step that keeps the replaced text; 600 of them held about 1.4 GB.
+                inner.Document.UndoStack.ClearAll();
                 // Let the tokenizer thread start publishing results for the large document.
                 Thread.Sleep(iteration % 5);
                 editor.Language = iteration % 2 == 0 ? "text" : "xml";
                 editor.Text = smallJson;
+                inner.Document.UndoStack.ClearAll();
                 editor.Language = "json";
                 UiTestHelpers.Pump();
                 Volatile.Write(ref progress, iteration + 1);

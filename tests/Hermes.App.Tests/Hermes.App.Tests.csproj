@@ -11,6 +11,10 @@
     <PackageReference Include="Avalonia.Skia" Version="12.1.4" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Keeps the test host's heap tight: the full UI suite peaked at about 2 GB with the default. -->
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="7" />
+  </ItemGroup>
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>
