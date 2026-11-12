@@ -49,9 +49,9 @@
         <StackPanel IsVisible="{Binding HasFailureActions}" Spacing="{StaticResource Spacing8}">
           <WrapPanel ItemSpacing="{StaticResource Spacing8}" LineSpacing="{StaticResource Spacing8}">
             <Button Name="TurnOffVerificationButton" Classes="outline" Content="Turn off verification for this request"
-                    Command="{Binding TurnOffVerificationCommand}" IsVisible="{Binding CanTurnOffVerification}" />
+                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.TurnOffSslVerification}" IsVisible="{Binding CanTurnOffVerification}" />
             <Button Name="OpenRequestSettingsButton" Classes="ghost" Content="Open request settings"
-                    Command="{Binding OpenRequestSettingsCommand}" IsVisible="{Binding CanOpenRequestSettings}" />
+                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.OpenRequestSettings}" IsVisible="{Binding CanOpenRequestSettings}" />
           </WrapPanel>
           <TextBlock Name="FailureActionCaptionText" Classes="secondary" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap"
                      Text="{Binding FailureActionCaption}" IsVisible="{Binding FailureActionCaption, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
