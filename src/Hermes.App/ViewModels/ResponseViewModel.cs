@@ -138,11 +138,8 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
 
     // ---- the failure on screen ----
 
-    /// <summary>What the request tab does for "Turn off verification for this request"; set by the tab, which owns the request.</summary>
-    public Func<Task>? TurnOffVerificationHandler { get; set; }
-
-    /// <summary>What the request tab does for "Open request settings".</summary>
-    public Action? OpenRequestSettingsHandler { get; set; }
+    /// <summary>Raised when the person picks a next step on the failure. The request tab handles it, since it owns the request.</summary>
+    public event EventHandler<RequestFailureActionEventArgs>? FailureActionRequested;
 
     public bool HasFailure => Failure is not null;
     public string FailureHeadline => Failure?.Headline ?? "";
@@ -349,14 +346,11 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     }
 
     [RelayCommand]
-    private async Task TurnOffVerification()
+    private void RunFailureAction(RequestFailureAction action)
     {
-        if (TurnOffVerificationHandler is { } handler)
-            await handler();
+        if (Failure is { } failure)
+            FailureActionRequested?.Invoke(this, new RequestFailureActionEventArgs(action, failure));
     }
-
-    [RelayCommand]
-    private void OpenRequestSettings() => OpenRequestSettingsHandler?.Invoke();
 
     [RelayCommand]
     private async Task CopyFailureDetails()

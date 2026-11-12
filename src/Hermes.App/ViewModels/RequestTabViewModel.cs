@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -72,8 +73,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 
         Response = new ResponseViewModel(services.Dialogs, services.Settings);
         Response.SetSaved(services.Workspace.LoadResponses(model.Id), show: true);
-        Response.TurnOffVerificationHandler = TurnOffVerificationAndResendAsync;
-        Response.OpenRequestSettingsHandler = RevealSettings;
+        Response.FailureActionRequested += OnFailureActionRequested;
 
         Load(model);
         _savedSnapshot = savedSnapshot ?? CurrentSnapshot();
@@ -717,7 +717,23 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         SettingsRevealRequested?.Invoke();
     }
 
+    private void OnFailureActionRequested(object? sender, RequestFailureActionEventArgs args)
+    {
+        switch (args.Action)
+        {
+            case RequestFailureAction.TurnOffSslVerification:
+                TurnOffVerificationAndResendCommand.Execute(null);
+                break;
+            case RequestFailureAction.OpenRequestSettings:
+                RevealSettings();
+                break;
+            default:
+                throw new UnreachableException($"Unhandled failure action {args.Action}");
+        }
+    }
+
     /// <summary>"Turn off verification for this request": the request's own override, not the app-wide setting.</summary>
+    [RelayCommand]
     private async Task TurnOffVerificationAndResendAsync()
     {
         VerifySslOverride = false;

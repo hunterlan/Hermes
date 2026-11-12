@@ -67,7 +67,8 @@ public class CertificateFailureViewTests
         var (window, tab) = await SendToSelfSignedServerAsync(server);
         Assert.Null(tab.VerifySslOverride);
 
-        Find<Button>(window, "TurnOffVerificationButton").Command!.Execute(null);
+        var turnOffButton = Find<Button>(window, "TurnOffVerificationButton");
+        turnOffButton.Command!.Execute(turnOffButton.CommandParameter);
         await UiTestHelpers.WaitUntil(() => tab.Response.HasResponse);
 
         Assert.False(tab.VerifySslOverride);
@@ -87,7 +88,8 @@ public class CertificateFailureViewTests
         var revealRequests = 0;
         tab.SettingsRevealRequested += () => revealRequests++;
 
-        Find<Button>(window, "OpenRequestSettingsButton").Command!.Execute(null);
+        var openSettingsButton = Find<Button>(window, "OpenRequestSettingsButton");
+        openSettingsButton.Command!.Execute(openSettingsButton.CommandParameter);
         UiTestHelpers.Pump();
 
         Assert.True(tab.IsSettingsSectionVisible);
@@ -122,6 +124,24 @@ public class CertificateFailureViewTests
         window.GetVisualDescendants().OfType<Panel>().First().Children.Add(plainSelectableText);
         UiTestHelpers.Pump();
         Assert.Equal(monoFont, plainSelectableText.FontFamily);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task Every_failure_action_is_handled_by_the_request_tab()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+        tab.Response.SetFailure(RequestFailure.FromMessage("A failure to act on."));
+
+        foreach (var action in Enum.GetValues<RequestFailureAction>())
+        {
+            var exception = Record.Exception(() => tab.Response.RunFailureActionCommand.Execute(action));
+            Assert.True(exception is null, $"{action} is not handled by the request tab: {exception?.Message}");
+        }
+
+        // Turning verification off resends the request; let that finish before the window goes.
+        await UiTestHelpers.WaitUntil(() => !tab.IsSending && !tab.TurnOffVerificationAndResendCommand.IsRunning);
         window.Close();
     }
 }
