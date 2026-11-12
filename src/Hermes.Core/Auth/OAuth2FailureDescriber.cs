@@ -99,14 +99,25 @@ public static class OAuth2FailureDescriber
         return string.IsNullOrWhiteSpace(description) ? facts : $"{facts} The server said: {Truncate(description)}";
     }
 
-    /// <summary>The token server answered with something that is neither a token nor an OAuth error.</summary>
-    public static RequestFailure FromUnexpectedResponse(string reason, string body, HttpStatusCode status) => new()
+    /// <summary>
+    /// The token server answered with something that is neither a token nor an OAuth error. A 401 or 403 without an
+    /// OAuth <c>error</c> most likely means the client credentials were rejected, so it says that.
+    /// </summary>
+    public static RequestFailure FromUnexpectedResponse(string reason, string body, HttpStatusCode status)
     {
-        Kind = RequestFailureKind.TokenResponseInvalid,
-        Headline = "The token server's answer wasn't understood",
-        Facts = reason,
-        Details = [new FailureDetail("HTTP status", $"{(int)status} {status}"), new FailureDetail("Response", Truncate(body))],
-    };
+        var details = new List<FailureDetail> { new("HTTP status", $"{(int)status} {status}") };
+        if (!string.IsNullOrWhiteSpace(body))
+            details.Add(new FailureDetail("Response", Truncate(body)));
+
+        var rejected = status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden;
+        return new RequestFailure
+        {
+            Kind = rejected ? RequestFailureKind.TokenRequestRefused : RequestFailureKind.TokenResponseInvalid,
+            Headline = rejected ? "The token server rejected the client credentials" : "The token server's answer wasn't understood",
+            Facts = rejected ? $"It answered {(int)status} {status}. Check the Client ID and Client Secret, and Client Authentication." : reason,
+            Details = details,
+        };
+    }
 
     /// <summary>The callback listener couldn't start, or the callback port is taken on a loopback address.</summary>
     public static RequestFailure FromCallbackListener(Exception exception, string host, int port)

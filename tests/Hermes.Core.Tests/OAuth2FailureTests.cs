@@ -160,6 +160,49 @@ public sealed class OAuth2FailureTests : IDisposable
         Assert.Contains("Your <tenant> is frozen", failure.Facts);
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, "401 Unauthorized")]
+    [InlineData(HttpStatusCode.Forbidden, "403 Forbidden")]
+    public void A_rejection_without_an_oauth_error_says_the_credentials_were_rejected_and_has_no_empty_response_row(HttpStatusCode status, string statusText)
+    {
+        var failure = Assert.IsType<RequestFailure>(OAuth2Service.ParseTokenResponse("", status).Failure);
+
+        Assert.Equal(RequestFailureKind.TokenRequestRefused, failure.Kind);
+        Assert.Equal("The token server rejected the client credentials", failure.Headline);
+        Assert.Equal($"It answered {statusText}. Check the Client ID and Client Secret, and Client Authentication.", failure.Facts);
+        Assert.Empty(failure.Actions);
+        Assert.Equal(statusText, Assert.Single(failure.Details).Value);
+        AssertNoTypeNames(failure);
+    }
+
+    [Fact]
+    public void A_rejection_with_a_body_keeps_the_response_in_details()
+    {
+        var failure = Assert.IsType<RequestFailure>(OAuth2Service.ParseTokenResponse("<html>Denied</html>", HttpStatusCode.Unauthorized).Failure);
+
+        Assert.Equal("The token server rejected the client credentials", failure.Headline);
+        Assert.Equal("<html>Denied</html>", failure.Details.Single(detail => detail.Label == "Response").Value);
+    }
+
+    [Fact]
+    public void An_oauth_error_in_a_rejection_keeps_the_oauth_wording()
+    {
+        var failure = Assert.IsType<RequestFailure>(OAuth2Service.ParseTokenResponse("{\"error\":\"invalid_client\"}", HttpStatusCode.Unauthorized).Failure);
+
+        Assert.Equal("The token server doesn't accept this client", failure.Headline);
+        Assert.Equal("invalid_client", failure.Details.Single(detail => detail.Label == "Error code").Value);
+    }
+
+    [Fact]
+    public void An_empty_answer_with_another_status_is_still_not_understood_and_has_no_empty_response_row()
+    {
+        var failure = Assert.IsType<RequestFailure>(OAuth2Service.ParseTokenResponse("", HttpStatusCode.OK).Failure);
+
+        Assert.Equal(RequestFailureKind.TokenResponseInvalid, failure.Kind);
+        Assert.Equal("The token server's answer wasn't understood", failure.Headline);
+        Assert.DoesNotContain(failure.Details, detail => detail.Label == "Response");
+    }
+
     [Fact]
     public void A_description_never_becomes_the_headline()
     {
