@@ -24,7 +24,8 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     [
         nameof(HasFailure), nameof(FailureHeadline), nameof(FailureFacts), nameof(FailureNothingWasSent), nameof(FailureDetails),
         nameof(FailureOriginalMessage), nameof(HasFailureDetails), nameof(HasFailureOriginalMessage), nameof(CanTurnOffVerification),
-        nameof(CanOpenRequestSettings), nameof(HasFailureActions), nameof(FailureActionCaption), nameof(FailureIconKey),
+        nameof(CanOpenRequestSettings), nameof(CanEditUrl), nameof(CanRetry), nameof(CanChooseFile), nameof(CanShowHeaders),
+        nameof(HasFailureActions), nameof(FailureActionCaption), nameof(FailureIconKey),
     ];
 
     [ObservableProperty] public partial bool IsLoading { get; set; }
@@ -151,6 +152,10 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     public bool HasFailureOriginalMessage => FailureOriginalMessage is not null;
     public bool CanTurnOffVerification => Failure?.Actions.Contains(RequestFailureAction.TurnOffSslVerification) ?? false;
     public bool CanOpenRequestSettings => Failure?.Actions.Contains(RequestFailureAction.OpenRequestSettings) ?? false;
+    public bool CanEditUrl => Failure?.Actions.Contains(RequestFailureAction.EditUrl) ?? false;
+    public bool CanRetry => Failure?.Actions.Contains(RequestFailureAction.Retry) ?? false;
+    public bool CanChooseFile => Failure?.Actions.Contains(RequestFailureAction.ChooseFile) ?? false;
+    public bool CanShowHeaders => Failure?.Actions.Contains(RequestFailureAction.ShowHeaders) ?? false;
     public bool HasFailureActions => Failure is { Actions.Count: > 0 };
     public string? FailureActionCaption => Failure?.ActionCaption;
 
@@ -159,6 +164,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     {
         RequestFailureKind.SecureConnectionFailed or RequestFailureKind.PlainHttpAnswered or RequestFailureKind.CertificateExpired or RequestFailureKind.CertificateSelfSigned
             or RequestFailureKind.CertificateUntrustedAuthority or RequestFailureKind.CertificateNameMismatch => "IconLock",
+        RequestFailureKind.BodyFileUnreadable => "IconFile",
         _ => "IconAlert",
     };
     public bool IsPretty => ViewMode == ResponseViewMode.Pretty;

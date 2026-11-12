@@ -10,8 +10,10 @@ namespace Hermes.Core.Http;
 /// so there's one client per combination; all of them share a single cookie jar (or none, with <c>useCookies: false</c>).
 /// Clients are never replaced while the provider lives, so requests in flight are never cut off.
 /// </summary>
-public sealed class HttpClientProvider(bool useCookies = true) : IDisposable
+public sealed class HttpClientProvider(bool useCookies = true, TimeSpan? connectTimeout = null) : IDisposable
 {
+    private static readonly TimeSpan DefaultConnectTimeout = TimeSpan.FromSeconds(30);
+
     private readonly ConcurrentDictionary<(bool FollowRedirects, bool VerifySsl), HttpClient> _clients = new();
 
     public CookieContainer Cookies { get; } = new();
@@ -34,7 +36,7 @@ public sealed class HttpClientProvider(bool useCookies = true) : IDisposable
             AutomaticDecompression = DecompressionMethods.All,
             UseCookies = useCookies,
             PooledConnectionLifetime = TimeSpan.FromMinutes(2),
-            ConnectTimeout = TimeSpan.FromSeconds(30),
+            ConnectTimeout = connectTimeout ?? DefaultConnectTimeout,
         };
         if (useCookies)
             handler.CookieContainer = Cookies;

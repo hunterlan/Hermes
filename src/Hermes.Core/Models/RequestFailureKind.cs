@@ -23,4 +23,25 @@ public enum RequestFailureKind
 
     /// <summary>The certificate was issued for other host names than the one requested.</summary>
     CertificateNameMismatch,
+
+    /// <summary>The host name has no address.</summary>
+    NameNotResolved,
+
+    /// <summary>The host is there, but nothing accepts connections on the port.</summary>
+    ConnectionRefused,
+
+    /// <summary>The server closed or reset the connection, or ended the response early.</summary>
+    ConnectionClosed,
+
+    /// <summary>The connection couldn't be made: no route, no answer in time, or a reason .NET doesn't name.</summary>
+    ConnectionFailed,
+
+    /// <summary>The URL can't be turned into a request: empty, no host, an unresolved variable, bad characters.</summary>
+    InvalidUrl,
+
+    /// <summary>A file the body refers to is missing, a folder, or can't be opened.</summary>
+    BodyFileUnreadable,
+
+    /// <summary>A header's name or value can't be sent.</summary>
+    InvalidHeader,
 }

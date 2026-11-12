@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
@@ -178,6 +180,28 @@ public sealed class CertificateFailureTests : IDisposable
     }
 
     [Fact]
+    public async Task Redirect_to_a_plain_http_port_names_the_target_host_and_offers_no_edit_url()
+    {
+        using var plain = new PlainHttpListener();
+        using var redirecting = new LocalHttpServer((ctx, _) =>
+        {
+            ctx.Response.StatusCode = 302;
+            ctx.Response.RedirectLocation = $"https://localhost:{plain.Port}/";
+            ctx.Response.Close();
+            return Task.CompletedTask;
+        });
+
+        var failure = (await Send(redirecting.Url)).Failure;
+
+        Assert.NotNull(failure);
+        Assert.Equal(RequestFailureKind.PlainHttpAnswered, failure.Kind);
+        Assert.Equal("The request was redirected to localhost. localhost answered, but not over a secure connection. "
+            + "If it only serves plain HTTP, change the URL to http://.", failure.Facts);
+        Assert.False(failure.NothingWasSent);
+        Assert.Empty(failure.Actions);
+    }
+
+    [Fact]
     public async Task Requests_failing_together_on_one_host_are_all_explained()
     {
         var server = StartServer(TestCertificates.SelfSigned());
@@ -240,6 +264,30 @@ public sealed class CertificateFailureTests : IDisposable
         Assert.DoesNotContain("frame", visibleText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Exception", visibleText);
         Assert.Equal(CertificateFailureDescriber.PlainHttpAnsweredMessage, failure.OriginalMessage);
+        Assert.Equal([RequestFailureAction.EditUrl], failure.Actions);
+        Assert.StartsWith("HttpRequestException (SecureConnectionError) > AuthenticationException", Detail(failure, "Error"));
+    }
+
+    [Fact]
+    public async Task Handshake_that_fails_without_a_certificate_check_shows_the_exception_chain_in_details()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        _ = Task.Run(async () =>
+        {
+            using var client = await listener.AcceptTcpClientAsync(TestContext.Current.CancellationToken);
+        }, TestContext.Current.CancellationToken);
+
+        var failure = (await Send($"https://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}/")).Failure;
+
+        Assert.NotNull(failure);
+        Assert.Equal(RequestFailureKind.SecureConnectionFailed, failure.Kind);
+        Assert.Equal("Secure connection failed", failure.Headline);
+        Assert.DoesNotContain("inner exception", failure.Facts);
+        Assert.Empty(failure.Actions);
+        var chain = Detail(failure, "Error");
+        Assert.StartsWith("HttpRequestException (SecureConnectionError) > ", chain);
+        Assert.DoesNotContain("see inner exception", failure.OriginalMessage);
     }
 
     [Fact]

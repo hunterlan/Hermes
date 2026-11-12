@@ -25,6 +25,9 @@ public sealed record RequestFailure
     /// <summary>The message as the system reported it, shown in Details and copied with them.</summary>
     public string? OriginalMessage { get; init; }
 
+    /// <summary>What the next steps work on, when they need to know: the path of the file, or the name of the header.</summary>
+    public string? Subject { get; init; }
+
     /// <summary>Next steps, in the order they are offered.</summary>
     public IReadOnlyList<RequestFailureAction> Actions { get; init; } = [];
 

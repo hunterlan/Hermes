@@ -1,5 +1,23 @@
 # Troubleshooting
 
+## Requests that fail before a response
+
+When a request can't be sent or no response comes back, Hermes names the problem in plain words, the same on every
+operating system. The headline says what went wrong, the facts name the host, port, file or header, and one button
+offers the next step.
+
+| Headline | Meaning | Next step |
+|---|---|---|
+| Couldn't find the server | The host name doesn't resolve. Check the URL, your network or VPN. | Edit URL |
+| Server isn't accepting connections | Nothing is listening on that host and port. Is the server running? | Retry |
+| Connection was closed by the server | The server closed the connection before the response finished. | Retry |
+| URL isn't valid | The facts say what is wrong: empty, no `http://`, no host, an unresolved `{{variable}}`. | Edit URL |
+| Body file can't be read | The file doesn't exist, is a folder, or you have no permission to read it. | Choose file |
+| Header name isn't valid / Header value isn't valid | The header can't be sent. The value of a credential header is not repeated. | Show headers |
+
+**Details** is collapsed and holds the original message and the error codes. **Copy details** puts them on the
+clipboard for a bug report.
+
 ## Certificate errors
 
 When a server's certificate fails its check, Hermes stops before sending anything and says why:

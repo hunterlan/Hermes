@@ -23,7 +23,7 @@ public static class CertificateFailureDescriber
     /// <param name="facts">What the handshake showed; null when no certificate check failed, which gives a failure in plain words: plain HTTP answered on an HTTPS URL, or else that both sides couldn't agree on how to secure the connection.</param>
     /// <param name="originalMessage">The exception's message. Kept for the Details only when no certificate facts exist, and never shown as the facts; with facts it is left out, since the facts say more.</param>
     /// <param name="now">The current time, to tell an expired certificate from one that isn't valid yet.</param>
-    /// <param name="requestedHost">The host of the request. When the facts are for another host, a redirect led there.</param>
+    /// <param name="requestedHost">The host of the request. When the facts are for another host, a redirect led there. Without facts, the host the failed handshake was with.</param>
     public static RequestFailure Describe(CertificateFacts? facts, string originalMessage, DateTime now, string requestedHost)
     {
         // Without a failed certificate check (a protocol or cipher mismatch, a dropped handshake) turning
@@ -49,7 +49,7 @@ public static class CertificateFailureDescriber
         {
             Kind = classification.Kind,
             Headline = classification.Headline,
-            Facts = redirected ? $"The request was redirected to {facts.Host}. {classification.Facts}" : classification.Facts,
+            Facts = redirected ? RedirectNote.Prepend(facts.Host, classification.Facts) : classification.Facts,
             // After a redirect the first request went out.
             NothingWasSent = !redirected,
             Details = CreateDetails(facts),

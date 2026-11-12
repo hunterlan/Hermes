@@ -133,6 +133,15 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     /// <summary>Raised when the Settings section should be brought on screen; the view scrolls to it.</summary>
     public event Action? SettingsRevealRequested;
 
+    /// <summary>Raised when the Headers section should be brought on screen; the view scrolls to it.</summary>
+    public event Action? HeadersRevealRequested;
+
+    /// <summary>Raised when the Body section should be brought on screen; the view scrolls to it.</summary>
+    public event Action? BodyRevealRequested;
+
+    /// <summary>Raised when the cursor should go to the URL; the view focuses it.</summary>
+    public event Action? UrlFocusRequested;
+
     public bool IsParamsSectionVisible => ParamsAdded || Params.ActiveCount > 0 || HasPathVariables;
     public bool IsBodySectionVisible => BodyAdded || HasBody || HasUnsupportedBody || SelectedMethod is "POST" or "PUT" or "PATCH";
     /// <summary>The effective setting, shown by the toggle; turning the toggle makes it an override.</summary>
@@ -717,6 +726,54 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         SettingsRevealRequested?.Invoke();
     }
 
+    private void RevealHeaders()
+    {
+        HeadersExpanded = true;
+        HeadersRevealRequested?.Invoke();
+    }
+
+    /// <summary>"Choose file" after the body's file couldn't be read: asks for another file and uses it.</summary>
+    [RelayCommand]
+    private async Task ChooseBodyFileAsync(string? unreadablePath)
+    {
+        if (await Services.Dialogs.PickFileAsync("Select file") is { } picked)
+            UseChosenBodyFile(picked, unreadablePath);
+    }
+
+    /// <summary>
+    /// Puts <paramref name="picked"/> in place of the file that couldn't be read, but only where that exact path is
+    /// written. When no field holds it (it came from a variable), nothing is overwritten and the Body section is
+    /// shown, so the user decides.
+    /// </summary>
+    /// <returns>True when a field was replaced.</returns>
+    public bool UseChosenBodyFile(string picked, string? unreadablePath)
+    {
+        var replaced = false;
+        if (IsBodyBinary)
+        {
+            if (BinaryFilePath == unreadablePath)
+            {
+                BinaryFilePath = picked;
+                replaced = true;
+            }
+        }
+        else
+        {
+            foreach (var row in FormData.Rows.Where(row => row.IsFile && row.Value == unreadablePath).ToList())
+            {
+                row.Value = picked;
+                replaced = true;
+            }
+        }
+
+        if (!replaced)
+        {
+            BodyAdded = BodyExpanded = true;
+            BodyRevealRequested?.Invoke();
+        }
+        return replaced;
+    }
+
     private void OnFailureActionRequested(object? sender, RequestFailureActionEventArgs args)
     {
         switch (args.Action)
@@ -726,6 +783,18 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
                 break;
             case RequestFailureAction.OpenRequestSettings:
                 RevealSettings();
+                break;
+            case RequestFailureAction.EditUrl:
+                UrlFocusRequested?.Invoke();
+                break;
+            case RequestFailureAction.Retry:
+                SendCommand.Execute(null);
+                break;
+            case RequestFailureAction.ChooseFile:
+                ChooseBodyFileCommand.Execute(args.Failure.Subject);
+                break;
+            case RequestFailureAction.ShowHeaders:
+                RevealHeaders();
                 break;
             default:
                 throw new UnreachableException($"Unhandled failure action {args.Action}");
