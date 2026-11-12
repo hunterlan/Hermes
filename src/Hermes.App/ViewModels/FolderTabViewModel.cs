@@ -20,6 +20,7 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         _folder = folder;
         Auth = services.CreateAuthEditor(allowInherit: true);
         Auth.Changed += UpdateDirty;
+        Auth.FailureActionRequested += OnAuthFailureActionRequested;
         Auth.ScopeProvider = BuildScope;
         Auth.InheritedAuthProvider = () => CreateContext()?.ResolveAuth(AuthConfig.Inherit()) ?? new Core.Auth.EffectiveAuth(AuthConfig.NoAuth(), null);
         Auth.ChainProvider = () => (AuthInheritance.OuterLevels(CreateContext()), "Folder", Name);

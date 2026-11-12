@@ -131,6 +131,10 @@ public class CertificateFailureViewTests
     public async Task Every_failure_action_is_handled_by_the_request_tab()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
+        // "Open settings" would show the real dialog, which the main window installs when it is created.
+        var services = App.Services.GetRequiredService<TabServices>();
+        var originalOpenSettings = services.OpenSettingsAsync;
+        services.OpenSettingsAsync = () => Task.CompletedTask;
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         tab.Response.SetFailure(RequestFailure.FromMessage("A failure to act on."));
 
@@ -142,6 +146,7 @@ public class CertificateFailureViewTests
 
         // Turning verification off, retrying and choosing a file start work; let it finish before the window goes.
         await UiTestHelpers.WaitUntil(() => !tab.IsSending && !tab.TurnOffVerificationAndResendCommand.IsRunning && !tab.ChooseBodyFileCommand.IsRunning);
+        services.OpenSettingsAsync = originalOpenSettings;
         window.Close();
     }
 }

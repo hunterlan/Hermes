@@ -4,12 +4,14 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
 using Hermes.App.Controls;
+using Hermes.App.Services;
 using Hermes.App.ViewModels;
 using Hermes.App.Views;
 using Hermes.Core.Auth;
 using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
 using Hermes.TestSupport;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Hermes.App.Tests;
 
@@ -85,11 +87,7 @@ public class TokenFailureViewTests
         using var oauth = new OAuth2Service();
         var editor = CreateEditor(oauth, ClientCredentials(server.Url + "token"));
         var openedSettings = 0;
-        editor.OpenAppSettingsHandler = () =>
-        {
-            openedSettings++;
-            return Task.CompletedTask;
-        };
+        editor.FailureActionRequested += (_, args) => openedSettings += args.Action == RequestFailureAction.OpenAppSettings ? 1 : 0;
         var (window, view) = Show(editor);
 
         await editor.GetNewAccessTokenCommand.ExecuteAsync(null);
@@ -111,7 +109,7 @@ public class TokenFailureViewTests
         var editor = CreateEditor(oauth, ClientCredentials(server.Url + "token"));
         var openedRequestSettings = 0;
         editor.SslSourceProvider = () => SslSettingSource.Request;
-        editor.OpenRequestSettingsHandler = () => openedRequestSettings++;
+        editor.FailureActionRequested += (_, args) => openedRequestSettings += args.Action == RequestFailureAction.OpenRequestSettings ? 1 : 0;
         var (window, view) = Show(editor);
 
         await editor.GetNewAccessTokenCommand.ExecuteAsync(null);
@@ -133,8 +131,6 @@ public class TokenFailureViewTests
         {
             var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
             Assert.Equal(SslSettingSource.AppWide, tab.Auth.SslSourceProvider());
-            Assert.NotNull(tab.Auth.OpenAppSettingsHandler);
-            Assert.NotNull(tab.Auth.OpenRequestSettingsHandler);
 
             tab.VerifySslOverride = false;
             Assert.Equal(SslSettingSource.Request, tab.Auth.SslSourceProvider());
@@ -147,6 +143,77 @@ public class TokenFailureViewTests
             window.Close();
         }
     }
+
+    [AvaloniaFact]
+    public void A_request_tab_handles_the_next_steps_of_its_auth_failure()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        // Set after the window: the main window installs the real dialog when it is created.
+        var services = App.Services.GetRequiredService<TabServices>();
+        var appSettingsOpened = 0;
+        var originalOpenSettings = services.OpenSettingsAsync;
+        services.OpenSettingsAsync = () =>
+        {
+            appSettingsOpened++;
+            return Task.CompletedTask;
+        };
+        try
+        {
+            var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+            Assert.False(tab.IsSettingsSectionVisible);
+
+            ShowAuthFailure(tab.Auth, RequestFailureAction.OpenRequestSettings);
+            tab.Auth.RunFailureActionCommand.Execute(null);
+            Assert.True(tab.SettingsExpanded);
+
+            ShowAuthFailure(tab.Auth, RequestFailureAction.OpenAppSettings);
+            tab.Auth.RunFailureActionCommand.Execute(null);
+            Assert.Equal(1, appSettingsOpened);
+        }
+        finally
+        {
+            services.OpenSettingsAsync = originalOpenSettings;
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task A_collection_tab_opens_the_app_settings_for_its_auth_failure()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var services = App.Services.GetRequiredService<TabServices>();
+        var appSettingsOpened = 0;
+        var originalOpenSettings = services.OpenSettingsAsync;
+        // Set after the window: the main window installs the real dialog when it is created.
+        services.OpenSettingsAsync = () =>
+        {
+            appSettingsOpened++;
+            return Task.CompletedTask;
+        };
+        var workspace = App.Services.GetRequiredService<WorkspaceService>();
+        var collection = workspace.CreateCollection("Auth failure " + Guid.NewGuid());
+        try
+        {
+            await vm.OpenCollectionAsync(collection);
+            var tab = Assert.IsType<CollectionTabViewModel>(vm.ActiveTab);
+
+            ShowAuthFailure(tab.Auth, RequestFailureAction.OpenAppSettings);
+            tab.Auth.RunFailureActionCommand.Execute(null);
+
+            Assert.Equal(1, appSettingsOpened);
+        }
+        finally
+        {
+            services.OpenSettingsAsync = originalOpenSettings;
+            workspace.DeleteCollection(collection);
+            window.Close();
+        }
+    }
+
+    private static void ShowAuthFailure(AuthEditorViewModel auth, RequestFailureAction action) =>
+        auth.Failure = new RequestFailureViewModel(
+            new RequestFailure { Kind = RequestFailureKind.Other, Headline = "Failed", Facts = "A failure.", Actions = [action] },
+            _ => Task.CompletedTask);
 
     [AvaloniaFact]
     public async Task A_taken_callback_port_asks_the_view_to_focus_the_callback_url()
