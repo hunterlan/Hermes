@@ -55,11 +55,36 @@ public partial class StorageErrorDialog : Window
             Close(Result);
             return;
         }
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = choice.Label });
-        if (folders.Count > 0 && folders[0].TryGetLocalPath() is { } folder)
+        try
         {
-            Result = new StorageDialogResult(choice.Id, folder);
-            Close(Result);
+            var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = choice.Label });
+            if (folders.Count > 0 && folders[0].TryGetLocalPath() is { } folder)
+            {
+                Result = new StorageDialogResult(choice.Id, folder);
+                Close(Result);
+            }
+        }
+        catch (Exception exception)
+        {
+            await ReportFolderPickFailureAsync(exception);
+        }
+    }
+
+    /// <summary>
+    /// Tells the user the folder picker failed, in a dialog owned by this one so it works before any main window
+    /// exists. Never throws: this runs inside an <c>async void</c> click handler.
+    /// </summary>
+    private async Task ReportFolderPickFailureAsync(Exception exception)
+    {
+        try
+        {
+            var notice = new MessageDialog("Folder picker failed",
+                $"Hermes couldn't open the folder picker: {exception.Message}", [("OK", "ok", "accent")]);
+            await notice.ShowDialog<string?>(this);
+        }
+        catch (Exception)
+        {
+            // Nothing else can report it; the dialog stays open so the user can pick another choice.
         }
     }
 }
