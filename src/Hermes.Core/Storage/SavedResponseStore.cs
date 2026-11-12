@@ -21,7 +21,7 @@ public sealed class SavedResponseStore(string directory)
     public SavedResponses Load(Guid requestId)
     {
         var items = new List<SavedResponse>();
-        var errors = new List<string>();
+        var errors = new List<StorageError>();
         List<string> files;
         try
         {
@@ -29,7 +29,7 @@ public sealed class SavedResponseStore(string directory)
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return new SavedResponses(items, [$"{DirectoryFor(requestId)}: {ex.Message}"]);
+            return new SavedResponses(items, [StorageErrorDescriber.Describe(ex, DirectoryFor(requestId), "Saved responses")]);
         }
         foreach (var file in files)
         {
@@ -40,7 +40,7 @@ public sealed class SavedResponseStore(string directory)
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
             {
-                errors.Add($"{file}: {ex.Message}");
+                errors.Add(StorageErrorDescriber.Describe(ex, file, "A saved response"));
             }
         }
         return new SavedResponses(items, errors);

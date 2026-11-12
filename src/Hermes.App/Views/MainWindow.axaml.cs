@@ -175,8 +175,7 @@ public partial class MainWindow : Window
         if (workspace?.LoadErrors is { Count: > 0 } errors)
         {
             var dialogs = App.Services!.GetRequiredService<DialogService>();
-            await dialogs.ShowMessageAsync("Some files couldn't be loaded",
-                "These files are corrupted or not in the expected format and were skipped:\n\n" + string.Join("\n", errors));
+            await dialogs.ShowStorageErrorsAsync("Some files couldn't be loaded", errors);
         }
     }
 

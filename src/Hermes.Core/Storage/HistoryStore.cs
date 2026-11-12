@@ -21,7 +21,7 @@ public sealed class HistoryStore(string directory, TimeProvider? timeProvider = 
     /// All stored entries, newest first. Lines and files that can't be read are skipped and described in
     /// <paramref name="errors"/>. Doesn't remove expired days; see <see cref="Prune"/>.
     /// </summary>
-    public List<HistoryEntry> Load(ICollection<string> errors)
+    public List<HistoryEntry> Load(ICollection<StorageError> errors)
     {
         if (!Directory.Exists(directory))
             return [];
@@ -29,14 +29,25 @@ public sealed class HistoryStore(string directory, TimeProvider? timeProvider = 
         var result = new List<HistoryEntry>();
         lock (_lock)
         {
-            foreach (var file in Directory.EnumerateFiles(directory, "*" + FileExtension))
+            List<string> files;
+            try
+            {
+                files = Directory.EnumerateFiles(directory, "*" + FileExtension).ToList();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                errors.Add(StorageErrorDescriber.Describe(ex, directory, $"History folder \"{directory}\""));
+                return [];
+            }
+            foreach (var file in files)
             {
                 if (!TryParseDay(file, out _))
                     continue;
                 try
                 {
-                    var lineErrors = new List<string>();
-                    var entries = JsonFileStore.ReadLines(file, HermesJsonContext.Default.HistoryEntry, lineErrors);
+                    var lineErrors = new List<StorageError>();
+                    var entries = JsonFileStore.ReadLines(file, HermesJsonContext.Default.HistoryEntry, lineErrors,
+                        SubjectFor(file));
                     foreach (var error in lineErrors)
                         errors.Add(error);
                     // Appends don't trim, so a busy day is cut back to its newest entries here. Lines that couldn't
@@ -50,7 +61,7 @@ public sealed class HistoryStore(string directory, TimeProvider? timeProvider = 
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    errors.Add($"{file}: {ex.Message}");
+                    errors.Add(StorageErrorDescriber.Describe(ex, file, SubjectFor(file)));
                 }
             }
         }
@@ -89,7 +100,7 @@ public sealed class HistoryStore(string directory, TimeProvider? timeProvider = 
             if (!File.Exists(file))
                 return;
             // Lines that can't be read are dropped by the rewrite; they were already reported when history loaded.
-            var entries = JsonFileStore.ReadLines(file, HermesJsonContext.Default.HistoryEntry, []);
+            var entries = JsonFileStore.ReadLines(file, HermesJsonContext.Default.HistoryEntry, [], SubjectFor(file));
             entries.RemoveAll(e => e.Id == entry.Id);
             JsonFileStore.WriteLines(file, entries, HermesJsonContext.Default.HistoryEntry);
         }
@@ -103,6 +114,8 @@ public sealed class HistoryStore(string directory, TimeProvider? timeProvider = 
                 Directory.Delete(directory, recursive: true);
         }
     }
+
+    private static string SubjectFor(string file) => $"History of {Path.GetFileNameWithoutExtension(file)}";
 
     private static bool TryParseDay(string file, out DateOnly day) =>
         DateOnly.TryParseExact(Path.GetFileNameWithoutExtension(file), DayFormat, CultureInfo.InvariantCulture,

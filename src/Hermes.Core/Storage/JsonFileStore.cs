@@ -34,8 +34,11 @@ public static class JsonFileStore
 
     // ---- JSON Lines: one value per line, so adding one doesn't rewrite the others ----
 
-    /// <summary>Reads every line of a JSON Lines file. Lines that can't be read are skipped and described in <paramref name="errors"/>.</summary>
-    public static List<T> ReadLines<T>(string path, JsonTypeInfo<T> typeInfo, ICollection<string> errors) where T : class
+    /// <summary>
+    /// Reads every line of a JSON Lines file. Lines that can't be read are skipped and described in
+    /// <paramref name="errors"/>, naming <paramref name="subject"/>.
+    /// </summary>
+    public static List<T> ReadLines<T>(string path, JsonTypeInfo<T> typeInfo, ICollection<StorageError> errors, string subject) where T : class
     {
         var items = new List<T>();
         if (!File.Exists(path))
@@ -53,7 +56,7 @@ public static class JsonFileStore
             }
             catch (JsonException ex)
             {
-                errors.Add($"{path}, line {number}: {ex.Message}");
+                errors.Add(StorageErrorDescriber.DescribeLine(ex, path, subject, number, line));
             }
         }
         return items;
