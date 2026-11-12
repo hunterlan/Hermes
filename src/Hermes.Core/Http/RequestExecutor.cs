@@ -15,9 +15,10 @@ public sealed class RequestExecutor(HttpClientProvider clients)
         {
             message = HttpMessageFactory.Create(request);
         }
-        catch (Exception ex) when (ex is UriFormatException or IOException or UnauthorizedAccessException or FormatException or ArgumentException)
+        catch (Exception ex) when (ex is UriFormatException or BodyFileException or InvalidHeaderException or IOException
+                                       or UnauthorizedAccessException or FormatException or ArgumentException)
         {
-            return new ExecutionResult { Failure = RequestFailure.FromMessage(ex.Message), ResolvedUrl = request.Url };
+            return new ExecutionResult { Failure = RequestBuildFailureDescriber.Describe(ex, request), ResolvedUrl = request.Url };
         }
 
         using var _ = message;
@@ -27,7 +28,7 @@ public sealed class RequestExecutor(HttpClientProvider clients)
 
         var client = clients.Get(request.FollowRedirects, request.VerifySsl);
         // Read before sending: a redirect rewrites the message's RequestUri.
-        var requestedHost = message.RequestUri?.IdnHost ?? "";
+        var requestedUri = message.RequestUri!;
         var startTimestamp = Stopwatch.GetTimestamp();
         var stopwatch = Stopwatch.StartNew();
         try
@@ -62,17 +63,14 @@ public sealed class RequestExecutor(HttpClientProvider clients)
         {
             return new ExecutionResult { Cancelled = true, ResolvedUrl = request.Url };
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (timeout.IsCancellationRequested && request.TimeoutMs > 0)
         {
+            // Only the request's own timer gets this wording; any other cancellation is the connection giving up (below).
             return new ExecutionResult { Failure = RequestFailure.FromMessage($"Request timed out after {request.TimeoutMs} ms."), ResolvedUrl = request.Url };
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex) when (ex is HttpRequestException or IOException or SocketException or OperationCanceledException)
         {
-            return new ExecutionResult { Failure = Describe(ex, requestedHost, startTimestamp), ResolvedUrl = request.Url };
-        }
-        catch (Exception ex) when (ex is IOException or SocketException)
-        {
-            return new ExecutionResult { Failure = RequestFailure.FromMessage(ex.Message), ResolvedUrl = request.Url };
+            return new ExecutionResult { Failure = Describe(ex, requestedUri, message.RequestUri!, startTimestamp), ResolvedUrl = request.Url };
         }
     }
 
@@ -110,14 +108,47 @@ public sealed class RequestExecutor(HttpClientProvider clients)
             Secure = c.Secure,
         }).ToList();
 
-    private RequestFailure Describe(HttpRequestException ex, string requestedHost, long startTimestamp)
+    private RequestFailure Describe(Exception ex, Uri requestedUri, Uri attemptedUri, long startTimestamp)
     {
-        var inner = ex.InnerException;
-        if (inner is AuthenticationException)
+        if (NetworkFailureClassifier.Classify(ex) == NetworkFailureCause.SecureConnectionFailed)
         {
-            var facts = clients.CertificateFailures.Find(requestedHost, startTimestamp);
-            return CertificateFailureDescriber.Describe(facts, inner.Message, DateTime.Now, requestedHost);
+            // The handshake that failed was with the address the last redirect led to.
+            var facts = clients.CertificateFailures.Find(attemptedUri.IdnHost, startTimestamp);
+            if (facts is not null)
+                return CertificateFailureDescriber.Describe(facts, FindTlsMessage(ex), DateTime.Now, requestedUri.IdnHost);
+
+            var failure = CertificateFailureDescriber.Describe(null, FindTlsMessage(ex), DateTime.Now, attemptedUri.IdnHost);
+            return WithNetworkDetails(failure, ex, requestedUri, attemptedUri);
         }
-        return RequestFailure.FromMessage(inner is null || inner.Message == ex.Message ? ex.Message : $"{ex.Message} ({inner.Message})");
+        return NetworkFailureDescriber.Describe(ex, requestedUri, attemptedUri);
+    }
+
+    /// <summary>
+    /// For a handshake that failed without a certificate check: the exception chain in Details, as for other network
+    /// failures, and the innermost message as the original one. Plain HTTP on an HTTPS URL can be fixed in the URL,
+    /// unless a redirect led there: then the facts say so, the first request went out, and the URL isn't the culprit.
+    /// </summary>
+    private static RequestFailure WithNetworkDetails(RequestFailure failure, Exception ex, Uri requestedUri, Uri attemptedUri)
+    {
+        var redirected = requestedUri != attemptedUri;
+        return failure with
+        {
+            Facts = redirected ? RedirectNote.Prepend(attemptedUri.IdnHost, failure.Facts) : failure.Facts,
+            NothingWasSent = !redirected,
+            Details = [new FailureDetail("Error", NetworkFailureClassifier.DescribeChain(ex))],
+            OriginalMessage = ExceptionText.Innermost(ex),
+            Actions = failure.Kind == RequestFailureKind.PlainHttpAnswered && !redirected ? [RequestFailureAction.EditUrl] : [],
+        };
+    }
+
+    /// <summary>The message of the TLS exception itself, which says more than the "see inner exception" around it.</summary>
+    private static string FindTlsMessage(Exception ex)
+    {
+        for (var current = ex; current is not null; current = current.InnerException)
+        {
+            if (current is AuthenticationException)
+                return current.Message;
+        }
+        return ExceptionText.Flatten(ex);
     }
 }

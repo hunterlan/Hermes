@@ -140,8 +140,8 @@ public class CertificateFailureViewTests
             Assert.True(exception is null, $"{action} is not handled by the request tab: {exception?.Message}");
         }
 
-        // Turning verification off resends the request; let that finish before the window goes.
-        await UiTestHelpers.WaitUntil(() => !tab.IsSending && !tab.TurnOffVerificationAndResendCommand.IsRunning);
+        // Turning verification off, retrying and choosing a file start work; let it finish before the window goes.
+        await UiTestHelpers.WaitUntil(() => !tab.IsSending && !tab.TurnOffVerificationAndResendCommand.IsRunning && !tab.ChooseBodyFileCommand.IsRunning);
         window.Close();
     }
 }

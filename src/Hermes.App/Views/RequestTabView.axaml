@@ -109,7 +109,7 @@
           </Border>
 
           <!-- Body -->
-          <Border Classes="section" IsVisible="{Binding IsBodySectionVisible}">
+          <Border Name="BodySection" Classes="section" IsVisible="{Binding IsBodySectionVisible}">
             <c:CollapsibleSection Header="Body" Summary="{Binding BodySummary}" IsExpanded="{Binding BodyExpanded}">
               <c:CollapsibleSection.HeaderActions>
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
@@ -154,7 +154,7 @@
           </Border>
 
           <!-- Headers: yours, then the ones Hermes adds, so nothing sent is invisible -->
-          <Border Classes="section">
+          <Border Name="HeadersSection" Classes="section">
             <c:CollapsibleSection Header="Headers" Summary="{Binding HeadersEditor.Summary}" IsExpanded="{Binding HeadersExpanded}">
               <StackPanel Spacing="{StaticResource Spacing8}" Margin="0,0,0,12">
                 <v:KeyValueTable DataContext="{Binding HeadersEditor.Headers}" />

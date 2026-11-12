@@ -7,6 +7,8 @@ namespace Hermes.Core.Http;
 
 public static class HttpMessageFactory
 {
+    private const char MaxAscii = '\u007f';
+
     private static readonly HashSet<string> ContentHeaderNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "Content-Type", "Content-Length", "Content-Disposition", "Content-Encoding", "Content-Language",
@@ -14,7 +16,8 @@ public static class HttpMessageFactory
     };
 
     /// <exception cref="UriFormatException">The URL is invalid.</exception>
-    /// <exception cref="IOException">A file referenced by the body couldn't be read.</exception>
+    /// <exception cref="BodyFileException">A file referenced by the body couldn't be read.</exception>
+    /// <exception cref="InvalidHeaderException">A header's name or value can't be sent.</exception>
     public static HttpRequestMessage Create(PreparedRequest request)
     {
         if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
@@ -25,21 +28,45 @@ public static class HttpMessageFactory
             Content = CreateContent(request),
         };
 
-        foreach (var header in request.Headers)
+        try
         {
-            if (ContentHeaderNames.Contains(header.Key))
+            foreach (var header in request.Headers)
             {
-                // Length is computed from the actual content.
-                if (string.Equals(header.Key, "Content-Length", StringComparison.OrdinalIgnoreCase))
+                // A row whose name is empty (a variable that resolved to nothing) is left out, as it always was.
+                if (header.Key.Length == 0)
                     continue;
-                message.Content ??= new ByteArrayContent([]);
-                message.Content.Headers.Remove(header.Key);
-                message.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                if (!IsHeaderName(header.Key))
+                    throw new InvalidHeaderException(header.Key, header.Value, InvalidHeaderProblem.Name);
+                // A line break in a value would end the header early and start another one.
+                if (header.Value.Any(character => char.IsControl(character) && character != '\t'))
+                    throw new InvalidHeaderException(header.Key, header.Value, InvalidHeaderProblem.Value);
+                if (header.Value.Any(character => character > MaxAscii))
+                    throw new InvalidHeaderException(header.Key, header.Value, InvalidHeaderProblem.NonAsciiValue);
+
+                bool added;
+                if (ContentHeaderNames.Contains(header.Key))
+                {
+                    // Length is computed from the actual content.
+                    if (string.Equals(header.Key, "Content-Length", StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    message.Content ??= new ByteArrayContent([]);
+                    message.Content.Headers.Remove(header.Key);
+                    added = message.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+                else
+                {
+                    added = message.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+
+                if (!added)
+                    throw new InvalidHeaderException(header.Key, header.Value, InvalidHeaderProblem.Value);
             }
-            else
-            {
-                message.Headers.TryAddWithoutValidation(header.Key, header.Value);
-            }
+        }
+        catch
+        {
+            // Closes the body's files; otherwise they stay locked until the GC gets to them.
+            message.Dispose();
+            throw;
         }
         return message;
     }
@@ -66,7 +93,7 @@ public static class HttpMessageFactory
                         {
                             if (field.Value.Length == 0)
                                 continue;
-                            var file = new StreamContent(File.OpenRead(field.Value));
+                            var file = new StreamContent(OpenBodyFile(field.Value));
                             file.Headers.ContentType = new MediaTypeHeaderValue(MimeTypes.FromFileName(field.Value));
                             multipart.Add(file, Quote(field.Key), Quote(Path.GetFileName(field.Value)));
                         }
@@ -87,12 +114,28 @@ public static class HttpMessageFactory
             case BodyMode.Binary:
                 if (string.IsNullOrEmpty(request.BinaryFilePath))
                     return null;
-                return new StreamContent(File.OpenRead(request.BinaryFilePath));
+                return new StreamContent(OpenBodyFile(request.BinaryFilePath));
 
             default:
                 return null;
         }
     }
+
+    private static FileStream OpenBodyFile(string path)
+    {
+        try
+        {
+            return File.OpenRead(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            throw new BodyFileException(path, ex);
+        }
+    }
+
+    /// <summary>A header name is a token: letters, digits and a few symbols, no spaces or colons.</summary>
+    private static bool IsHeaderName(string name) =>
+        name.All(character => char.IsAsciiLetterOrDigit(character) || "!#$%&'*+-.^_`|~".Contains(character));
 
     private static string Quote(string s) => "\"" + s.Replace("\"", "\\\"") + "\"";
 }

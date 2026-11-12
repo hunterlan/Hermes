@@ -40,15 +40,31 @@ public partial class RequestTabView : UserControl
     {
         base.OnDataContextChanged(e);
         if (_tab is not null)
+        {
             _tab.SettingsRevealRequested -= ScrollSettingsIntoView;
+            _tab.HeadersRevealRequested -= ScrollHeadersIntoView;
+            _tab.BodyRevealRequested -= ScrollBodyIntoView;
+            _tab.UrlFocusRequested -= FocusUrl;
+        }
         _tab = DataContext as RequestTabViewModel;
         if (_tab is not null)
+        {
             _tab.SettingsRevealRequested += ScrollSettingsIntoView;
+            _tab.HeadersRevealRequested += ScrollHeadersIntoView;
+            _tab.BodyRevealRequested += ScrollBodyIntoView;
+            _tab.UrlFocusRequested += FocusUrl;
+        }
     }
 
     /// <summary>Waits for the section to be laid out (it may have just become visible), then scrolls the request editor to it.</summary>
     private void ScrollSettingsIntoView() =>
         Dispatcher.UIThread.Post(() => SettingsSection.BringIntoView(), DispatcherPriority.Loaded);
+
+    private void ScrollHeadersIntoView() =>
+        Dispatcher.UIThread.Post(() => HeadersSection.BringIntoView(), DispatcherPriority.Loaded);
+
+    private void ScrollBodyIntoView() =>
+        Dispatcher.UIThread.Post(() => BodySection.BringIntoView(), DispatcherPriority.Loaded);
 
     public void FocusUrl() => UrlBox.FocusEditor();
 
