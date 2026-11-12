@@ -44,8 +44,22 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
 
     private string CollectionsDir => Path.Combine(Root, CollectionsFolderName);
     private string EnvironmentsDir => Path.Combine(Root, EnvironmentsFolderName);
-    private string GlobalsFile => Path.Combine(Root, "globals.json");
-    private string SessionFile => Path.Combine(Root, "session.json");
+
+    /// <summary>The file holding the global variables.</summary>
+    public string GlobalsFile => Path.Combine(Root, "globals.json");
+
+    /// <summary>The file holding the open tabs and drafts.</summary>
+    public string SessionFile => Path.Combine(Root, "session.json");
+
+    /// <summary>The file a collection is saved in.</summary>
+    public string CollectionFile(Guid id) => Path.Combine(CollectionsDir, $"{id}.json");
+
+    /// <summary>The file an environment is saved in.</summary>
+    public string EnvironmentFile(Guid id) => Path.Combine(EnvironmentsDir, $"{id}.json");
+
+    /// <summary>The folder holding the saved responses of a request.</summary>
+    public string ResponsesFolder(Guid requestId) =>
+        Path.Combine(Root, ResponsesFolderName, requestId.ToString());
 
     /// <summary>Files that failed to load, with the reason. Shown to the user instead of crashing.</summary>
     public List<StorageError> LoadErrors { get; } = [];
@@ -63,13 +77,13 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
             .ToList();
 
     public void SaveCollection(CollectionModel collection) =>
-        JsonFileStore.Write(Path.Combine(CollectionsDir, $"{collection.Id}.json"),
+        JsonFileStore.Write(CollectionFile(collection.Id),
             WithoutSecrets(collection, ModelCloner.Clone, SecretFields.Strip, CollectionOwner(collection.Id)),
             HermesJsonContext.Default.CollectionModel);
 
     public void DeleteCollection(Guid id)
     {
-        DeleteFile(Path.Combine(CollectionsDir, $"{id}.json"));
+        DeleteFile(CollectionFile(id));
         Secrets.Set(CollectionOwner(id), NoSecrets);
     }
 
@@ -86,13 +100,13 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
             .ToList();
 
     public void SaveEnvironment(EnvironmentModel environment) =>
-        JsonFileStore.Write(Path.Combine(EnvironmentsDir, $"{environment.Id}.json"),
+        JsonFileStore.Write(EnvironmentFile(environment.Id),
             WithoutSecrets(environment, ModelCloner.Clone, SecretFields.Strip, EnvironmentOwner(environment.Id)),
             HermesJsonContext.Default.EnvironmentModel);
 
     public void DeleteEnvironment(Guid id)
     {
-        DeleteFile(Path.Combine(EnvironmentsDir, $"{id}.json"));
+        DeleteFile(EnvironmentFile(id));
         Secrets.Set(EnvironmentOwner(id), NoSecrets);
     }
 

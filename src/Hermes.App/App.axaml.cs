@@ -29,6 +29,7 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            UnexpectedErrorHandler.Install(Services.GetRequiredService<UnexpectedErrorHandler>());
             StartMainWindow(desktop, showWindow: false);
         }
 
@@ -104,14 +105,9 @@ public partial class App : Application
         }
         var settings = Services.GetRequiredService<SettingsService>();
         var chosenFolder = result.ChoiceId == StartupFolderChoices.ChooseFolder ? result.Folder : null;
-        try
+        settings.Current.DataDirectory = chosenFolder;
+        if (settings.Update(settings.Current) is { } failure)
         {
-            settings.Current.DataDirectory = chosenFolder;
-            settings.Update(settings.Current);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            var failure = StorageErrorDescriber.Describe(ex, AppPaths.SettingsFile, "Settings", StorageOperation.Write);
             var notice = new StorageErrorDialog("Hermes can't start", [failure], [], closeText: "Quit");
             notice.Closed += (_, _) => desktop.Shutdown();
             SetMainWindow(desktop, notice, showWindow: true);
@@ -128,6 +124,10 @@ public partial class App : Application
             window.Show();
     }
 
+    // Not the main window's close path: that would ask to save and write a session from a state nobody can vouch for.
+    private static void QuitAfterUnexpectedError() =>
+        (Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown(1);
+
     private static ServiceProvider ConfigureServices()
     {
         var services = new ServiceCollection();
@@ -143,6 +143,7 @@ public partial class App : Application
         services.AddSingleton<RequestExecutor>();
         services.AddSingleton<OAuth2Service>();
         services.AddSingleton<DialogService>();
+        services.AddSingleton(sp => new UnexpectedErrorHandler(sp.GetRequiredService<DialogService>(), QuitAfterUnexpectedError));
         services.AddSingleton<ManualService>();
         services.AddSingleton<TabServices>();
         services.AddSingleton<MainWindowViewModel>();

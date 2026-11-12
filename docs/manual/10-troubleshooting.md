@@ -105,6 +105,26 @@ include in a bug report.
 
 A damaged line in a history file is skipped and reported once; the other entries load normally.
 
-If Hermes can't use the data folder when it starts, it says which folder and why. Choose **Use default folder** to
-go back to the default location, or **Choose another folder** to pick one. Your files in the old folder are not
-touched.
+### When saving fails
+
+If Hermes can't write a collection, environment, folder or request (the data folder is read-only, the disk is full or
+another program has the file open), a **Couldn't save** dialog says which one and why:
+
+- Nothing is lost. The tab keeps its changes and stays marked as unsaved, and what you see in the sidebar is what is
+  on disk.
+- Fix the problem, then choose **Retry** to save again. **Cancel** leaves the tab unsaved. **Reveal file** or
+  **Reveal folder** opens the file manager where the file belongs.
+- When a rename, move, delete or new item can't be saved, the dialog says why and the change is undone: the name
+  stays as it was, the item stays where it was, and a collection or environment that couldn't be written is not added.
+- If the open tabs and drafts (the session) can't be saved, Hermes tells you once and keeps trying quietly, so you
+  aren't interrupted every half minute. It tells you again if saving works and then fails again.
+- If Settings can't be saved, the error appears in the Settings dialog and the dialog stays open, so you can try again.
+- Exporting a collection or environment, or saving a response to a file, names the file that couldn't be written and
+  why, for example when the folder you picked is read-only. Pick another location and try again.
+
+## Something went wrong
+
+If Hermes hits a problem it didn't expect, it shows a **Something went wrong** dialog and then closes when you choose
+**Quit**. It doesn't ask to save and doesn't write the session again, because it can't tell what state it is in. Tabs
+and drafts as of the last automatic save (every half minute) come back the next time you start Hermes. Choose **Copy
+details** and include them when you report the problem.

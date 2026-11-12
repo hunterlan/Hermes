@@ -105,20 +105,26 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         Auth.HideRevealedValues();
     }
 
-    public override Task<bool> SaveAsync()
+    public override async Task<bool> SaveAsync()
     {
         if (Services.Workspace.Find(_folder.Id) is not { } location)
-            return Task.FromResult(true);
+            return true;
+        var previous = (_folder.Name, _folder.Description, _folder.Auth, _folder.Headers);
         _folder.Name = string.IsNullOrWhiteSpace(Name) ? "New Folder" : Name.Trim();
         _folder.Description = string.IsNullOrWhiteSpace(Description) ? null : Description;
         _folder.Auth = Auth.ToModel();
         _folder.Headers = HeadersEditor.Headers.ToModels();
-        Services.Workspace.SaveCollection(location.Collection);
+        if (!await WriteWithRetryAsync(() => Services.Workspace.TrySaveCollection(location.Collection)))
+        {
+            // Not on disk, so not in the folder either; the edits stay in the tab.
+            (_folder.Name, _folder.Description, _folder.Auth, _folder.Headers) = previous;
+            return false;
+        }
         Name = _folder.Name;
         _snapshot = Snapshot();
         UpdateDirty();
         HeadersEditor.Refresh();
-        return Task.FromResult(true);
+        return true;
     }
 
     [RelayCommand]

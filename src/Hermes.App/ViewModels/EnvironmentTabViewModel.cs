@@ -74,18 +74,24 @@ public sealed partial class EnvironmentTabViewModel : TabViewModelBase
         UpdateDirty();
     }
 
-    public override Task<bool> SaveAsync()
+    public override async Task<bool> SaveAsync()
     {
+        var previous = (_environment.Name, _environment.Variables, _environment.ConfirmBeforeSend, _environment.Color);
         if (!IsGlobals)
             _environment.Name = string.IsNullOrWhiteSpace(Name) ? "New Environment" : Name.Trim();
         _environment.Variables = Variables.ToModels();
         _environment.ConfirmBeforeSend = ConfirmBeforeSend && !IsGlobals;
         _environment.Color = IsGlobals ? EnvironmentColor.None : Color;
-        Services.Workspace.SaveEnvironment(_environment);
+        if (!await WriteWithRetryAsync(() => Services.Workspace.TrySaveEnvironment(_environment)))
+        {
+            // Not on disk, so not in the environment either; the edits stay in the tab.
+            (_environment.Name, _environment.Variables, _environment.ConfirmBeforeSend, _environment.Color) = previous;
+            return false;
+        }
         Name = _environment.Name;
         _snapshot = Snapshot();
         UpdateDirty();
-        return Task.FromResult(true);
+        return true;
     }
 
     [RelayCommand]
