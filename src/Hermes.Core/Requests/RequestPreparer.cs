@@ -39,7 +39,7 @@ public static class RequestPreparer
     /// the masked parts. (A secret whose value itself uses dynamic variables may shift later dynamic values in the
     /// copy; the secret is masked either way.)
     /// </summary>
-    public static (PreparedRequest Request, PreparedRequest Masked) PrepareWithMasked(HttpRequestModel request, RequestContext context)
+    public static PreparedRequestPair PrepareWithMasked(HttpRequestModel request, RequestContext context)
     {
         var dynamicValues = new DynamicValueLog();
         var auth = context.ResolveAuth(request.Auth).Auth;
@@ -52,7 +52,7 @@ public static class RequestPreparer
         var secretValues = scope.Values.Where(v => scope.IsSecret(v.Key)).Select(v => v.Value)
             .Concat(SecretFields.Values(auth).Select(v => VariableResolver.Resolve(v, scope)));
         SecretMasker.MaskOccurrences(masked, secretValues);
-        return (prepared, masked);
+        return new PreparedRequestPair(prepared, masked);
     }
 
     private static PreparedRequest Prepare(HttpRequestModel request, RequestContext context, VariableScope scope, AuthConfig auth,

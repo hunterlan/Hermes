@@ -283,7 +283,9 @@ public static partial class PostmanCollectionImporter
             case "oauth2":
                 var o = Attributes(auth["oauth2"]);
                 config.Type = AuthType.OAuth2;
-                (config.OAuth2.GrantType, config.OAuth2.UsePkce) = ParseGrantType(o.GetValueOrDefault("grant_type"));
+                var grantType = ParseGrantType(o.GetValueOrDefault("grant_type"));
+                config.OAuth2.GrantType = grantType.Grant;
+                config.OAuth2.UsePkce = grantType.Pkce;
                 config.OAuth2.AuthUrl = o.GetValueOrDefault("authUrl", "");
                 config.OAuth2.AccessTokenUrl = o.GetValueOrDefault("accessTokenUrl", "");
                 config.OAuth2.ClientId = o.GetValueOrDefault("clientId", "");
