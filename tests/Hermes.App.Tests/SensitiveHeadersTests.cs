@@ -13,6 +13,7 @@ using Hermes.Core.Http;
 using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Hermes.App.Tests;
 
@@ -20,7 +21,22 @@ public class SensitiveHeadersTests
 {
     private const string Jwt = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkFkYSBMb3ZlbGFjZSJ9.c2lnbmF0dXJl";
 
-    private static (Window Window, HeaderListView List, List<string> Copied, HeaderRowViewModel Token, HeaderRowViewModel Plain) ShowList()
+    private sealed record HeaderListFixture(
+        Window Window,
+        HeaderListView List,
+        List<string> Copied,
+        HeaderRowViewModel Token,
+        HeaderRowViewModel Plain);
+
+    private sealed record SentResponseFixture(Window Window, ResponseViewModel Response);
+
+    private sealed record EditableTableFixture(
+        Window Window,
+        KeyValueTable Table,
+        KeyValueListViewModel List,
+        List<string> Copied);
+
+    private static HeaderListFixture ShowList(TimeProvider? timeProvider = null)
     {
         var copied = new List<string>();
         Task CopyAsync(string text)
@@ -31,14 +47,18 @@ public class SensitiveHeadersTests
 
         var token = new HeaderRowViewModel("Authorization", Jwt, "from auth")
         {
-            Sensitive = new SensitiveValueViewModel(Jwt, isSensitive: true, CopyAsync) { CopiedDuration = TimeSpan.FromMilliseconds(30) },
+            Sensitive = new SensitiveValueViewModel(Jwt, isSensitive: true, CopyAsync)
+            {
+                CopiedDuration = TimeSpan.FromMilliseconds(30),
+                TimeProvider = timeProvider ?? TimeProvider.System,
+            },
         };
         var plain = new HeaderRowViewModel("Accept", "application/json", "added automatically");
         var list = new HeaderListView { Rows = new[] { token, plain } };
         var window = new Window { Content = list, Width = 720, Height = 420 };
         window.Show();
         UiTestHelpers.Pump();
-        return (window, list, copied, token, plain);
+        return new HeaderListFixture(window, list, copied, token, plain);
     }
 
     private static IEnumerable<TextBlock> ValueTexts(Visual root) =>
@@ -140,7 +160,7 @@ public class SensitiveHeadersTests
         }
     }
 
-    private static (Window Window, ResponseViewModel Response) ShowSentRequest(Action<ResponseViewModel> show, string theme)
+    private static SentResponseFixture ShowSentRequest(Action<ResponseViewModel> show, string theme)
     {
         var response = new ResponseViewModel(App.Services.GetRequiredService<DialogService>(), App.Services.GetRequiredService<SettingsService>());
         response.SetResponse(new ResponseModel { StatusCode = 200, ReasonPhrase = "OK", ContentType = "text/plain", Body = "ok"u8.ToArray() });
@@ -156,7 +176,7 @@ public class SensitiveHeadersTests
         window.Show();
         view.GetVisualDescendants().OfType<TabControl>().First().SelectedIndex = 3;
         UiTestHelpers.Pump();
-        return (window, response);
+        return new SentResponseFixture(window, response);
     }
 
     private static PreparedRequest SentRequest()
@@ -223,7 +243,7 @@ public class SensitiveHeadersTests
         window.Close();
     }
 
-    private static (Window Window, KeyValueTable Table, KeyValueListViewModel List, List<string> Copied) ShowEditableTable(bool masksSensitiveKeys)
+    private static EditableTableFixture ShowEditableTable(bool masksSensitiveKeys)
     {
         var copied = new List<string>();
         var list = new KeyValueListViewModel { MasksSensitiveKeys = masksSensitiveKeys, CopyText = text => { copied.Add(text); return Task.CompletedTask; } };
@@ -232,7 +252,7 @@ public class SensitiveHeadersTests
         var window = new Window { Content = table, Width = 900, Height = 300 };
         window.Show();
         UiTestHelpers.Pump();
-        return (window, table, list, copied);
+        return new EditableTableFixture(window, table, list, copied);
     }
 
     private static List<(TextBlock Dots, VariableTextBox Box)> ValueCells(KeyValueTable table) =>
@@ -348,18 +368,25 @@ public class SensitiveHeadersTests
     [AvaloniaFact]
     public async Task Copy_while_masked_copies_the_real_value_and_confirms()
     {
-        var (window, list, copied, token, _) = ShowList();
+        var clock = new FakeTimeProvider();
+        var (window, list, copied, token, _) = ShowList(clock);
 
         ButtonNamed(list, "Copy value").Command!.Execute(null);
-        UiTestHelpers.Pump();
 
         Assert.Equal([Jwt], copied);
         Assert.True(token.Sensitive.ShowMask);
         Assert.True(token.Sensitive.IsCopied);
-        Assert.Contains(list.GetVisualDescendants().OfType<TextBlock>(), text => text.Text == "Copied" && text.IsVisible);
+        await UiTestHelpers.WaitUntil(() => CopiedLabelIsVisible(list));
+
+        // The confirmation lasts until the fake clock has moved past its duration, however slow the machine is.
+        clock.Advance(token.Sensitive.CopiedDuration);
         await UiTestHelpers.WaitUntil(() => !token.Sensitive.IsCopied);
+        Assert.False(CopiedLabelIsVisible(list));
         window.Close();
     }
+
+    private static bool CopiedLabelIsVisible(Visual root) =>
+        root.GetVisualDescendants().OfType<TextBlock>().Any(text => text.Text == "Copied" && text.IsVisible);
 
     [AvaloniaFact]
     public void The_full_value_flyout_overlays_the_row_without_changing_its_height()

@@ -20,7 +20,7 @@ internal static class UiTestHelpers
     /// tabs between them), focused on a new request tab. The saved session is cleared first: every window saves
     /// its tabs when it closes, and the next view model would restore them.
     /// </summary>
-    public static (MainWindow Window, MainWindowViewModel ViewModel) ShowMainWindow()
+    public static ShownMainWindow ShowMainWindow()
     {
         App.Services.GetRequiredService<Services.WorkspaceService>().SaveSession(new Core.Models.SessionState());
         var vm = new MainWindowViewModel(App.Services.GetRequiredService<TabServices>());
@@ -29,7 +29,7 @@ internal static class UiTestHelpers
         App.Services.GetRequiredService<Services.DialogService>().Owner = window;
         window.Show();
         Pump();
-        return (window, vm);
+        return new ShownMainWindow(window, vm);
     }
 
     public static void Pump()
