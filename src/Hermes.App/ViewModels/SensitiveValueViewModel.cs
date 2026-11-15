@@ -32,6 +32,9 @@ public sealed partial class SensitiveValueViewModel(string value, bool isSensiti
     /// <summary>How long <see cref="IsCopied"/> stays set.</summary>
     public TimeSpan CopiedDuration { get; init; } = DefaultCopiedDuration;
 
+    /// <summary>The clock that times <see cref="CopiedDuration"/>; tests replace it to advance time by hand.</summary>
+    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
+
     /// <summary>The real value, whether or not it is masked.</summary>
     public string Value
     {
@@ -103,7 +106,7 @@ public sealed partial class SensitiveValueViewModel(string value, bool isSensiti
             return;
         await copyText(Value);
         IsCopied = true;
-        await Task.Delay(CopiedDuration);
+        await Task.Delay(CopiedDuration, TimeProvider);
         IsCopied = false;
     }
 

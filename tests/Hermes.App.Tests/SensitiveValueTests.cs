@@ -1,5 +1,6 @@
 using Hermes.App.ViewModels;
 using Hermes.Core.Headers;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Hermes.App.Tests;
 
@@ -49,17 +50,22 @@ public class SensitiveValueTests
     public async Task Copy_puts_the_real_value_on_the_clipboard_while_masked_and_confirms_briefly()
     {
         string? copied = null;
+        var clock = new FakeTimeProvider();
         var value = new SensitiveValueViewModel(Token, isSensitive: true, text =>
         {
             copied = text;
             return Task.CompletedTask;
         })
-        { CopiedDuration = TimeSpan.FromMilliseconds(50) };
+        {
+            CopiedDuration = TimeSpan.FromMilliseconds(50),
+            TimeProvider = clock,
+        };
 
         var copying = value.CopyCommand.ExecuteAsync(null);
 
         Assert.Equal(Token, copied);
         Assert.True(value.IsCopied);
+        clock.Advance(value.CopiedDuration);
         await copying;
         Assert.False(value.IsCopied);
         Assert.False(value.IsRevealed);
