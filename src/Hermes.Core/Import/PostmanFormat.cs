@@ -34,12 +34,12 @@ internal static class PostmanFormat
         GrantTypes.First(g => g.Grant == grant && g.Pkce == (pkce && grant == OAuth2GrantType.AuthorizationCode)).Name;
 
     /// <summary>Unknown names fall back to the authorization code flow, Postman's default. "password" is an older name.</summary>
-    public static (OAuth2GrantType Grant, bool Pkce) ParseGrantType(string? name) =>
+    public static PostmanGrantType ParseGrantType(string? name) =>
         name == "password"
-            ? (OAuth2GrantType.Password, false)
+            ? new PostmanGrantType(OAuth2GrantType.Password, false)
             : GrantTypes.FirstOrDefault(g => g.Name == name) is { Name: not null } match
-                ? (match.Grant, match.Pkce)
-                : (OAuth2GrantType.AuthorizationCode, false);
+                ? new PostmanGrantType(match.Grant, match.Pkce)
+                : new PostmanGrantType(OAuth2GrantType.AuthorizationCode, false);
 
     public static string ClientAuthenticationName(OAuth2ClientAuthentication value) =>
         value == OAuth2ClientAuthentication.Body ? "body" : "header";
