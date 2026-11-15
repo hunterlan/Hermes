@@ -10,6 +10,7 @@ namespace Hermes.App.Services;
 public sealed class DialogService
 {
     private const string RetryChoiceId = "retry";
+    private const string QuitAnywayChoiceId = "quit";
 
     public Window? Owner { get; set; }
 
@@ -157,6 +158,18 @@ public sealed class DialogService
             closeText: "Cancel");
         await ShowDialogAsync<StorageDialogResult>(dialog);
         return dialog.Result?.ChoiceId == RetryChoiceId;
+    }
+
+    /// <summary>
+    /// Tells the user the session couldn't be written as Hermes quits, so unsaved drafts would be lost. True when they
+    /// chose Quit anyway, false when they cancelled to keep Hermes open.
+    /// </summary>
+    public async Task<bool> ConfirmQuitLosingDraftsAsync(StorageError error)
+    {
+        var dialog = new StorageErrorDialog("Unsaved drafts can't be kept", [error],
+            [new StorageDialogChoice("Quit anyway", QuitAnywayChoiceId, "danger")], closeText: "Cancel");
+        await ShowDialogAsync<StorageDialogResult>(dialog);
+        return dialog.Result?.ChoiceId == QuitAnywayChoiceId;
     }
 
     /// <summary>
