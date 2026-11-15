@@ -691,14 +691,27 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
     [ObservableProperty] public partial double SidebarWidth { get; set; } = 300;
 
     /// <summary>Persists open tabs (including unsaved drafts), the active environment and layout.</summary>
-    public void SaveSession() =>
-        Workspace.SaveSession(new SessionState
-        {
-            Tabs = Tabs.Select(t => t.ToSession()).ToList(),
-            ActiveTabIndex = ActiveTab is null ? 0 : Tabs.IndexOf(ActiveTab),
-            ActiveEnvironmentId = Workspace.ActiveEnvironment?.Id,
-            SidebarWidth = SidebarWidth,
-        });
+    public void SaveSession() => Workspace.SaveSession(CurrentSession());
+
+    /// <summary>
+    /// Saves the session as the app quits. Returns the error only when the write failed while a tab has unsaved edits
+    /// kept as a draft in the session, so quitting would lose them; null otherwise.
+    /// </summary>
+    public StorageError? SaveSessionBeforeQuit() =>
+        Workspace.TrySaveSession(CurrentSession()) is { } error && Tabs.Any(t => t.IsDirty && t.KeepsDraftInSession)
+            ? error
+            : null;
+
+    /// <summary>Asks whether to quit although unsaved drafts can't be kept. True to quit anyway.</summary>
+    public Task<bool> ConfirmQuitLosingDraftsAsync(StorageError error) => Dialogs.ConfirmQuitLosingDraftsAsync(error);
+
+    private SessionState CurrentSession() => new()
+    {
+        Tabs = Tabs.Select(t => t.ToSession()).ToList(),
+        ActiveTabIndex = ActiveTab is null ? 0 : Tabs.IndexOf(ActiveTab),
+        ActiveEnvironmentId = Workspace.ActiveEnvironment?.Id,
+        SidebarWidth = SidebarWidth,
+    };
 
     private void RestoreSession()
     {

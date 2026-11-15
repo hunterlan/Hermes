@@ -478,8 +478,7 @@ public sealed class WorkspaceService : IDisposable
     /// </summary>
     public void SaveSession(SessionState session)
     {
-        var error = Attempt(() => _repository.SaveSession(session), _repository.SessionFile,
-            "Session (open tabs and drafts)", StorageOperation.Write);
+        var error = TrySaveSession(session);
         if (error is null)
         {
             _sessionFailureReported = false;
@@ -490,4 +489,9 @@ public sealed class WorkspaceService : IDisposable
         _sessionFailureReported = true;
         Report(error);
     }
+
+    /// <summary>Like <see cref="SaveSession"/>, but returns the error instead of reporting it. Null when it worked.</summary>
+    public StorageError? TrySaveSession(SessionState session) =>
+        Attempt(() => _repository.SaveSession(session), _repository.SessionFile,
+            "Session (open tabs and drafts)", StorageOperation.Write);
 }

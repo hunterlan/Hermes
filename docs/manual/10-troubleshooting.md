@@ -117,7 +117,9 @@ another program has the file open), a **Couldn't save** dialog says which one an
 - When a rename, move, delete or new item can't be saved, the dialog says why and the change is undone: the name
   stays as it was, the item stays where it was, and a collection or environment that couldn't be written is not added.
 - If the open tabs and drafts (the session) can't be saved, Hermes tells you once and keeps trying quietly, so you
-  aren't interrupted every half minute. It tells you again if saving works and then fails again.
+  aren't interrupted every half minute. It tells you again if saving works and then fails again. When you quit with
+  unsaved request edits and the session can't be saved, Hermes asks first: **Cancel** keeps it open so you can fix
+  the folder or save the requests, and **Quit anyway** closes it and loses those edits.
 - If Settings can't be saved, the error appears in the Settings dialog and the dialog stays open, so you can try again.
 - Exporting a collection or environment, or saving a response to a file, names the file that couldn't be written and
   why, for example when the folder you picked is read-only. Pick another location and try again.

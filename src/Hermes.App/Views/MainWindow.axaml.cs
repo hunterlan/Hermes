@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private MainWindowViewModel? _viewModel;
     private bool _quitConfirmed;
     private bool _confirmingQuit;
+    private bool _draftLossAccepted;
 
     // Header density breakpoint (window width). The trailing group (environment button with a 200px name)
     // needs ~343px, and each side group must fit its third of the header grid ((width - 24) / 3), so the
@@ -252,7 +253,31 @@ public partial class MainWindow : Window
         _sessionTimer.Stop();
         if (_viewModel.IsSidebarVisible && SidebarColumn.ActualWidth > 0)
             _viewModel.SidebarWidth = SidebarColumn.ActualWidth;
-        _viewModel.SaveSession();
+        if (_viewModel.SaveSessionBeforeQuit() is not { } error || _draftLossAccepted
+            || e.CloseReason == WindowCloseReason.OSShutdown)
+            return;
+
+        // Unsaved drafts live only in the session; without it they'd be lost without a word.
+        e.Cancel = true;
+        _confirmingQuit = true;
+        bool quitAnyway;
+        try
+        {
+            quitAnyway = await _viewModel.ConfirmQuitLosingDraftsAsync(error);
+        }
+        finally
+        {
+            _confirmingQuit = false;
+        }
+        if (!quitAnyway)
+        {
+            // Hermes stays open, so the next close asks about unsaved tabs again.
+            _quitConfirmed = false;
+            _sessionTimer.Start();
+            return;
+        }
+        _draftLossAccepted = true;
+        Close();
     }
 
     // ---- environment picker ----
