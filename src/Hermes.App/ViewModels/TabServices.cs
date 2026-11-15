@@ -23,6 +23,7 @@ public sealed class TabServices(
     public HttpClientProvider Http { get; } = http;
     public ManualService Manual { get; } = manual;
     public TimeProvider TimeProvider { get; } = timeProvider;
+    public RequestSendService Sender { get; } = new(workspace, executor);
 
     /// <summary>
     /// Opens (or focuses) the tab of the folder or collection with the given id. Set by the main window, which owns

@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Hermes.App.Services;
 using Hermes.App.Views.Dialogs;
 using Hermes.Core.Auth;
 using Hermes.Core.CodeGen;
@@ -13,7 +14,6 @@ using Hermes.Core.Import;
 using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
 using Hermes.Core.Requests;
-using Hermes.Core.Secrets;
 using Hermes.Core.Serialization;
 using Hermes.Core.Variables;
 using Hermes.Core.Web;
@@ -496,7 +496,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         var model = BuildModel();
         // One context for the request and its masked copy: switching environments while it's in flight changes neither.
         var context = CreateContext();
-        var (prepared, masked) = RequestPreparer.PrepareWithMasked(model, context);
+        var pair = RequestPreparer.PrepareWithMasked(model, context);
+        var prepared = pair.Request;
         if (!await ConfirmSendAsync(prepared) || _isClosed)
             return;
 
@@ -506,36 +507,26 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         _sendCts = new CancellationTokenSource();
         try
         {
-            var result = await Services.Executor.ExecuteAsync(prepared, _sendCts.Token);
-            // A tab closed during the send leaves no response and no history behind.
-            if (_isClosed)
+            var outcome = await Services.Sender.SendAsync(new RequestSendInput
+            {
+                Model = model,
+                Prepared = pair,
+                RequestId = RequestId,
+                IsAbandoned = () => _isClosed,
+            }, _sendCts.Token);
+            if (outcome.Abandoned)
                 return;
+            var result = outcome.Result!;
             if (result.Cancelled)
                 Response.SetCancelled();
             else if (result.Response is { } response)
             {
                 Response.SetResponse(response, sentWith: context.Environment);
-                // Responses are kept with saved requests, so reopening shows the last result and earlier ones.
-                // The saved copy has credentials masked; the one on screen stays exact.
-                if (IsPersisted && Services.Workspace.SaveResponse(RequestId, new SavedResponse
-                {
-                    Response = response,
-                    SentRequest = SecretMasker.MaskCredentialHeaders(RawRequestFormatter.Format(masked)),
-                }) is { } saved)
+                if (outcome.SavedResponse is { } saved)
                     Response.AddSaved(saved);
             }
             else
                 Response.SetFailure(result.Failure ?? RequestFailure.FromMessage("Unknown error"));
-
-            if (!result.Cancelled)
-            {
-                Services.Workspace.AddHistory(new HistoryEntry
-                {
-                    Request = model,
-                    StatusCode = result.Response?.StatusCode,
-                    DurationMs = (long)(result.Response?.TotalTime.TotalMilliseconds ?? 0),
-                });
-            }
         }
         finally
         {
