@@ -205,7 +205,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         SelectedMethod = model.Method;
         Url = model.Url;
         Params.Load(model.QueryParams.Count > 0 ? model.QueryParams : UrlUtilities.ParseQuery(UrlUtilities.Split(model.Url).Query));
-        PathVariables.Load(MergePathVariables(model.Url, model.PathVariables));
+        PathVariables.Load(UrlUtilities.MergePathVariables(model.Url, model.PathVariables));
         HeadersEditor.Load(model.Headers, model.SkippedInheritedHeaders);
         SelectedBodyMode = BodyModes.First(m => m.Value == model.Body.Mode);
         SelectedRawLanguage = RawLanguages.First(l => l.Value == model.Body.RawLanguage);
@@ -373,8 +373,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         _syncingUrl = true;
         try
         {
-            Params.Load(MergeQueryParams(Params.ToModels(), UrlUtilities.ParseQuery(UrlUtilities.Split(value).Query)));
-            PathVariables.Load(MergePathVariables(value, PathVariables.ToModels()));
+            Params.Load(UrlUtilities.MergeQueryParams(Params.ToModels(), UrlUtilities.ParseQuery(UrlUtilities.Split(value).Query)));
+            PathVariables.Load(UrlUtilities.MergePathVariables(value, PathVariables.ToModels()));
             OnPropertyChanged(nameof(HasPathVariables));
             NotifySections();
         }
@@ -404,45 +404,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             _syncingUrl = false;
         }
         OnAnyChanged();
-    }
-
-    /// <summary>
-    /// Enabled rows are replaced by what's in the URL; disabled rows (which aren't in the URL) keep their position.
-    /// Descriptions are carried over by position.
-    /// </summary>
-    internal static List<KeyValueItem> MergeQueryParams(List<KeyValueItem> existing, List<KeyValueItem> parsed)
-    {
-        var result = new List<KeyValueItem>();
-        var enabledExisting = existing.Where(e => e.Enabled).ToList();
-        var next = 0;
-        foreach (var row in existing)
-        {
-            if (!row.Enabled)
-            {
-                result.Add(row);
-                continue;
-            }
-            if (next < parsed.Count)
-            {
-                var p = parsed[next];
-                p.Description = enabledExisting.ElementAtOrDefault(next)?.Description;
-                result.Add(p);
-                next++;
-            }
-        }
-        for (; next < parsed.Count; next++)
-            result.Add(parsed[next]);
-        return result;
-    }
-
-    private static List<KeyValueItem> MergePathVariables(string url, IEnumerable<KeyValueItem> existing)
-    {
-        var known = existing.GroupBy(e => e.Key).ToDictionary(g => g.Key, g => g.First());
-        return UrlUtilities.ParsePathVariables(url)
-            .Select(name => known.TryGetValue(name, out var item)
-                ? new KeyValueItem(name, item.Value) { Description = item.Description }
-                : new KeyValueItem(name, ""))
-            .ToList();
     }
 
     /// <summary>

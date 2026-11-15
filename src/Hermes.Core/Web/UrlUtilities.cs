@@ -68,6 +68,46 @@ public static class UrlUtilities
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Enabled rows are replaced by what's in the URL; disabled rows (which aren't in the URL) keep their position.
+    /// Descriptions are carried over by position.
+    /// </summary>
+    public static List<KeyValueItem> MergeQueryParams(List<KeyValueItem> existing, List<KeyValueItem> parsed)
+    {
+        var result = new List<KeyValueItem>();
+        var enabledExisting = existing.Where(e => e.Enabled).ToList();
+        var next = 0;
+        foreach (var row in existing)
+        {
+            if (!row.Enabled)
+            {
+                result.Add(row);
+                continue;
+            }
+            if (next < parsed.Count)
+            {
+                var p = parsed[next];
+                p.Description = enabledExisting.ElementAtOrDefault(next)?.Description;
+                result.Add(p);
+                next++;
+            }
+        }
+        for (; next < parsed.Count; next++)
+            result.Add(parsed[next]);
+        return result;
+    }
+
+    /// <summary>One row per <c>:name</c> in the URL, keeping the value and description of rows already known by name.</summary>
+    public static List<KeyValueItem> MergePathVariables(string url, IEnumerable<KeyValueItem> existing)
+    {
+        var known = existing.GroupBy(e => e.Key).ToDictionary(g => g.Key, g => g.First());
+        return ParsePathVariables(url)
+            .Select(name => known.TryGetValue(name, out var item)
+                ? new KeyValueItem(name, item.Value) { Description = item.Description }
+                : new KeyValueItem(name, ""))
+            .ToList();
+    }
+
     public static string AppendQueryParam(string url, string key, string value)
     {
         var parts = Split(url);
