@@ -12,6 +12,8 @@ internal sealed class TempWorkspace : IDisposable
 {
     public const string NotEnforced = "The operating system doesn't enforce read-only folders here (Windows, or running as root).";
 
+    private static readonly TimeSpan HistoryFlushTimeout = TimeSpan.FromSeconds(10);
+
     private readonly List<ReadOnlyFolder> _locked = [];
 
     public string Root { get; } = Path.Combine(Path.GetTempPath(), "hermes-write-tests-" + Guid.NewGuid());
@@ -41,6 +43,8 @@ internal sealed class TempWorkspace : IDisposable
 
     public void Dispose()
     {
+        // History is written in the background; deleting the folder while a file is still open fails on Windows.
+        Workspace.FlushHistoryAsync().Wait(HistoryFlushTimeout);
         foreach (var folder in _locked)
             folder.Dispose();
         Workspace.Dispose();
