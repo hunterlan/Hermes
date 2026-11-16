@@ -46,12 +46,11 @@ public class RequestSendServiceTests : IDisposable
         return request;
     }
 
-    private static RequestSendInput InputFor(HttpRequestModel request, Func<bool>? isAbandoned = null) => new()
+    private static RequestSendInput InputFor(HttpRequestModel request) => new()
     {
         Model = request,
         Prepared = RequestPreparer.PrepareWithMasked(request, RequestContext.Empty),
         RequestId = request.Id,
-        IsAbandoned = isAbandoned,
     };
 
     [AvaloniaFact]
@@ -66,7 +65,7 @@ public class RequestSendServiceTests : IDisposable
         var outcome = await _service.SendAsync(InputFor(request), TestContext.Current.CancellationToken);
 
         Assert.Equal(1, savedWhenHistoryWasWritten);
-        Assert.False(outcome.Abandoned);
+        Assert.False(outcome.Cancelled);
         Assert.Equal(200, outcome.Result!.Response!.StatusCode);
         Assert.NotNull(outcome.SavedResponse);
         var entry = Assert.Single(_temp.Workspace.History);
@@ -107,7 +106,6 @@ public class RequestSendServiceTests : IDisposable
 
         var outcome = await _service.SendAsync(InputFor(request), TestContext.Current.CancellationToken);
 
-        Assert.False(outcome.Abandoned);
         Assert.False(outcome.Cancelled);
         Assert.Null(outcome.Result!.Response);
         Assert.NotNull(outcome.Result.Failure);
@@ -130,37 +128,32 @@ public class RequestSendServiceTests : IDisposable
         var outcome = await sending;
 
         Assert.True(outcome.Cancelled);
-        Assert.False(outcome.Abandoned);
         Assert.Null(outcome.SavedResponse);
         Assert.Empty(_temp.Workspace.History);
         Assert.Empty(_temp.Workspace.LoadResponses(request.Id));
     }
 
     [AvaloniaFact]
-    public async Task A_send_for_a_closed_tab_writes_nothing_even_when_a_response_arrived()
+    public async Task A_token_cancelled_after_the_response_arrived_but_before_recording_writes_nothing()
     {
         using var server = OkServer();
         var request = SavedRequest(server.Url);
+        using var cts = new CancellationTokenSource();
+        var executor = new RequestExecutor(_clients);
+        // Cancels at the one point that matters: the response is in hand and nothing is recorded yet.
+        var service = new RequestSendService(_temp.Workspace, async (prepared, token) =>
+        {
+            var result = await executor.ExecuteAsync(prepared, token);
+            await cts.CancelAsync();
+            return result;
+        });
 
-        var outcome = await _service.SendAsync(InputFor(request, isAbandoned: () => true), TestContext.Current.CancellationToken);
+        var outcome = await service.SendAsync(InputFor(request), cts.Token);
 
-        Assert.True(outcome.Abandoned);
+        Assert.True(outcome.Cancelled);
         Assert.Null(outcome.Result);
         Assert.Null(outcome.SavedResponse);
         Assert.Empty(_temp.Workspace.History);
         Assert.Empty(_temp.Workspace.LoadResponses(request.Id));
-    }
-
-    [AvaloniaFact]
-    public async Task The_tab_is_asked_whether_it_was_closed_only_after_the_request_finished()
-    {
-        using var server = OkServer();
-        var request = SavedRequest(server.Url);
-        var asked = 0;
-
-        await _service.SendAsync(InputFor(request, isAbandoned: () => { asked++; return false; }), TestContext.Current.CancellationToken);
-
-        Assert.Equal(1, asked);
-        Assert.Single(_temp.Workspace.History);
     }
 }

@@ -512,14 +512,17 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
                 Model = model,
                 Prepared = pair,
                 RequestId = RequestId,
-                IsAbandoned = () => _isClosed,
             }, _sendCts.Token);
-            if (outcome.Abandoned)
+            // A tab closed during the send updates nothing; closing cancels the send, so nothing was recorded either.
+            if (_isClosed)
                 return;
-            var result = outcome.Result!;
-            if (result.Cancelled)
+            if (outcome.Cancelled)
+            {
                 Response.SetCancelled();
-            else if (result.Response is { } response)
+                return;
+            }
+            var result = outcome.Result!;
+            if (result.Response is { } response)
             {
                 Response.SetResponse(response, sentWith: context.Environment);
                 if (outcome.SavedResponse is { } saved)

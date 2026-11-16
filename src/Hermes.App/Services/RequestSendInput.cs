@@ -14,10 +14,4 @@ public sealed class RequestSendInput
 
     /// <summary>The request's id. The response is kept with it only if a request with this id is saved when the send ends.</summary>
     public required Guid RequestId { get; init; }
-
-    /// <summary>
-    /// Asked once the request has finished: true when the tab that sent it was closed meanwhile, in which case
-    /// nothing is saved and no history entry is written.
-    /// </summary>
-    public Func<bool>? IsAbandoned { get; init; }
 }
