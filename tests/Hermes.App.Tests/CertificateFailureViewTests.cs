@@ -65,13 +65,13 @@ public class CertificateFailureViewTests
         using var server = new LocalHttpsServer(TestCertificates.SelfSigned());
         var appWideVerifySsl = App.Services.GetRequiredService<SettingsService>().Current.VerifySsl;
         var (window, tab) = await SendToSelfSignedServerAsync(server);
-        Assert.Null(tab.VerifySslOverride);
+        Assert.Null(tab.Settings.VerifySslOverride);
 
         var turnOffButton = Find<Button>(window, "TurnOffVerificationButton");
         turnOffButton.Command!.Execute(turnOffButton.CommandParameter);
         await UiTestHelpers.WaitUntil(() => tab.Response.HasResponse);
 
-        Assert.False(tab.VerifySslOverride);
+        Assert.False(tab.Settings.VerifySslOverride);
         Assert.Null(tab.Response.Failure);
         Assert.Equal("200 OK", tab.Response.StatusText);
         Assert.Equal(LocalHttpsServer.ResponseBody, tab.Response.RawText);
@@ -96,7 +96,7 @@ public class CertificateFailureViewTests
         Assert.True(tab.SettingsExpanded);
         Assert.Equal(1, revealRequests);
         Assert.True(Find<Border>(window, "SettingsSection").IsEffectivelyVisible);
-        Assert.Null(tab.VerifySslOverride);
+        Assert.Null(tab.Settings.VerifySslOverride);
         window.Close();
     }
 

@@ -49,9 +49,9 @@ public class AuthEditorTests
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
 
-        tab.VerifySslOverride = false;
+        tab.Settings.VerifySslOverride = false;
         Assert.False(tab.Auth.VerifySslProvider());
-        tab.VerifySslOverride = true;
+        tab.Settings.VerifySslOverride = true;
         Assert.True(tab.Auth.VerifySslProvider());
         window.Close();
     }
