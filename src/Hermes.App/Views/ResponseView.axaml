@@ -6,13 +6,13 @@
              xmlns:core="using:Hermes.Core.Models"
              x:Class="Hermes.App.Views.ResponseView"
              x:DataType="vm:ResponseViewModel"
-             IsVisible="{Binding !ShowsCollapsedBar}">
+             IsVisible="{Binding !Pane.ShowsCollapsedBar}">
   <!-- collapsed, the request tab shows CollapsedResponseBar instead -->
   <Grid RowDefinitions="Auto,*">
     <!-- header: the collapse chevron, how the last send went, and the layout switch -->
     <Grid Name="ResponseHeader" ColumnDefinitions="Auto,*,Auto" Margin="0,2,0,4">
       <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
-        <Button Name="CollapseResponseButton" Classes="icon" Command="{Binding ToggleCollapsedCommand}" IsVisible="{Binding CanToggleCollapsed}"
+        <Button Name="CollapseResponseButton" Classes="icon" Command="{Binding Pane.ToggleCollapsedCommand}" IsVisible="{Binding Pane.CanToggleCollapsed}"
                 ToolTip.Tip="Collapse response (Ctrl+J)" AutomationProperties.Name="Collapse response">
           <PathIcon Data="{StaticResource IconChevronDown}" />
         </Button>
@@ -35,33 +35,33 @@
         </Grid>
       </Grid>
       <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource Spacing2}">
-        <Border Classes="tag warn" Margin="0,0,6,0" IsVisible="{Binding ViewingEarlier, Converter={x:Static ObjectConverters.IsNotNull}}"
-                ToolTip.Tip="{Binding ViewingEarlier.Label}">
+        <Border Classes="tag warn" Margin="0,0,6,0" IsVisible="{Binding Saved.ViewingEarlier, Converter={x:Static ObjectConverters.IsNotNull}}"
+                ToolTip.Tip="{Binding Saved.ViewingEarlier.Label}">
           <TextBlock Text="Earlier response" />
         </Border>
-        <Button Classes="outline" FontSize="{StaticResource FontSizeSmall}" MinHeight="26" Padding="10,2" Margin="0,0,6,0" IsVisible="{Binding HasSavedResponses}"
+        <Button Classes="outline" FontSize="{StaticResource FontSizeSmall}" MinHeight="26" Padding="10,2" Margin="0,0,6,0" IsVisible="{Binding Saved.HasItems}"
                 ToolTip.Tip="Responses are saved with the request">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
-            <TextBlock Text="{Binding SavedResponsesLabel}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Saved.Label}" VerticalAlignment="Center" />
             <PathIcon Data="{StaticResource IconChevronDown}" Width="11" Height="11" />
           </StackPanel>
           <Button.Flyout>
-            <MenuFlyout ItemsSource="{Binding SavedResponses}" Placement="BottomEdgeAlignedRight">
+            <MenuFlyout ItemsSource="{Binding Saved.Items}" Placement="BottomEdgeAlignedRight">
               <MenuFlyout.ItemContainerTheme>
                 <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}" x:DataType="vm:SavedResponseItem">
                   <Setter Property="Header" Value="{Binding Label}" />
-                  <Setter Property="Command" Value="{Binding $parent[UserControl].((vm:ResponseViewModel)DataContext).ShowSavedCommand}" />
+                  <Setter Property="Command" Value="{Binding $parent[UserControl].((vm:ResponseViewModel)DataContext).Saved.ShowSavedCommand}" />
                   <Setter Property="CommandParameter" Value="{Binding}" />
                 </ControlTheme>
               </MenuFlyout.ItemContainerTheme>
             </MenuFlyout>
           </Button.Flyout>
         </Button>
-        <Button Classes="icon layout" Classes.on="{Binding IsSideBySide}" Command="{Binding SetLayoutCommand}"
+        <Button Classes="icon layout" Classes.on="{Binding Pane.IsSideBySide}" Command="{Binding Pane.SetLayoutCommand}"
                 CommandParameter="{x:Static core:ResponseLayout.Horizontal}" ToolTip.Tip="Side by side" AutomationProperties.Name="Side by side layout">
           <PathIcon Data="{StaticResource IconLayoutSide}" />
         </Button>
-        <Button Classes="icon layout" Classes.on="{Binding !IsSideBySide}" Command="{Binding SetLayoutCommand}"
+        <Button Classes="icon layout" Classes.on="{Binding !Pane.IsSideBySide}" Command="{Binding Pane.SetLayoutCommand}"
                 CommandParameter="{x:Static core:ResponseLayout.Vertical}" ToolTip.Tip="Stacked" AutomationProperties.Name="Stacked layout">
           <PathIcon Data="{StaticResource IconLayoutStacked}" />
         </Button>
@@ -104,17 +104,17 @@
         <StackPanel IsVisible="{Binding Failure.HasActions}" Spacing="{StaticResource Spacing8}">
           <WrapPanel ItemSpacing="{StaticResource Spacing8}" LineSpacing="{StaticResource Spacing8}">
             <Button Name="TurnOffVerificationButton" Classes="outline" Content="Turn off verification for this request"
-                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.TurnOffSslVerification}" IsVisible="{Binding CanTurnOffVerification}" />
+                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.TurnOffSslVerification}" IsVisible="{Binding Failure.CanTurnOffVerification}" />
             <Button Name="EditUrlButton" Classes="outline" Content="Edit URL"
-                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.EditUrl}" IsVisible="{Binding CanEditUrl}" />
+                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.EditUrl}" IsVisible="{Binding Failure.CanEditUrl}" />
             <Button Name="RetryButton" Classes="outline" Content="Retry"
-                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.Retry}" IsVisible="{Binding CanRetry}" />
+                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.Retry}" IsVisible="{Binding Failure.CanRetry}" />
             <Button Name="ChooseFileButton" Classes="outline" Content="Choose file"
-                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.ChooseFile}" IsVisible="{Binding CanChooseFile}" />
+                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.ChooseFile}" IsVisible="{Binding Failure.CanChooseFile}" />
             <Button Name="ShowHeadersButton" Classes="outline" Content="Show headers"
-                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.ShowHeaders}" IsVisible="{Binding CanShowHeaders}" />
+                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.ShowHeaders}" IsVisible="{Binding Failure.CanShowHeaders}" />
             <Button Name="OpenRequestSettingsButton" Classes="ghost" Content="Open request settings"
-                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.OpenRequestSettings}" IsVisible="{Binding CanOpenRequestSettings}" />
+                    Command="{Binding RunFailureActionCommand}" CommandParameter="{x:Static core:RequestFailureAction.OpenRequestSettings}" IsVisible="{Binding Failure.CanOpenRequestSettings}" />
           </WrapPanel>
           <TextBlock Name="FailureActionCaptionText" Classes="secondary" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap"
                      Text="{Binding Failure.ActionCaption}" IsVisible="{Binding Failure.HasActionCaption}" />
@@ -278,13 +278,13 @@
             <Grid RowDefinitions="Auto,*">
               <ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="0,8">
-                  <TextBlock Name="SentRequestLineText" Classes="mono" Text="{Binding SentRequestLine}" FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
+                  <TextBlock Name="SentRequestLineText" Classes="mono" Text="{Binding Sent.RequestLine}" FontSize="{StaticResource FontSizeSmall}" FontWeight="SemiBold"
                              Margin="16,0,16,6" TextTrimming="CharacterEllipsis" />
-                  <v:HeaderListView Rows="{Binding SentHeaderRows}" />
+                  <v:HeaderListView Rows="{Binding Sent.HeaderRows}" />
                 </StackPanel>
               </ScrollViewer>
-              <c:CodeEditor Grid.Row="1" Text="{Binding SentBodyText, Mode=OneWay}" Language="text" IsReadOnly="True"
-                            IsVisible="{Binding HasSentBody}" />
+              <c:CodeEditor Grid.Row="1" Text="{Binding Sent.BodyText, Mode=OneWay}" Language="text" IsReadOnly="True"
+                            IsVisible="{Binding Sent.HasBody}" />
             </Grid>
           </Border>
         </TabItem>

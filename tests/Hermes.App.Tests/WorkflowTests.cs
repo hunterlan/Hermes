@@ -98,22 +98,22 @@ public class WorkflowTests
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var collapsedTab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        collapsedTab.Response.ResponseSplitRatio = 0.25;
-        collapsedTab.Response.ToggleCollapsedCommand.Execute(null);
+        collapsedTab.Response.Pane.ResponseSplitRatio = 0.25;
+        collapsedTab.Response.Pane.ToggleCollapsedCommand.Execute(null);
         vm.NewRequestCommand.Execute(null);
         var splitTab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        splitTab.Response.ResponseSplitRatio = 0.7;
+        splitTab.Response.Pane.ResponseSplitRatio = 0.7;
 
         vm.SaveSession();
         window.Close();
 
         var restored = new MainWindowViewModel(TabServices);
         var restoredCollapsed = restored.Tabs.OfType<RequestTabViewModel>().Single(t => t.RequestId == collapsedTab.RequestId);
-        Assert.True(restoredCollapsed.Response.IsResponseCollapsed);
-        Assert.Equal(0.25, restoredCollapsed.Response.ResponseSplitRatio);
+        Assert.True(restoredCollapsed.Response.Pane.IsResponseCollapsed);
+        Assert.Equal(0.25, restoredCollapsed.Response.Pane.ResponseSplitRatio);
         var restoredSplit = restored.Tabs.OfType<RequestTabViewModel>().Single(t => t.RequestId == splitTab.RequestId);
-        Assert.False(restoredSplit.Response.IsResponseCollapsed);
-        Assert.Equal(0.7, restoredSplit.Response.ResponseSplitRatio);
+        Assert.False(restoredSplit.Response.Pane.IsResponseCollapsed);
+        Assert.Equal(0.7, restoredSplit.Response.Pane.ResponseSplitRatio);
     }
 
     [AvaloniaFact]

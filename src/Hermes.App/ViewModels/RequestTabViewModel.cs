@@ -47,7 +47,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable, 
         Auth.ChainProvider = () => (AuthInheritance.OuterLevels(CreateContext()), "Request", Name);
 
         Response = new ResponseViewModel(services.Dialogs, services.Settings);
-        Response.SetSaved(services.Workspace.LoadResponses(model.Id), show: true);
+        Response.Saved.SetSaved(services.Workspace.LoadResponses(model.Id), show: true);
         Sending = new RequestSendViewModel(this, services, Response);
 
         FailureActions = new RequestFailureActionRouter(UrlEditor, Body, Settings, Sections, Auth, services.Dialogs,
@@ -211,7 +211,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable, 
             return;
         HeadersEditor.HideRevealedValues();
         Auth.HideRevealedValues();
-        Response.HideRevealedValues();
+        Response.Sent.HideRevealedValues();
     }
 
     public override async Task<bool> SaveAsync()
@@ -288,12 +288,12 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable, 
         EntityId = RequestId,
         RequestDraft = IsDirty || !IsPersisted ? BuildModel() : null,
         IsPinned = IsPinned,
-        IsResponseCollapsed = Response.IsResponseCollapsed,
-        ResponseSplitRatio = Response.ResponseSplitRatio,
+        IsResponseCollapsed = Response.Pane.IsResponseCollapsed,
+        ResponseSplitRatio = Response.Pane.ResponseSplitRatio,
     };
 
     /// <summary>Puts back what <see cref="ToSession"/> kept besides the request and the pin: the response pane.</summary>
-    public void RestoreSession(SessionTab saved) => Response.RestorePane(saved.IsResponseCollapsed, saved.ResponseSplitRatio);
+    public void RestoreSession(SessionTab saved) => Response.Pane.RestorePane(saved.IsResponseCollapsed, saved.ResponseSplitRatio);
 
     public override string? CollectionName => Services.Workspace.Find(RequestId)?.Collection.Name;
 }

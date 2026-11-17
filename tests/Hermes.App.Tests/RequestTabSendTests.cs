@@ -65,7 +65,7 @@ public class RequestTabSendTests
 
         Assert.True(tab.Response.HasResponse);
         Assert.Single(temp.Workspace.LoadResponses(tab.RequestId));
-        Assert.Single(tab.Response.SavedResponses);
+        Assert.Single(tab.Response.Saved.Items);
         Assert.Empty(temp.Workspace.LoadResponses(original.Id));
         window.Close();
     }

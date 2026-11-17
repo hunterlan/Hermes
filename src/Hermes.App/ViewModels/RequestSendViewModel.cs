@@ -58,7 +58,7 @@ public sealed partial class RequestSendViewModel(IRequestSource request, TabServ
             return;
 
         IsSending = true;
-        response.SetSentRequest(prepared);
+        response.Sent.SetSentRequest(prepared);
         response.BeginLoading();
         _sendCts = new CancellationTokenSource();
         try
@@ -88,7 +88,7 @@ public sealed partial class RequestSendViewModel(IRequestSource request, TabServ
                 KeepResponseWith = request.IsPersisted ? request.RequestId : null,
             }, _sendCts.Token);
             if (saved is not null)
-                response.AddSaved(saved);
+                response.Saved.AddSaved(saved);
         }
         finally
         {

@@ -17,13 +17,13 @@ public class ResponseCollapseViewModelTests
         using var temp = new TempWorkspace();
         using var response = new ResponseViewModel(new DialogService(), temp.Settings);
 
-        response.ToggleCollapsedCommand.Execute(null);
-        Assert.True(response.IsResponseCollapsed);
-        Assert.True(response.ShowsCollapsedBar);
+        response.Pane.ToggleCollapsedCommand.Execute(null);
+        Assert.True(response.Pane.IsResponseCollapsed);
+        Assert.True(response.Pane.ShowsCollapsedBar);
 
-        response.ToggleCollapsedCommand.Execute(null);
-        Assert.False(response.IsResponseCollapsed);
-        Assert.False(response.ShowsCollapsedBar);
+        response.Pane.ToggleCollapsedCommand.Execute(null);
+        Assert.False(response.Pane.IsResponseCollapsed);
+        Assert.False(response.Pane.ShowsCollapsedBar);
     }
 
     [AvaloniaFact]
@@ -31,11 +31,11 @@ public class ResponseCollapseViewModelTests
     {
         using var temp = new TempWorkspace();
         using var response = new ResponseViewModel(new DialogService(), temp.Settings);
-        response.IsResponseCollapsed = true;
+        response.Pane.IsResponseCollapsed = true;
 
         response.SetResponse(Ok());
 
-        Assert.False(response.IsResponseCollapsed);
+        Assert.False(response.Pane.IsResponseCollapsed);
     }
 
     [AvaloniaFact]
@@ -43,11 +43,11 @@ public class ResponseCollapseViewModelTests
     {
         using var temp = new TempWorkspace();
         using var response = new ResponseViewModel(new DialogService(), temp.Settings);
-        response.IsResponseCollapsed = true;
+        response.Pane.IsResponseCollapsed = true;
 
         response.SetFailure(RequestFailure.FromMessage("Connection refused"));
 
-        Assert.False(response.IsResponseCollapsed);
+        Assert.False(response.Pane.IsResponseCollapsed);
     }
 
     [AvaloniaFact]
@@ -55,12 +55,12 @@ public class ResponseCollapseViewModelTests
     {
         using var temp = new TempWorkspace();
         using var response = new ResponseViewModel(new DialogService(), temp.Settings);
-        response.ResponseSplitRatio = 0.3;
+        response.Pane.ResponseSplitRatio = 0.3;
 
-        response.ToggleCollapsedCommand.Execute(null);
-        response.ToggleCollapsedCommand.Execute(null);
+        response.Pane.ToggleCollapsedCommand.Execute(null);
+        response.Pane.ToggleCollapsedCommand.Execute(null);
 
-        Assert.Equal(0.3, response.ResponseSplitRatio);
+        Assert.Equal(0.3, response.Pane.ResponseSplitRatio);
     }
 
     [AvaloniaTheory]
@@ -73,10 +73,10 @@ public class ResponseCollapseViewModelTests
         using var temp = new TempWorkspace();
         using var response = new ResponseViewModel(new DialogService(), temp.Settings);
 
-        response.RestorePane(isCollapsed: true, savedRatio);
+        response.Pane.RestorePane(isCollapsed: true, savedRatio);
 
-        Assert.True(response.IsResponseCollapsed);
-        Assert.Equal(SessionTab.DefaultResponseSplitRatio, response.ResponseSplitRatio);
+        Assert.True(response.Pane.IsResponseCollapsed);
+        Assert.Equal(SessionTab.DefaultResponseSplitRatio, response.Pane.ResponseSplitRatio);
     }
 
     [AvaloniaFact]
@@ -84,19 +84,19 @@ public class ResponseCollapseViewModelTests
     {
         using var temp = new TempWorkspace();
         using var response = new ResponseViewModel(new DialogService(), temp.Settings);
-        response.IsResponseCollapsed = true;
+        response.Pane.IsResponseCollapsed = true;
         try
         {
-            response.SetLayoutCommand.Execute(ResponseLayout.Horizontal);
+            response.Pane.SetLayoutCommand.Execute(ResponseLayout.Horizontal);
 
-            Assert.False(response.ShowsCollapsedBar);
-            Assert.False(response.ToggleCollapsedCommand.CanExecute(null));
-            Assert.True(response.IsResponseCollapsed);
+            Assert.False(response.Pane.ShowsCollapsedBar);
+            Assert.False(response.Pane.ToggleCollapsedCommand.CanExecute(null));
+            Assert.True(response.Pane.IsResponseCollapsed);
 
-            response.SetLayoutCommand.Execute(ResponseLayout.Vertical);
+            response.Pane.SetLayoutCommand.Execute(ResponseLayout.Vertical);
 
-            Assert.True(response.ShowsCollapsedBar);
-            Assert.True(response.ToggleCollapsedCommand.CanExecute(null));
+            Assert.True(response.Pane.ShowsCollapsedBar);
+            Assert.True(response.Pane.ToggleCollapsedCommand.CanExecute(null));
         }
         finally
         {
@@ -111,14 +111,14 @@ public class ResponseCollapseViewModelTests
         using var temp = new TempWorkspace();
         using var response = new ResponseViewModel(new DialogService(), temp.Settings);
         var changed = new List<string?>();
-        response.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        response.Pane.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
         try
         {
             temp.Settings.Current.Layout = ResponseLayout.Horizontal;
             temp.Settings.SaveCurrent();
 
-            Assert.Contains(nameof(ResponseViewModel.IsSideBySide), changed);
-            Assert.True(response.IsSideBySide);
+            Assert.Contains(nameof(ResponsePaneLayoutViewModel.IsSideBySide), changed);
+            Assert.True(response.Pane.IsSideBySide);
         }
         finally
         {
