@@ -6,7 +6,7 @@ using Hermes.Core.Models;
 
 namespace Hermes.Core.Http;
 
-public sealed class RequestExecutor(HttpClientProvider clients)
+public sealed class RequestExecutor(HttpClientProvider clients) : IRequestExecutor
 {
     public async Task<ExecutionResult> ExecuteAsync(PreparedRequest request, CancellationToken cancellationToken)
     {
