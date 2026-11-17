@@ -18,8 +18,7 @@ namespace Hermes.App.ViewModels;
 
 public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 {
-    private string _savedSnapshot = "";
-    private bool _loading;
+    private readonly RequestChangeTracker _changes = new();
     private CancellationTokenSource? _sendCts;
     private bool _isClosed;
 
@@ -33,20 +32,21 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     {
         RequestId = model.Id;
         UrlEditor = new RequestUrlEditorViewModel();
-        UrlEditor.Changed += OnAnyChanged;
+        UrlEditor.Changed += AfterEdit;
         UrlEditor.CurlPasted += OnCurlPasted;
         HeadersEditor = new RequestHeadersViewModel(BuildModel, CreateContext,
             id => Services.OpenContainerAsync?.Invoke(id) ?? Task.CompletedTask, services.Dialogs.CopyTextAsync);
-        HeadersEditor.Headers.Changed += OnAnyChanged;
+        HeadersEditor.Headers.Changed += AfterEdit;
+        // A skipped inherited header updates the header rows in place, keeping focus, so only the dirty check runs.
         HeadersEditor.Changed += UpdateDirty;
         Body = new RequestBodyViewModel(services.Dialogs);
-        Body.Changed += OnAnyChanged;
+        Body.Changed += AfterEdit;
         Settings = new RequestSettingsViewModel(services.Settings);
-        Settings.Changed += OnAnyChanged;
+        Settings.Changed += AfterEdit;
         Sections = new ComposerSectionsViewModel(UrlEditor, Body, Settings);
 
         Auth = services.CreateAuthEditor(allowInherit: true);
-        Auth.Changed += OnAnyChanged;
+        Auth.Changed += AfterEdit;
         Auth.ScopeProvider = () => CreateContext().BuildScope();
         Auth.VerifySslProvider = () => Settings.VerifySsl;
         Auth.SslSourceProvider = () => Settings.VerifySslOverride is null ? SslSettingSource.AppWide : SslSettingSource.Request;
@@ -59,7 +59,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         Response.FailureActionRequested += OnFailureActionRequested;
 
         Load(model);
-        _savedSnapshot = savedSnapshot ?? CurrentSnapshot();
+        _changes.MarkSaved(savedSnapshot ?? CurrentSnapshot());
         UpdateDirty();
         RefreshVariables();
         RefreshBreadcrumb();
@@ -83,7 +83,10 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     [ObservableProperty] public partial string Name { get; set; } = "";
     [ObservableProperty] public partial string SelectedMethod { get; set; } = "GET";
 
-    [ObservableProperty] public partial bool IsSending { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SendButtonText))]
+    [NotifyPropertyChangedFor(nameof(SendButtonCommand))]
+    public partial bool IsSending { get; set; }
     [ObservableProperty] public partial VariableScope Variables { get; set; } = VariableScope.Empty;
     [ObservableProperty] public partial string Breadcrumb { get; set; } = "";
     [ObservableProperty] public partial bool IsRenaming { get; set; }
@@ -102,19 +105,20 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 
     private void Load(HttpRequestModel model)
     {
-        _loading = true;
-        RequestId = model.Id;
-        Name = model.Name;
-        Title = model.Name;
-        SelectedMethod = model.Method;
-        UrlEditor.Load(model.Url, model.QueryParams, model.PathVariables);
-        HeadersEditor.Load(model.Headers, model.SkippedInheritedHeaders);
-        Body.Load(model.Body);
-        Auth.Load(model.Auth);
-        Settings.Load(model.Settings);
-        _description = model.Description;
-        _eventsJson = model.EventsJson;
-        _loading = false;
+        using (_changes.Loading())
+        {
+            RequestId = model.Id;
+            Name = model.Name;
+            Title = model.Name;
+            SelectedMethod = model.Method;
+            UrlEditor.Load(model.Url, model.QueryParams, model.PathVariables);
+            HeadersEditor.Load(model.Headers, model.SkippedInheritedHeaders);
+            Body.Load(model.Body);
+            Auth.Load(model.Auth);
+            Settings.Load(model.Settings);
+            _description = model.Description;
+            _eventsJson = model.EventsJson;
+        }
         OnPropertyChanged(nameof(Method));
         RefreshPreview();
     }
@@ -141,43 +145,43 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 
     private string CurrentSnapshot() => ModelCloner.Serialize(BuildModel());
 
-    private void UpdateDirty()
-    {
-        if (!_loading)
-            IsDirty = CurrentSnapshot() != _savedSnapshot;
-    }
-
     private RequestContext CreateContext() => Services.Workspace.CreateContext(RequestId);
 
     // ---- change tracking ----
+    // Edits are what the URL, headers, body, settings and auth report through Changed, plus the name and the method.
 
-    protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
+    partial void OnNameChanged(string value)
     {
-        base.OnPropertyChanged(e);
-        switch (e.PropertyName)
-        {
-            case nameof(IsSending):
-                OnPropertyChanged(nameof(SendButtonText));
-                OnPropertyChanged(nameof(SendButtonCommand));
-                break;
-            case nameof(SelectedMethod):
-                OnPropertyChanged(nameof(Method));
-                Sections.Method = SelectedMethod;
-                break;
-            case nameof(Name):
-                Title = Name;
-                break;
-        }
-
-        if (e.PropertyName is nameof(Name) or nameof(SelectedMethod))
-            OnAnyChanged();
+        Title = value;
+        AfterEdit();
     }
 
-    private void OnAnyChanged()
+    partial void OnSelectedMethodChanged(string value)
     {
-        if (_loading)
+        OnPropertyChanged(nameof(Method));
+        Sections.Method = value;
+        AfterEdit();
+    }
+
+    /// <summary>Runs after each edit: updates the preview, then whether the tab has unsaved edits.</summary>
+    private void AfterEdit()
+    {
+        if (_changes.IsLoading)
             return;
         RefreshPreview();
+        UpdateDirty();
+    }
+
+    private void UpdateDirty()
+    {
+        if (!_changes.IsLoading)
+            IsDirty = _changes.IsDirty(CurrentSnapshot());
+    }
+
+    /// <summary>The request as it is now is the saved one.</summary>
+    private void MarkSaved()
+    {
+        _changes.MarkSaved(CurrentSnapshot());
         UpdateDirty();
     }
 
@@ -363,8 +367,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             // When the write is given up, the edits stay in the tab.
             if (!await Services.Saver.SaveExistingAsync(location, BuildModel()))
                 return false;
-            _savedSnapshot = CurrentSnapshot();
-            UpdateDirty();
+            MarkSaved();
             return true;
         }
         return await SaveAsNewAsync(keepId: true);
@@ -396,8 +399,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             Name = previousName;
             return false;
         }
-        _savedSnapshot = CurrentSnapshot();
-        UpdateDirty();
+        MarkSaved();
         RefreshBreadcrumb();
         RefreshVariables();
         Auth.RefreshInherited();
@@ -492,10 +494,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         var wasDirty = IsDirty;
         Name = name;
         if (!wasDirty)
-        {
-            _savedSnapshot = CurrentSnapshot();
-            UpdateDirty();
-        }
+            MarkSaved();
     }
 
     public override bool KeepsDraftInSession => true;
