@@ -23,7 +23,7 @@ public class TabDisposalTests
         var workspace = App.Services.GetRequiredService<Services.WorkspaceService>();
         var historyBefore = workspace.History.Count;
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        tab.Url = server.Url;
+        tab.UrlEditor.Url = server.Url;
 
         tab.SendButtonCommand.Execute(null);
         await UiTestHelpers.WaitUntil(() => tab.IsSending);

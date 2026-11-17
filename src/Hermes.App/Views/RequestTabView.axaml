@@ -65,7 +65,7 @@
           </ComboBox.ItemTemplate>
         </ComboBox>
         <Border Grid.Column="1" Background="{DynamicResource BorderBrush}" Margin="0,9" />
-        <c:VariableTextBox Grid.Column="2" Name="UrlBox" Margin="12,0" Text="{Binding Url}"
+        <c:VariableTextBox Grid.Column="2" Name="UrlBox" Margin="12,0" Text="{Binding UrlEditor.Url}"
                            PlaceholderText="Enter URL or paste cURL" SubmitCommand="{Binding SendButtonCommand}" AllowMultilineInput="True" />
         <Button Grid.Column="3" Classes="send" Height="32" MinWidth="0" Padding="14,0" VerticalAlignment="Center"
                 Command="{Binding SendButtonCommand}" ToolTip.Tip="Send (Ctrl+Enter)">
@@ -81,7 +81,7 @@
 
     <!-- the exact target after variable resolution, with the environment it came from -->
     <StackPanel Name="ResolvedUrlLine" Grid.Row="2" Orientation="Horizontal" Spacing="{StaticResource Spacing8}" Margin="2,8,0,4"
-                IsVisible="{Binding HasUrlSubstitutions}">
+                IsVisible="{Binding UrlEditor.HasUrlSubstitutions}">
       <PathIcon Data="{StaticResource IconArrowRight}" Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}" />
       <TextBlock Classes="secondary" Text="Sends to" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
       <SelectableTextBlock Classes="mono" Text="{Binding ResolvedUrl}" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" TextWrapping="Wrap" />
@@ -98,7 +98,7 @@
           <!-- Params -->
           <Border Classes="section" BorderThickness="0" IsVisible="{Binding Sections.IsParamsSectionVisible}">
             <c:CollapsibleSection Header="Params" Summary="{Binding Sections.ParamsSummary}" IsExpanded="{Binding Sections.ParamsExpanded}">
-              <StackPanel Spacing="{StaticResource Spacing8}" Margin="0,0,0,12">
+              <StackPanel Spacing="{StaticResource Spacing8}" Margin="0,0,0,12" DataContext="{Binding UrlEditor}" x:DataType="vm:RequestUrlEditorViewModel">
                 <v:KeyValueTable DataContext="{Binding Params}" />
                 <StackPanel Spacing="{StaticResource Spacing8}" IsVisible="{Binding HasPathVariables}" Margin="0,4,0,0">
                   <TextBlock Classes="section" Text="Path variables" />

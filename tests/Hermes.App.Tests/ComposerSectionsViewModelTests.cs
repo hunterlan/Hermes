@@ -10,7 +10,7 @@ public class ComposerSectionsViewModelTests
 {
     private sealed class Composer
     {
-        public required KeyValueListViewModel QueryParams { get; init; }
+        public required RequestUrlEditorViewModel UrlEditor { get; init; }
         public required RequestBodyViewModel Body { get; init; }
         public required RequestSettingsViewModel Settings { get; init; }
         public required ComposerSectionsViewModel Sections { get; init; }
@@ -18,15 +18,15 @@ public class ComposerSectionsViewModelTests
 
     private static Composer CreateComposer()
     {
-        var queryParams = new KeyValueListViewModel();
+        var urlEditor = new RequestUrlEditorViewModel();
         var body = new RequestBodyViewModel(new DialogService());
         var settings = new RequestSettingsViewModel(App.Services.GetRequiredService<SettingsService>());
         return new Composer
         {
-            QueryParams = queryParams,
+            UrlEditor = urlEditor,
             Body = body,
             Settings = settings,
-            Sections = new ComposerSectionsViewModel(queryParams, body, settings),
+            Sections = new ComposerSectionsViewModel(urlEditor, body, settings),
         };
     }
 
@@ -58,14 +58,14 @@ public class ComposerSectionsViewModelTests
         var composer = CreateComposer();
         var changed = RecordChanges(composer.Sections);
 
-        composer.QueryParams.Load([new("a", "1"), new("b", "2"), new("c", "3", enabled: false)]);
+        composer.UrlEditor.Params.Load([new("a", "1"), new("b", "2"), new("c", "3", enabled: false)]);
 
         Assert.True(composer.Sections.IsParamsSectionVisible);
         Assert.Equal("2 active", composer.Sections.ParamsSummary);
         Assert.Contains(nameof(ComposerSectionsViewModel.IsParamsSectionVisible), changed);
         Assert.Contains(nameof(ComposerSectionsViewModel.ParamsSummary), changed);
 
-        composer.QueryParams.Load([]);
+        composer.UrlEditor.Params.Load([]);
 
         Assert.False(composer.Sections.IsParamsSectionVisible);
         Assert.Equal("", composer.Sections.ParamsSummary);
@@ -74,13 +74,40 @@ public class ComposerSectionsViewModelTests
     [AvaloniaFact]
     public void Path_variables_bring_the_params_section_on_screen()
     {
-        var sections = CreateComposer().Sections;
+        var composer = CreateComposer();
+        var changed = RecordChanges(composer.Sections);
 
-        sections.HasPathVariables = true;
-        Assert.True(sections.IsParamsSectionVisible);
+        composer.UrlEditor.Url = "https://example.com/users/:id";
+        Assert.True(composer.Sections.IsParamsSectionVisible);
+        Assert.Contains(nameof(ComposerSectionsViewModel.IsParamsSectionVisible), changed);
 
-        sections.HasPathVariables = false;
-        Assert.False(sections.IsParamsSectionVisible);
+        composer.UrlEditor.Url = "https://example.com/users";
+        Assert.False(composer.Sections.IsParamsSectionVisible);
+    }
+
+    [AvaloniaFact]
+    public void Editing_a_param_keeps_the_section_after_the_params_are_removed()
+    {
+        var composer = CreateComposer();
+        composer.UrlEditor.Url = "https://example.com/get?a=1";
+        Assert.False(composer.Sections.ParamsAdded);
+
+        composer.UrlEditor.Params.Rows[0].RemoveCommand.Execute(null);
+
+        Assert.True(composer.Sections.ParamsAdded);
+        Assert.True(composer.Sections.IsParamsSectionVisible);
+    }
+
+    [AvaloniaFact]
+    public void Loading_or_typing_params_in_the_url_does_not_keep_the_section()
+    {
+        var composer = CreateComposer();
+
+        composer.UrlEditor.Load("https://example.com/get?a=1", [], []);
+        composer.UrlEditor.Url = "https://example.com/get";
+
+        Assert.False(composer.Sections.ParamsAdded);
+        Assert.False(composer.Sections.IsParamsSectionVisible);
     }
 
     [AvaloniaTheory]
@@ -231,7 +258,7 @@ public class ComposerSectionsViewModelTests
         tab.Body.RawBody = "edited";
         Assert.True(tab.Sections.IsBodySectionVisible);
 
-        tab.Url = "curl https://httpbin.org/get";
+        tab.UrlEditor.Url = "curl https://httpbin.org/get";
         UiTestHelpers.Pump();
 
         Assert.False(tab.Sections.BodyAdded);

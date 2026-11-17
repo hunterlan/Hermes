@@ -31,7 +31,7 @@ public class QuitWithDraftsTests
         viewModel.NewRequestCommand.Execute(null);
         UiTestHelpers.Pump();
         var tab = Assert.IsType<RequestTabViewModel>(viewModel.ActiveTab);
-        tab.Url = "https://example.com/draft";
+        tab.UrlEditor.Url = "https://example.com/draft";
         Assert.True(tab.IsDirty);
         Assert.True(tab.KeepsDraftInSession);
         return tab;

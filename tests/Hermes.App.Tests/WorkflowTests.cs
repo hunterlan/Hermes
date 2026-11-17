@@ -43,7 +43,7 @@ public class WorkflowTests
         var collection = Assert.Single(Workspace.Collections, c => c.Id == result.Collections[0].Id);
         Assert.Equal("Imported API", collection.Name);
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        Assert.Equal("https://api.example.com/health", tab.Url);
+        Assert.Equal("https://api.example.com/health", tab.UrlEditor.Url);
         Assert.True(tab.IsDirty);
 
         // Open the imported POST request: body and collection variables come along.
@@ -69,10 +69,10 @@ public class WorkflowTests
 
         await vm.OpenRequestAsync(request);
         var persistedTab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        persistedTab.Url = "https://example.com/changed";
+        persistedTab.UrlEditor.Url = "https://example.com/changed";
         vm.NewRequestCommand.Execute(null);
         var draftTab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        draftTab.Url = "https://example.com/draft";
+        draftTab.UrlEditor.Url = "https://example.com/draft";
         await vm.OpenCollectionAsync(collection);
 
         vm.SaveSession();
@@ -81,12 +81,12 @@ public class WorkflowTests
         // A fresh view model (as on next launch) restores from session.json.
         var restored = new MainWindowViewModel(TabServices);
         var restoredPersisted = restored.Tabs.OfType<RequestTabViewModel>().Single(t => t.RequestId == request.Id);
-        Assert.Equal("https://example.com/changed", restoredPersisted.Url);
+        Assert.Equal("https://example.com/changed", restoredPersisted.UrlEditor.Url);
         Assert.True(restoredPersisted.IsDirty);
         Assert.True(restoredPersisted.IsPersisted);
 
         var restoredDraft = restored.Tabs.OfType<RequestTabViewModel>().Single(t => t.RequestId == draftTab.RequestId);
-        Assert.Equal("https://example.com/draft", restoredDraft.Url);
+        Assert.Equal("https://example.com/draft", restoredDraft.UrlEditor.Url);
         Assert.False(restoredDraft.IsPersisted);
 
         Assert.Contains(restored.Tabs, t => t is CollectionTabViewModel && t.EntityId == collection.Id);
@@ -113,7 +113,7 @@ public class WorkflowTests
 
             vm.NewRequestCommand.Execute(null);
             var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-            tab.Url = "https://example.com";
+            tab.UrlEditor.Url = "https://example.com";
             var prepared = RequestPreparer.Prepare(tab.BuildModel(), Workspace.CreateContext(tab.RequestId));
             Assert.Equal(1500, prepared.TimeoutMs);
             UiTestHelpers.Screenshot(window, "21-light-horizontal");
@@ -133,7 +133,7 @@ public class WorkflowTests
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         vm.NewRequestCommand.Execute(null);
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        tab.Url = server.Url;
+        tab.UrlEditor.Url = server.Url;
         await tab.SendCommand.ExecuteAsync(null);
 
         var cookies = new CookieManagerViewModel(App.Services.GetRequiredService<HttpClientProvider>());
@@ -153,7 +153,7 @@ public class WorkflowTests
         {
             vm.NewRequestCommand.Execute(null);
             var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-            tab.Url = "https://example.com/items/{{$guid}}";
+            tab.UrlEditor.Url = "https://example.com/items/{{$guid}}";
 
             Assert.Equal("https://example.com/items/{{$guid}}", tab.ResolvedUrl);
         }
@@ -178,9 +178,9 @@ public class WorkflowTests
         {
             vm.NewRequestCommand.Execute(null);
             var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-            tab.Url = url;
+            tab.UrlEditor.Url = url;
 
-            Assert.Equal(expectedVisible, tab.HasUrlSubstitutions);
+            Assert.Equal(expectedVisible, tab.UrlEditor.HasUrlSubstitutions);
         }
         finally
         {
@@ -196,24 +196,24 @@ public class WorkflowTests
         {
             vm.NewRequestCommand.Execute(null);
             var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-            tab.Url = "https://example.com/users";
+            tab.UrlEditor.Url = "https://example.com/users";
             var raised = new List<string?>();
-            tab.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+            tab.UrlEditor.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
 
-            tab.Url = "https://example.com/{{segment}}";
+            tab.UrlEditor.Url = "https://example.com/{{segment}}";
             UiTestHelpers.Pump();
             var resolvedUrlLine = window.GetVisualDescendants().OfType<StackPanel>()
                 .First(panel => panel.Name == "ResolvedUrlLine" && ReferenceEquals(panel.DataContext, tab));
-            Assert.True(tab.HasUrlSubstitutions);
+            Assert.True(tab.UrlEditor.HasUrlSubstitutions);
             Assert.True(resolvedUrlLine.IsVisible);
-            Assert.Contains(nameof(RequestTabViewModel.HasUrlSubstitutions), raised);
+            Assert.Contains(nameof(RequestUrlEditorViewModel.HasUrlSubstitutions), raised);
 
             raised.Clear();
-            tab.Url = "https://example.com/users";
+            tab.UrlEditor.Url = "https://example.com/users";
             UiTestHelpers.Pump();
-            Assert.False(tab.HasUrlSubstitutions);
+            Assert.False(tab.UrlEditor.HasUrlSubstitutions);
             Assert.False(resolvedUrlLine.IsVisible);
-            Assert.Contains(nameof(RequestTabViewModel.HasUrlSubstitutions), raised);
+            Assert.Contains(nameof(RequestUrlEditorViewModel.HasUrlSubstitutions), raised);
         }
         finally
         {
