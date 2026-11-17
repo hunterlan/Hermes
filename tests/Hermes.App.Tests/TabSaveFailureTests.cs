@@ -39,7 +39,8 @@ public class TabSaveFailureTests
         var window = new Window { Width = 800, Height = 600 };
         window.Show();
         var dialogs = new DialogService { Owner = window };
-        var services = new TabServices(temp.Workspace, App.Services.GetRequiredService<RequestExecutor>(),
+        var sender = new RequestSendService(temp.Workspace, App.Services.GetRequiredService<IRequestExecutor>());
+        var services = new TabServices(temp.Workspace, sender,
             App.Services.GetRequiredService<OAuth2Service>(), dialogs, temp.Settings,
             App.Services.GetRequiredService<HttpClientProvider>(), App.Services.GetRequiredService<ManualService>(),
             TimeProvider.System);

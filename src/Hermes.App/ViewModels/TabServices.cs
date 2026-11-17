@@ -7,7 +7,7 @@ namespace Hermes.App.ViewModels;
 /// <summary>Dependencies shared by all tabs.</summary>
 public sealed class TabServices(
     WorkspaceService workspace,
-    RequestExecutor executor,
+    RequestSendService sender,
     OAuth2Service oauth,
     DialogService dialogs,
     SettingsService settings,
@@ -16,14 +16,13 @@ public sealed class TabServices(
     TimeProvider timeProvider)
 {
     public WorkspaceService Workspace { get; } = workspace;
-    public RequestExecutor Executor { get; } = executor;
     public OAuth2Service OAuth { get; } = oauth;
     public DialogService Dialogs { get; } = dialogs;
     public SettingsService Settings { get; } = settings;
     public HttpClientProvider Http { get; } = http;
     public ManualService Manual { get; } = manual;
     public TimeProvider TimeProvider { get; } = timeProvider;
-    public RequestSendService Sender { get; } = new(workspace, executor);
+    public RequestSendService Sender { get; } = sender;
 
     /// <summary>
     /// Opens (or focuses) the tab of the folder or collection with the given id. Set by the main window, which owns
