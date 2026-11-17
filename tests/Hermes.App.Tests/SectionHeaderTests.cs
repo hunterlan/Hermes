@@ -20,14 +20,14 @@ public class SectionHeaderTests
             .First(button => button.Classes.Contains("sectionHeader")
                              && button.GetVisualDescendants().OfType<TextBlock>().Any(text => text.Text == "Headers"));
         var arrowPoint = headersHeader.TranslatePoint(new Point(2, headersHeader.Bounds.Height / 2), window)!.Value;
-        Assert.True(tab.HeadersExpanded);
+        Assert.True(tab.Sections.HeadersExpanded);
 
         // Expanded (checked) header: collapse it.
         window.MouseDown(arrowPoint, MouseButton.Left);
         UiTestHelpers.Pump();
         window.MouseUp(arrowPoint, MouseButton.Left);
         UiTestHelpers.Pump();
-        Assert.False(tab.HeadersExpanded);
+        Assert.False(tab.Sections.HeadersExpanded);
 
         // Collapsed (unchecked) header: pressing it must not shrink it, so the arrow stays under the pointer.
         window.MouseDown(arrowPoint, MouseButton.Left);
@@ -35,7 +35,7 @@ public class SectionHeaderTests
         Assert.True(headersHeader.RenderTransform is null || headersHeader.RenderTransform.Value.IsIdentity);
         window.MouseUp(arrowPoint, MouseButton.Left);
         UiTestHelpers.Pump();
-        Assert.True(tab.HeadersExpanded);
+        Assert.True(tab.Sections.HeadersExpanded);
         window.Close();
     }
 }

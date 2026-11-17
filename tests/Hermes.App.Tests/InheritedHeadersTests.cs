@@ -504,7 +504,7 @@ public class InheritedHeadersTests
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
-            tab.HeadersExpanded = true;
+            tab.Sections.HeadersExpanded = true;
             UiTestHelpers.Pump();
             var lists = window.GetVisualDescendants().OfType<HeaderListView>()
                 .Where(list => ReferenceEquals(list.Rows, tab.HeadersEditor.InheritedRows) || ReferenceEquals(list.Rows, tab.HeadersEditor.AutomaticRows))

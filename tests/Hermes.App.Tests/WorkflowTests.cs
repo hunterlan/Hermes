@@ -54,7 +54,7 @@ public class WorkflowTests
         Assert.Equal("{\"name\":\"Ada\"}", createTab.Body.RawBody);
         Assert.True(createTab.Variables.TryGet("base", out var baseUrl));
         Assert.Equal("https://api.example.com", baseUrl);
-        Assert.True(createTab.IsBodySectionVisible);
+        Assert.True(createTab.Sections.IsBodySectionVisible);
         UiTestHelpers.Screenshot(window, "20-imported-body");
         window.Close();
     }

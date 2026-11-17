@@ -98,7 +98,7 @@ public class InheritedVariablesTests
             tab.Params.Load([new KeyValueItem("page", "1")]);
             tab.HeadersEditor.Headers.Load([new KeyValueItem("Accept", "application/json")]);
             SelectBearer(tab.Auth);
-            tab.AuthExpanded = true;
+            tab.Sections.AuthExpanded = true;
             UiTestHelpers.Pump();
 
             var boxes = VisibleBoxes(window).ToList();

@@ -74,13 +74,13 @@ public class RequestFailureViewTests
     {
         var (window, tab) = await SendAsync("http://127.0.0.1:1/", t => t.HeadersEditor.Headers.Load([new KeyValueItem("Bad Name", "x")]));
         var revealRequests = 0;
-        tab.HeadersRevealRequested += () => revealRequests++;
-        tab.HeadersExpanded = false;
+        tab.Sections.HeadersRevealRequested += () => revealRequests++;
+        tab.Sections.HeadersExpanded = false;
 
         Assert.Equal(RequestFailureKind.InvalidHeader, tab.Response.Failure?.Model.Kind);
         Click(window, "ShowHeadersButton");
 
-        Assert.True(tab.HeadersExpanded);
+        Assert.True(tab.Sections.HeadersExpanded);
         Assert.Equal(1, revealRequests);
         window.Close();
     }
@@ -124,14 +124,14 @@ public class RequestFailureViewTests
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         tab.Body.SelectedBodyMode = RequestBodyViewModel.BodyModes.Single(mode => mode.Value == BodyMode.Binary);
         tab.Body.BinaryFilePath = "{{payloadFile}}";
-        tab.BodyExpanded = false;
+        tab.Sections.BodyExpanded = false;
         var revealRequests = 0;
-        tab.BodyRevealRequested += () => revealRequests++;
+        tab.Sections.BodyRevealRequested += () => revealRequests++;
 
         Assert.False(tab.UseChosenBodyFile("/new/payload.bin", "/resolved/payload.bin"));
 
         Assert.Equal("{{payloadFile}}", tab.Body.BinaryFilePath);
-        Assert.True(tab.BodyExpanded);
+        Assert.True(tab.Sections.BodyExpanded);
         Assert.Equal(1, revealRequests);
         window.Close();
     }
