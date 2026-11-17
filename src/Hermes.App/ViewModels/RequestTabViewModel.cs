@@ -498,7 +498,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         var context = CreateContext();
         var pair = RequestPreparer.PrepareWithMasked(model, context);
         var prepared = pair.Request;
-        if (!await ConfirmSendAsync(prepared) || _isClosed)
+        if (!await ConfirmSendAsync(model, context, prepared) || _isClosed)
             return;
 
         IsSending = true;
@@ -546,10 +546,10 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     public IReadOnlyList<string> FindUnresolvedVariables() => UnresolvedVariableFinder.Find(BuildModel(), CreateContext());
 
     /// <summary>Unresolved variables and environments marked "ask before sending" need a yes first.</summary>
-    private async Task<bool> ConfirmSendAsync(PreparedRequest prepared)
+    private async Task<bool> ConfirmSendAsync(HttpRequestModel model, RequestContext context, PreparedRequest prepared)
     {
         var environment = Services.Workspace.ActiveEnvironment;
-        var unresolved = FindUnresolvedVariables();
+        var unresolved = UnresolvedVariableFinder.Find(model, context);
         if (unresolved.Count > 0)
         {
             var names = string.Join(", ", unresolved.Select(n => "{{" + n + "}}"));
