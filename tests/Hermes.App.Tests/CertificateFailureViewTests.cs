@@ -22,7 +22,7 @@ public class CertificateFailureViewTests
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        tab.Url = server.Url;
+        tab.UrlEditor.Url = server.Url;
         await tab.SendCommand.ExecuteAsync(null);
         UiTestHelpers.Pump();
         return (window, tab);
@@ -106,7 +106,7 @@ public class CertificateFailureViewTests
         using var listener = new PlainHttpListener();
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        tab.Url = $"https://127.0.0.1:{listener.Port}/";
+        tab.UrlEditor.Url = $"https://127.0.0.1:{listener.Port}/";
 
         await tab.SendCommand.ExecuteAsync(null);
         UiTestHelpers.Pump();

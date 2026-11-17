@@ -22,7 +22,7 @@ public class CancellationTests
         using var server = SlowServer(TimeSpan.FromMinutes(1));
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        tab.Url = server.Url;
+        tab.UrlEditor.Url = server.Url;
 
         tab.SendButtonCommand.Execute(null);
         await UiTestHelpers.WaitUntil(() => tab.IsSending);
@@ -43,7 +43,7 @@ public class CancellationTests
         using var server = SlowServer(TimeSpan.FromMinutes(1));
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        tab.Url = server.Url;
+        tab.UrlEditor.Url = server.Url;
 
         vm.SendActiveCommand.Execute(null);
         await UiTestHelpers.WaitUntil(() => tab.IsSending);

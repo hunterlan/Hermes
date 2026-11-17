@@ -22,9 +22,9 @@ public class RequestTabUrlSyncTests
         using var temp = new TempWorkspace();
         using var tab = OpenTab(temp);
 
-        tab.Url = "https://example.com/get?a=1&b=2";
+        tab.UrlEditor.Url = "https://example.com/get?a=1&b=2";
 
-        Assert.Equal(["a=1", "b=2"], Pairs(tab.Params));
+        Assert.Equal(["a=1", "b=2"], Pairs(tab.UrlEditor.Params));
         Assert.True(tab.IsDirty);
     }
 
@@ -33,13 +33,13 @@ public class RequestTabUrlSyncTests
     {
         using var temp = new TempWorkspace();
         using var tab = OpenTab(temp);
-        tab.Url = "https://example.com/get?a=1&b=2";
+        tab.UrlEditor.Url = "https://example.com/get?a=1&b=2";
 
-        tab.Params.Rows[1].Value = "3";
-        Assert.Equal("https://example.com/get?a=1&b=3", tab.Url);
+        tab.UrlEditor.Params.Rows[1].Value = "3";
+        Assert.Equal("https://example.com/get?a=1&b=3", tab.UrlEditor.Url);
 
-        tab.Params.Rows[0].Key = "first";
-        Assert.Equal("https://example.com/get?first=1&b=3", tab.Url);
+        tab.UrlEditor.Params.Rows[0].Key = "first";
+        Assert.Equal("https://example.com/get?first=1&b=3", tab.UrlEditor.Url);
     }
 
     [AvaloniaFact]
@@ -47,13 +47,13 @@ public class RequestTabUrlSyncTests
     {
         using var temp = new TempWorkspace();
         using var tab = OpenTab(temp);
-        tab.Url = "https://example.com/get?a=1";
+        tab.UrlEditor.Url = "https://example.com/get?a=1";
 
-        tab.Params.Rows[^1].Key = "c";
-        Assert.Equal("https://example.com/get?a=1&c", tab.Url);
+        tab.UrlEditor.Params.Rows[^1].Key = "c";
+        Assert.Equal("https://example.com/get?a=1&c", tab.UrlEditor.Url);
 
-        tab.Params.Rows[1].Value = "9";
-        Assert.Equal("https://example.com/get?a=1&c=9", tab.Url);
+        tab.UrlEditor.Params.Rows[1].Value = "9";
+        Assert.Equal("https://example.com/get?a=1&c=9", tab.UrlEditor.Url);
     }
 
     [AvaloniaFact]
@@ -61,12 +61,12 @@ public class RequestTabUrlSyncTests
     {
         using var temp = new TempWorkspace();
         using var tab = OpenTab(temp);
-        tab.Url = "https://example.com/get?a=1&b=2";
+        tab.UrlEditor.Url = "https://example.com/get?a=1&b=2";
 
-        tab.Params.Rows[0].Enabled = false;
+        tab.UrlEditor.Params.Rows[0].Enabled = false;
 
-        Assert.Equal("https://example.com/get?b=2", tab.Url);
-        Assert.Equal(["!a=1", "b=2"], Pairs(tab.Params));
+        Assert.Equal("https://example.com/get?b=2", tab.UrlEditor.Url);
+        Assert.Equal(["!a=1", "b=2"], Pairs(tab.UrlEditor.Params));
     }
 
     [AvaloniaFact]
@@ -74,12 +74,12 @@ public class RequestTabUrlSyncTests
     {
         using var temp = new TempWorkspace();
         using var tab = OpenTab(temp);
-        tab.Url = "https://example.com/get?a=1&b=2";
-        tab.Params.Rows[0].Enabled = false;
+        tab.UrlEditor.Url = "https://example.com/get?a=1&b=2";
+        tab.UrlEditor.Params.Rows[0].Enabled = false;
 
-        tab.Url = "https://example.com/get?b=5&c=6";
+        tab.UrlEditor.Url = "https://example.com/get?b=5&c=6";
 
-        Assert.Equal(["!a=1", "b=5", "c=6"], Pairs(tab.Params));
+        Assert.Equal(["!a=1", "b=5", "c=6"], Pairs(tab.UrlEditor.Params));
     }
 
     [AvaloniaFact]
@@ -87,14 +87,14 @@ public class RequestTabUrlSyncTests
     {
         using var temp = new TempWorkspace();
         using var tab = OpenTab(temp);
-        tab.Url = "https://example.com/get?a=1&b=2";
+        tab.UrlEditor.Url = "https://example.com/get?a=1&b=2";
 
-        tab.Params.Rows[0].RemoveCommand.Execute(null);
-        Assert.Equal("https://example.com/get?b=2", tab.Url);
+        tab.UrlEditor.Params.Rows[0].RemoveCommand.Execute(null);
+        Assert.Equal("https://example.com/get?b=2", tab.UrlEditor.Url);
 
-        tab.Params.Rows[0].RemoveCommand.Execute(null);
-        Assert.Equal("https://example.com/get", tab.Url);
-        Assert.Empty(tab.Params.ToModels());
+        tab.UrlEditor.Params.Rows[0].RemoveCommand.Execute(null);
+        Assert.Equal("https://example.com/get", tab.UrlEditor.Url);
+        Assert.Empty(tab.UrlEditor.Params.ToModels());
     }
 
     [AvaloniaFact]
@@ -103,20 +103,20 @@ public class RequestTabUrlSyncTests
         using var temp = new TempWorkspace();
         using var tab = OpenTab(temp);
 
-        tab.Url = "https://example.com/users/:id";
-        Assert.Equal(["id="], Pairs(tab.PathVariables));
-        Assert.True(tab.HasPathVariables);
+        tab.UrlEditor.Url = "https://example.com/users/:id";
+        Assert.Equal(["id="], Pairs(tab.UrlEditor.PathVariables));
+        Assert.True(tab.UrlEditor.HasPathVariables);
 
-        tab.PathVariables.Rows[0].Value = "42";
-        tab.Url = "https://example.com/users/:id?x=1";
-        Assert.Equal(["id=42"], Pairs(tab.PathVariables));
+        tab.UrlEditor.PathVariables.Rows[0].Value = "42";
+        tab.UrlEditor.Url = "https://example.com/users/:id?x=1";
+        Assert.Equal(["id=42"], Pairs(tab.UrlEditor.PathVariables));
 
-        tab.Url = "https://example.com/v2/users/:id/posts/:postId";
-        Assert.Equal(["id=42", "postId="], Pairs(tab.PathVariables));
+        tab.UrlEditor.Url = "https://example.com/v2/users/:id/posts/:postId";
+        Assert.Equal(["id=42", "postId="], Pairs(tab.UrlEditor.PathVariables));
 
-        tab.Url = "https://example.com/v2/users";
-        Assert.Empty(tab.PathVariables.ToModels());
-        Assert.False(tab.HasPathVariables);
+        tab.UrlEditor.Url = "https://example.com/v2/users";
+        Assert.Empty(tab.UrlEditor.PathVariables.ToModels());
+        Assert.False(tab.UrlEditor.HasPathVariables);
     }
 
     [AvaloniaFact]
@@ -126,13 +126,13 @@ public class RequestTabUrlSyncTests
         var model = new HttpRequestModel { Id = Guid.NewGuid(), Name = "Keep me" };
         using var tab = OpenTab(temp, model);
 
-        tab.Url = """curl -X POST https://example.com/post?x=1 -H 'X-Test: 1' -d '{"a":1}'""";
+        tab.UrlEditor.Url = """curl -X POST https://example.com/post?x=1 -H 'X-Test: 1' -d '{"a":1}'""";
         UiTestHelpers.Pump();
 
         var built = tab.BuildModel();
         Assert.Equal("POST", built.Method);
-        Assert.Equal("https://example.com/post?x=1", tab.Url);
-        Assert.Equal(["x=1"], Pairs(tab.Params));
+        Assert.Equal("https://example.com/post?x=1", tab.UrlEditor.Url);
+        Assert.Equal(["x=1"], Pairs(tab.UrlEditor.Params));
         Assert.Contains(built.Headers, header => header.Key == "X-Test" && header.Value == "1");
         Assert.Equal(BodyMode.Raw, built.Body.Mode);
         Assert.Equal("""{"a":1}""", built.Body.Raw);
@@ -148,11 +148,11 @@ public class RequestTabUrlSyncTests
         using var temp = new TempWorkspace();
         using var tab = OpenTab(temp);
 
-        tab.Url = "  https://example.com/a\r\n/b?x=1\n ";
+        tab.UrlEditor.Url = "  https://example.com/a\r\n/b?x=1\n ";
         UiTestHelpers.Pump();
 
-        Assert.Equal("https://example.com/a/b?x=1", tab.Url);
-        Assert.Equal(["x=1"], Pairs(tab.Params));
+        Assert.Equal("https://example.com/a/b?x=1", tab.UrlEditor.Url);
+        Assert.Equal(["x=1"], Pairs(tab.UrlEditor.Params));
     }
 
     [AvaloniaFact]
@@ -169,15 +169,15 @@ public class RequestTabUrlSyncTests
         };
         using var tab = OpenTab(temp, model);
 
-        tab.Url = "https://example.com/users/:id?x=1";
+        tab.UrlEditor.Url = "https://example.com/users/:id?x=1";
         Assert.False(tab.IsDirty);
-        Assert.Equal(["id=7"], Pairs(tab.PathVariables));
+        Assert.Equal(["id=7"], Pairs(tab.UrlEditor.PathVariables));
 
-        tab.Url = "https://example.com/users/:id?x=2";
+        tab.UrlEditor.Url = "https://example.com/users/:id?x=2";
         Assert.True(tab.IsDirty);
 
-        tab.Url = "https://example.com/users/:id?x=1";
+        tab.UrlEditor.Url = "https://example.com/users/:id?x=1";
         Assert.False(tab.IsDirty);
-        Assert.Equal(["x=1"], Pairs(tab.Params));
+        Assert.Equal(["x=1"], Pairs(tab.UrlEditor.Params));
     }
 }

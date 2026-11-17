@@ -38,7 +38,7 @@ public class SidebarTests
         Assert.False(tab.IsDirty);
         Assert.Equal($"{collection.Model.Name} / Users", tab.Breadcrumb);
 
-        tab.Url = "https://api.example.com/users";
+        tab.UrlEditor.Url = "https://api.example.com/users";
         tab.SelectedMethod = "POST";
         Assert.True(tab.IsDirty);
         Assert.True(tab.SaveAsync().Result);
@@ -143,7 +143,7 @@ public class SidebarTests
 
         vm.NewRequestCommand.Execute(null);
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        tab.Url = "{{baseUrl}}/env-test";
+        tab.UrlEditor.Url = "{{baseUrl}}/env-test";
         Assert.True(tab.Variables.TryGet("baseUrl", out _));
         Assert.Empty(tab.FindUnresolvedVariables());
 

@@ -8,13 +8,11 @@ using Hermes.Core.Auth;
 using Hermes.Core.CodeGen;
 using Hermes.Core.Headers;
 using Hermes.Core.Http;
-using Hermes.Core.Import;
 using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
 using Hermes.Core.Requests;
 using Hermes.Core.Serialization;
 using Hermes.Core.Variables;
-using Hermes.Core.Web;
 
 namespace Hermes.App.ViewModels;
 
@@ -22,7 +20,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 {
     private string _savedSnapshot = "";
     private bool _loading;
-    private bool _syncingUrl;
     private CancellationTokenSource? _sendCts;
     private bool _isClosed;
 
@@ -35,8 +32,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     public RequestTabViewModel(TabServices services, HttpRequestModel model, string? savedSnapshot = null) : base(services)
     {
         RequestId = model.Id;
-        Params.Changed += OnParamsChanged;
-        PathVariables.Changed += OnAnyChanged;
+        UrlEditor = new RequestUrlEditorViewModel();
+        UrlEditor.Changed += OnAnyChanged;
+        UrlEditor.CurlPasted += OnCurlPasted;
         HeadersEditor = new RequestHeadersViewModel(BuildModel, CreateContext,
             id => Services.OpenContainerAsync?.Invoke(id) ?? Task.CompletedTask, services.Dialogs.CopyTextAsync);
         HeadersEditor.Headers.Changed += OnAnyChanged;
@@ -45,7 +43,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         Body.Changed += OnAnyChanged;
         Settings = new RequestSettingsViewModel(services.Settings);
         Settings.Changed += OnAnyChanged;
-        Sections = new ComposerSectionsViewModel(Params, Body, Settings);
+        Sections = new ComposerSectionsViewModel(UrlEditor, Body, Settings);
 
         Auth = services.CreateAuthEditor(allowInherit: true);
         Auth.Changed += OnAnyChanged;
@@ -74,8 +72,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 
     public bool IsPersisted => Services.Workspace.Find(RequestId) is not null;
 
-    public KeyValueListViewModel Params { get; } = new();
-    public KeyValueListViewModel PathVariables { get; } = new(keysReadOnly: true);
+    public RequestUrlEditorViewModel UrlEditor { get; }
     public RequestHeadersViewModel HeadersEditor { get; }
     public RequestBodyViewModel Body { get; }
     public RequestSettingsViewModel Settings { get; }
@@ -85,9 +82,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 
     [ObservableProperty] public partial string Name { get; set; } = "";
     [ObservableProperty] public partial string SelectedMethod { get; set; } = "GET";
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasUrlSubstitutions))]
-    public partial string Url { get; set; } = "";
 
     [ObservableProperty] public partial bool IsSending { get; set; }
     [ObservableProperty] public partial VariableScope Variables { get; set; } = VariableScope.Empty;
@@ -102,10 +96,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 
     public string? ActiveEnvironmentName => Services.Workspace.ActiveEnvironment?.Name;
 
-    /// <summary>Whether the URL has <c>{{variables}}</c> (including dynamic ones) or <c>:path</c> variables, i.e. whether "Sends to" adds information.</summary>
-    public bool HasUrlSubstitutions =>
-        VariableResolver.FindVariables(Url).Any() || UrlUtilities.ParsePathVariables(Url).Count > 0;
-    public bool HasPathVariables => PathVariables.Rows.Count > 0;
     public string SendButtonText => IsSending ? "Cancel" : "Send";
 
     // ---- load / build ----
@@ -113,24 +103,18 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     private void Load(HttpRequestModel model)
     {
         _loading = true;
-        _syncingUrl = true;
         RequestId = model.Id;
         Name = model.Name;
         Title = model.Name;
         SelectedMethod = model.Method;
-        Url = model.Url;
-        Params.Load(model.QueryParams.Count > 0 ? model.QueryParams : UrlUtilities.ParseQuery(UrlUtilities.Split(model.Url).Query));
-        PathVariables.Load(UrlUtilities.MergePathVariables(model.Url, model.PathVariables));
+        UrlEditor.Load(model.Url, model.QueryParams, model.PathVariables);
         HeadersEditor.Load(model.Headers, model.SkippedInheritedHeaders);
         Body.Load(model.Body);
         Auth.Load(model.Auth);
         Settings.Load(model.Settings);
         _description = model.Description;
         _eventsJson = model.EventsJson;
-        _syncingUrl = false;
         _loading = false;
-        OnPropertyChanged(nameof(HasPathVariables));
-        Sections.HasPathVariables = HasPathVariables;
         OnPropertyChanged(nameof(Method));
         RefreshPreview();
     }
@@ -144,9 +128,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             Description = _description,
             EventsJson = _eventsJson,
             Method = string.IsNullOrWhiteSpace(SelectedMethod) ? "GET" : SelectedMethod.Trim().ToUpperInvariant(),
-            Url = Url,
-            QueryParams = Params.ToModels(),
-            PathVariables = PathVariables.ToModels(),
+            Url = UrlEditor.Url,
+            QueryParams = UrlEditor.Params.ToModels(),
+            PathVariables = UrlEditor.PathVariables.ToModels(),
             Headers = HeadersEditor.Headers.ToModels(),
             SkippedInheritedHeaders = [.. HeadersEditor.SkippedInheritedHeaders],
             Body = Body.ToModel(),
@@ -197,70 +181,14 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         UpdateDirty();
     }
 
-    partial void OnUrlChanged(string value)
+    /// <summary>A cURL command pasted into the URL bar replaces the request, like Postman; the tab keeps its identity.</summary>
+    private void OnCurlPasted(object? sender, CurlPastedEventArgs args)
     {
-        if (_syncingUrl || _loading)
-            return;
-
-        // Pasting a cURL command into the URL bar imports it, like Postman.
-        if (CurlParser.LooksLikeCurl(value))
-        {
-            try
-            {
-                var imported = CurlParser.Parse(value);
-                imported.Id = RequestId;
-                imported.Name = Name;
-                Dispatch(() =>
-                {
-                    Load(imported);
-                    UpdateDirty();
-                });
-                return;
-            }
-            catch (FormatException)
-            {
-            }
-        }
-
-        if (value.Contains('\n') || value.Contains('\r'))
-        {
-            Dispatch(() => Url = value.Replace("\r", "").Replace("\n", "").Trim());
-            return;
-        }
-
-        _syncingUrl = true;
-        try
-        {
-            Params.Load(UrlUtilities.MergeQueryParams(Params.ToModels(), UrlUtilities.ParseQuery(UrlUtilities.Split(value).Query)));
-            PathVariables.Load(UrlUtilities.MergePathVariables(value, PathVariables.ToModels()));
-            OnPropertyChanged(nameof(HasPathVariables));
-            Sections.HasPathVariables = HasPathVariables;
-        }
-        finally
-        {
-            _syncingUrl = false;
-        }
-        OnAnyChanged();
-    }
-
-    /// <summary>Changing the text the editor is currently raising events for must be deferred.</summary>
-    private static void Dispatch(Action action) => Avalonia.Threading.Dispatcher.UIThread.Post(action);
-
-    private void OnParamsChanged()
-    {
-        if (_syncingUrl || _loading)
-            return;
-        Sections.ParamsAdded = true;
-        _syncingUrl = true;
-        try
-        {
-            Url = UrlUtilities.WithQuery(Url, Params.ToModels());
-        }
-        finally
-        {
-            _syncingUrl = false;
-        }
-        OnAnyChanged();
+        var imported = args.Request;
+        imported.Id = RequestId;
+        imported.Name = Name;
+        Load(imported);
+        UpdateDirty();
     }
 
     /// <summary>
@@ -280,7 +208,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         catch (Exception)
         {
             HeadersEditor.Clear();
-            ResolvedUrl = Url;
+            ResolvedUrl = UrlEditor.Url;
         }
         OnPropertyChanged(nameof(ActiveEnvironmentName));
     }

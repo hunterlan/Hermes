@@ -10,19 +10,24 @@ namespace Hermes.App.ViewModels;
 /// </summary>
 public sealed partial class ComposerSectionsViewModel : ObservableObject
 {
-    private readonly KeyValueListViewModel _queryParams;
+    private readonly RequestUrlEditorViewModel _urlEditor;
     private readonly RequestBodyViewModel _body;
     private readonly RequestSettingsViewModel _settings;
 
-    /// <param name="queryParams">The query params; the section shows while any is active.</param>
+    /// <param name="urlEditor">
+    /// The URL with its params; the Params section shows while a param is active or the URL has path variables, and
+    /// stays once the user edits the params.
+    /// </param>
     /// <param name="body">The body; the section shows while it has content, and stays once the user changes its mode.</param>
     /// <param name="settings">The settings; the section shows while any is overridden, and stays once edited.</param>
-    public ComposerSectionsViewModel(KeyValueListViewModel queryParams, RequestBodyViewModel body, RequestSettingsViewModel settings)
+    public ComposerSectionsViewModel(RequestUrlEditorViewModel urlEditor, RequestBodyViewModel body, RequestSettingsViewModel settings)
     {
-        _queryParams = queryParams;
+        _urlEditor = urlEditor;
         _body = body;
         _settings = settings;
-        _queryParams.PropertyChanged += OnQueryParamsPropertyChanged;
+        _urlEditor.Params.PropertyChanged += OnQueryParamsPropertyChanged;
+        _urlEditor.PropertyChanged += OnUrlEditorPropertyChanged;
+        _urlEditor.ParamsEdited += OnParamsEdited;
         _body.PropertyChanged += OnBodyPropertyChanged;
         _body.ModeChanged += OnBodyModeChanged;
         _settings.PropertyChanged += OnSettingsPropertyChanged;
@@ -43,12 +48,6 @@ public sealed partial class ComposerSectionsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsBodySectionVisible))]
     [NotifyPropertyChangedFor(nameof(HasUnusedSections))]
     public partial string Method { get; set; } = "GET";
-
-    /// <summary>Whether the URL has path variables; they bring the Params section on screen.</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsParamsSectionVisible))]
-    [NotifyPropertyChangedFor(nameof(HasUnusedSections))]
-    public partial bool HasPathVariables { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsParamsSectionVisible))]
@@ -71,7 +70,7 @@ public sealed partial class ComposerSectionsViewModel : ObservableObject
     [ObservableProperty] public partial bool BodyExpanded { get; set; } = true;
     [ObservableProperty] public partial bool SettingsExpanded { get; set; } = true;
 
-    public bool IsParamsSectionVisible => ParamsAdded || _queryParams.ActiveCount > 0 || HasPathVariables;
+    public bool IsParamsSectionVisible => ParamsAdded || _urlEditor.Params.ActiveCount > 0 || _urlEditor.HasPathVariables;
 
     public bool IsBodySectionVisible =>
         BodyAdded || _body.HasBody || _body.HasUnsupportedBody || Method is "POST" or "PUT" or "PATCH";
@@ -80,7 +79,7 @@ public sealed partial class ComposerSectionsViewModel : ObservableObject
 
     public bool HasUnusedSections => !IsParamsSectionVisible || !IsBodySectionVisible || !IsSettingsSectionVisible;
 
-    public string ParamsSummary => _queryParams.ActiveCount is var count and > 0 ? $"{count} active" : "";
+    public string ParamsSummary => _urlEditor.Params.ActiveCount is var count and > 0 ? $"{count} active" : "";
 
     /// <summary>Shows the Settings section, expanded, and asks the view to bring it on screen.</summary>
     public void RevealSettings()
@@ -130,6 +129,15 @@ public sealed partial class ComposerSectionsViewModel : ObservableObject
         }
     }
 
+    private void OnUrlEditorPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(RequestUrlEditorViewModel.HasPathVariables))
+        {
+            OnPropertyChanged(nameof(IsParamsSectionVisible));
+            OnPropertyChanged(nameof(HasUnusedSections));
+        }
+    }
+
     private void OnBodyPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(RequestBodyViewModel.HasBody) or nameof(RequestBodyViewModel.HasUnsupportedBody))
@@ -149,6 +157,8 @@ public sealed partial class ComposerSectionsViewModel : ObservableObject
     }
 
     /// <summary>A section the user edits stays on screen even if it becomes empty again; a load doesn't count.</summary>
+    private void OnParamsEdited() => ParamsAdded = true;
+
     private void OnBodyModeChanged() => BodyAdded = true;
 
     private void OnSettingsEdited() => SettingsAdded = true;

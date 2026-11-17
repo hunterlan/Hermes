@@ -120,7 +120,7 @@ public class TabViewHostTests
         UiTestHelpers.Pump();
         window.KeyTextInput("a");
         UiTestHelpers.Pump();
-        var firstUrl = first.Url;
+        var firstUrl = first.UrlEditor.Url;
         Assert.EndsWith("a", firstUrl);
 
         vm.NewRequestCommand.Execute(null);
@@ -128,7 +128,7 @@ public class TabViewHostTests
         window.KeyTextInput("b");
         UiTestHelpers.Pump();
 
-        Assert.Equal(firstUrl, first.Url);
+        Assert.Equal(firstUrl, first.UrlEditor.Url);
         Assert.DoesNotContain(RequestViews(host).Where(view => !view.IsEffectivelyVisible),
             view => view.GetVisualDescendants().OfType<InputElement>().Any(element => element.IsFocused));
         Close(window, vm);

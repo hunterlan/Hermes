@@ -193,7 +193,7 @@ public class TabTests
         var edited = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         Assert.Equal(second.Id, edited.RequestId);
 
-        edited.Url = "https://example.com/changed";
+        edited.UrlEditor.Url = "https://example.com/changed";
         Assert.False(edited.IsPreview);
 
         await vm.PreviewRequestAsync(first);
@@ -306,7 +306,7 @@ public class TabTests
     private static RequestTabViewModel EditActiveRequest(MainWindowViewModel vm)
     {
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        tab.Url = "https://example.com/edited-" + Guid.NewGuid();
+        tab.UrlEditor.Url = "https://example.com/edited-" + Guid.NewGuid();
         Assert.True(tab.IsDirty);
         return tab;
     }
@@ -349,7 +349,7 @@ public class TabTests
         var only = Assert.IsType<RequestTabViewModel>(Assert.Single(restored.Tabs));
         Assert.Same(only, restored.ActiveTab);
         Assert.Equal(first.Id, only.RequestId);
-        Assert.Equal(draft.Url, only.Url);
+        Assert.Equal(draft.Url, only.UrlEditor.Url);
         Assert.True(only.IsDirty);
         Assert.False(restored.IsTabStripVisible);
         Workspace.DeleteEnvironment(environment);
@@ -468,7 +468,7 @@ public class TabTests
         saving = dialog.SaveCommand.ExecuteAsync(null);
         Assert.Contains("1 tab will be closed", MessageOf(window));
         Answer(window, "confirm");
-        var savedUrl = secondTab.Url;
+        var savedUrl = secondTab.UrlEditor.Url;
         Answer(window, "save");
 
         Assert.True(saving.IsCompleted);
@@ -571,7 +571,7 @@ public class TabTests
         Assert.Equal(first.Url, StoredUrl(first.Id));
 
         // Save: the edits are saved, then the item (here from History) replaces the tab.
-        var editedUrl = EditActiveRequest(vm).Url;
+        var editedUrl = EditActiveRequest(vm).UrlEditor.Url;
         opening = vm.History.OpenCommand.ExecuteAsync(new HistoryItemViewModel(new HistoryEntry { Request = first }));
         Answer(window, "save");
         Assert.True(opening.IsCompleted);
@@ -613,7 +613,7 @@ public class TabTests
         FinishesAtOnce(vm.History.OpenCommand.ExecuteAsync(historyB));
         UiTestHelpers.Pump();
         Assert.Empty(window.OwnedWindows);
-        Assert.Equal(historyB.Entry.Request.Url, Assert.IsType<RequestTabViewModel>(Assert.Single(vm.Tabs)).Url);
+        Assert.Equal(historyB.Entry.Request.Url, Assert.IsType<RequestTabViewModel>(Assert.Single(vm.Tabs)).UrlEditor.Url);
 
         var edited = EditActiveRequest(vm);
         var opening = vm.History.OpenCommand.ExecuteAsync(historyA);

@@ -22,11 +22,11 @@ public class MainWindowTests
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
 
-        tab.Url = server.Url + "users/:id?page=2&limit=10";
+        tab.UrlEditor.Url = server.Url + "users/:id?page=2&limit=10";
         UiTestHelpers.Pump();
-        Assert.Equal(["page", "limit"], tab.Params.ToModels().Select(p => p.Key));
-        Assert.Equal("id", Assert.Single(tab.PathVariables.Rows).Key);
-        tab.PathVariables.Rows[0].Value = "42";
+        Assert.Equal(["page", "limit"], tab.UrlEditor.Params.ToModels().Select(p => p.Key));
+        Assert.Equal("id", Assert.Single(tab.UrlEditor.PathVariables.Rows).Key);
+        tab.UrlEditor.PathVariables.Rows[0].Value = "42";
 
         await tab.SendCommand.ExecuteAsync(null);
         UiTestHelpers.Pump();
@@ -48,15 +48,15 @@ public class MainWindowTests
         vm.NewRequestCommand.Execute(null);
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
 
-        tab.Url = "https://api.example.com/items";
-        var placeholder = tab.Params.Rows.Last();
+        tab.UrlEditor.Url = "https://api.example.com/items";
+        var placeholder = tab.UrlEditor.Params.Rows.Last();
         placeholder.Key = "q";
         placeholder.Value = "hermes";
-        Assert.Equal("https://api.example.com/items?q=hermes", tab.Url);
+        Assert.Equal("https://api.example.com/items?q=hermes", tab.UrlEditor.Url);
 
-        tab.Params.Rows[0].Enabled = false;
-        Assert.Equal("https://api.example.com/items", tab.Url);
-        Assert.Single(tab.Params.ToModels());
+        tab.UrlEditor.Params.Rows[0].Enabled = false;
+        Assert.Equal("https://api.example.com/items", tab.UrlEditor.Url);
+        Assert.Single(tab.UrlEditor.Params.ToModels());
         window.Close();
     }
 
@@ -67,11 +67,11 @@ public class MainWindowTests
         vm.NewRequestCommand.Execute(null);
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
 
-        tab.Url = "curl -X POST https://api.example.com/users -H 'Content-Type: application/json' -d '{\"name\":\"x\"}'";
+        tab.UrlEditor.Url = "curl -X POST https://api.example.com/users -H 'Content-Type: application/json' -d '{\"name\":\"x\"}'";
         UiTestHelpers.Pump();
 
         Assert.Equal("POST", tab.SelectedMethod);
-        Assert.Equal("https://api.example.com/users", tab.Url);
+        Assert.Equal("https://api.example.com/users", tab.UrlEditor.Url);
         Assert.True(tab.Body.IsBodyRaw);
         Assert.Equal("{\"name\":\"x\"}", tab.Body.RawBody);
         UiTestHelpers.Screenshot(window, "03-curl-import");

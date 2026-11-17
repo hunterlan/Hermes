@@ -156,7 +156,7 @@ public class TabSaveFailureTests
         var tab = new RequestTabViewModel(services, request);
         using var locked = temp.Lock("collections");
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
-        tab.Url = "https://new.example.com";
+        tab.UrlEditor.Url = "https://new.example.com";
         Assert.True(tab.IsDirty);
 
         var save = tab.SaveAsync();

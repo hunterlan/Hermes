@@ -18,7 +18,7 @@ public class RequestFailureViewTests
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        tab.Url = url;
+        tab.UrlEditor.Url = url;
         configure?.Invoke(tab);
         await tab.SendCommand.ExecuteAsync(null);
         UiTestHelpers.Pump();
