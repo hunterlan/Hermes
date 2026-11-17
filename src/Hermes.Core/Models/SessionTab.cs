@@ -2,6 +2,9 @@ namespace Hermes.Core.Models;
 
 public sealed class SessionTab
 {
+    /// <summary>The response pane's share of a request tab's split when nothing else was saved.</summary>
+    public const double DefaultResponseSplitRatio = 0.5;
+
     public SessionTabKind Kind { get; set; }
 
     /// <summary>The persisted entity the tab is bound to (request, folder, collection or environment id).</summary>
@@ -11,4 +14,10 @@ public sealed class SessionTab
     public HttpRequestModel? RequestDraft { get; set; }
 
     public bool IsPinned { get; set; }
+
+    /// <summary>A request tab's response pane is collapsed to its bar.</summary>
+    public bool IsResponseCollapsed { get; set; }
+
+    /// <summary>The response pane's share of a request tab's split while expanded, between 0 and 1.</summary>
+    public double ResponseSplitRatio { get; set; } = DefaultResponseSplitRatio;
 }

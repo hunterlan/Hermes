@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:v="using:Hermes.App.Views"
+             x:Class="Hermes.App.Views.CollapsedResponseBar"
+             x:DataType="vm:ResponseViewModel"
+             IsVisible="{Binding ShowsCollapsedBar}">
+  <!-- The response pane folded to a bar at the bottom of the tab. It still says how the last send went, and a click
+       anywhere on it opens the pane again. -->
+  <Border Name="Bar" Height="{StaticResource ResponseBarHeight}" Background="{DynamicResource BgPrimaryBrush}"
+          BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Cursor="Hand"
+          PointerPressed="OnBarPointerPressed" PointerReleased="OnBarPointerReleased">
+    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
+        <Button Name="ExpandResponseButton" Classes="icon" Command="{Binding ToggleCollapsedCommand}"
+                ToolTip.Tip="Expand response (Ctrl+J)" AutomationProperties.Name="Expand response">
+          <PathIcon Data="{StaticResource IconChevronUp}" />
+        </Button>
+        <TextBlock Text="Response" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
+        <TextBlock Name="NotSentYetText" Classes="secondary" Text="· not sent yet" FontSize="{StaticResource FontSizeSmall}"
+                   VerticalAlignment="Center" IsVisible="{Binding IsEmpty}" />
+        <TextBlock Classes="secondary" Text="· sending…" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center"
+                   IsVisible="{Binding IsLoading}" />
+        <v:ResponseStatusTag Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}" />
+        <TextBlock Name="TimeAndSizeText" Classes="mono secondary" FontSize="{StaticResource FontSizeCaption}" VerticalAlignment="Center"
+                   IsVisible="{Binding HasResponse}" Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}">
+          <Run Text="{Binding TimeText}" /><Run Text=" · " /><Run Text="{Binding SizeText}" />
+        </TextBlock>
+      </StackPanel>
+      <Border Grid.Column="1" Classes="kbd" ToolTip.Tip="Expand or collapse the response">
+        <TextBlock Text="Ctrl J" />
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

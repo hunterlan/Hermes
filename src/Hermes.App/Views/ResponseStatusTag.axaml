@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:c="using:Hermes.App.Controls"
+             x:Class="Hermes.App.Views.ResponseStatusTag"
+             x:DataType="vm:ResponseViewModel"
+             VerticalAlignment="Center">
+  <!-- How the last send went, the same in the pane's header, its collapsed bar and the failure view.
+       Status is icon + text + colour, never colour alone. -->
+  <Panel>
+    <Panel IsVisible="{Binding HasResponse}">
+      <c:IconTag Classes="status" Kind="Ok" Icon="{StaticResource IconCheck}" Text="{Binding StatusText}" IsVisible="{Binding IsSuccess}" />
+      <c:IconTag Classes="status" Kind="Info" Icon="{StaticResource IconArrowRight}" Text="{Binding StatusText}" IsVisible="{Binding IsRedirect}" />
+      <c:IconTag Classes="status" Kind="Warn" Icon="{StaticResource IconAlert}" Text="{Binding StatusText}" IsVisible="{Binding IsClientError}" />
+      <c:IconTag Classes="status" Kind="Err" Icon="{StaticResource IconClose}" Text="{Binding StatusText}" IsVisible="{Binding IsServerError}" />
+    </Panel>
+    <Border Classes="status" HorizontalAlignment="Left" Background="{DynamicResource BgTertiaryBrush}"
+            BorderBrush="{DynamicResource TextTertiaryBrush}" BorderThickness="1"
+            IsVisible="{Binding Failure, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
+        <PathIcon Data="{StaticResource IconCancel}" Width="13" Height="13" Foreground="{DynamicResource TextSecondaryBrush}" />
+        <TextBlock Text="No response" Foreground="{DynamicResource TextSecondaryBrush}" />
+      </StackPanel>
+    </Border>
+  </Panel>
+</UserControl>

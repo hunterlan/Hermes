@@ -5,6 +5,14 @@
 The response body can be shown prettified (highlighted) or as raw text. Responses larger than the limit in
 [Settings](09-settings.md) are shown as raw text to stay responsive. `Ctrl+F` searches the body.
 
+## Collapsing the response
+
+With the response below the request, the chevron at the start of the response header collapses it to a bar at the
+bottom of the tab, so the request editor gets the room. The bar still shows the status, time and size of the last
+response. Click the bar, press `Ctrl+J` or double-click the line between request and response to expand it again;
+dragging that line to the bottom also collapses it. The response expands by itself when a new one arrives or a send
+fails. Each tab remembers whether its response is collapsed and where the line was, also after a restart.
+
 ## The exact sent request
 
 Each response shows the request as it was sent, after variables were resolved: the request line, one row per header

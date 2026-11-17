@@ -154,13 +154,14 @@ shows the same four parts, compact, when getting a token fails.
 
 ### Region heights
 
-Regions that scroll when their content grows, so they can't push the rest of a dialog out of view, and the minimum that keeps a flexible region usable.
+Regions that scroll when their content grows, so they can't push the rest of a dialog out of view, the minimum that keeps a flexible region usable, and regions with a fixed height.
 
 | Token | Height | Use for |
 |---|---|---|
 | `ImportFilesMaxHeight` | 78 | The picked-file list of the Import dialog (about 3 rows) |
 | `ImportErrorsMaxHeight` | 60 | The error lines of the Import dialog (about 3 lines of body text) |
 | `ImportPasteMinHeight` | 80 | The least the Import dialog's paste box (label and box) can shrink to |
+| `ResponseBarHeight` | 40 | The response pane collapsed to a bar in stacked layout; dragging the splitter this close to the bottom collapses it |
 
 ## The token rule
 
