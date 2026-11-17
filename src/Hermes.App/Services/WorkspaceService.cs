@@ -28,7 +28,7 @@ public sealed class WorkspaceService : IDisposable
         _repository = repository;
         _timeProvider = timeProvider;
         _historyWriter.Failed += ex => StorageProblem?.Invoke(
-            StorageErrorDescriber.Describe(ex, Path.Combine(repository.Root, "history"), "History", StorageOperation.Write));
+            StorageErrorDescriber.Describe(ex, Path.Combine(repository.Root, "history"), "History", StorageOperation.Write, target: StorageTarget.Folder));
         Settings = settings;
         Collections = repository.LoadCollections();
         Environments = repository.LoadEnvironments();
@@ -463,7 +463,7 @@ public sealed class WorkspaceService : IDisposable
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             StorageProblem?.Invoke(StorageErrorDescriber.Describe(ex, Path.Combine(_repository.Root, "responses", requestId.ToString()),
-                "The response", StorageOperation.Write));
+                "The response", StorageOperation.Write, target: StorageTarget.Folder));
             return null;
         }
     }

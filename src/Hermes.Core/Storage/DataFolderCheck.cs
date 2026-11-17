@@ -37,7 +37,8 @@ public static class DataFolderCheck
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                var error = StorageErrorDescriber.Describe(ex, folder, $"{subfolder.Subject} \"{folder}\"", StorageOperation.Use);
+                var error = StorageErrorDescriber.Describe(ex, folder, $"{subfolder.Subject} \"{folder}\"", StorageOperation.Use,
+                    target: StorageTarget.Folder);
                 return error with { NextStep = NextStepFor(error, subfolder.StaysHere) };
             }
         }

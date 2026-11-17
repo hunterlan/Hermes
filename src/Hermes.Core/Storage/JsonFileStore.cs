@@ -22,8 +22,23 @@ public static class JsonFileStore
         if (!File.Exists(path))
             return null;
         using var stream = File.OpenRead(path);
-        return JsonSerializer.Deserialize(stream, typeInfo);
+        try
+        {
+            return JsonSerializer.Deserialize(stream, typeInfo);
+        }
+        catch (NotSupportedException ex) when (IsMissingDiscriminator(ex))
+        {
+            throw WrongShape(ex);
+        }
     }
+
+    // System.Text.Json reports a polymorphic node without its $kind as a NotSupportedException. In a file that parsed,
+    // that is the wrong shape, the same as any other JsonException. Other NotSupportedExceptions (a type the serializer
+    // context lacks) say nothing about the file, so they are not turned into one.
+    private static bool IsMissingDiscriminator(NotSupportedException exception) =>
+        exception.Message.Contains("type discriminator", StringComparison.Ordinal);
+
+    private static JsonException WrongShape(NotSupportedException exception) => new(exception.Message, exception);
 
     /// <summary>
     /// Writes atomically: to a temp file of its own (so concurrent writers never share one), flushed to disk, then
@@ -53,6 +68,10 @@ public static class JsonFileStore
             {
                 if (JsonSerializer.Deserialize(line, typeInfo) is { } item)
                     items.Add(item);
+            }
+            catch (NotSupportedException ex) when (IsMissingDiscriminator(ex))
+            {
+                errors.Add(StorageErrorDescriber.DescribeLine(WrongShape(ex), path, subject, number, line));
             }
             catch (JsonException ex)
             {

@@ -38,7 +38,108 @@ public class StorageErrorTests : IDisposable
         Assert.True(error.CanMoveAside);
         Assert.NotNull(error.NextStep);
         AssertPlainText(error);
-        Assert.Contains("BytePositionInLine", error.Details);
+        Assert.DoesNotContain("BytePositionInLine", error.Details);
+        Assert.DoesNotContain("LineNumber", error.Details);
+        Assert.DoesNotContain("HResult", error.Details);
+        Assert.Contains("System.Text.Json.JsonException", error.Details);
+    }
+
+    [Fact]
+    public void Details_do_not_repeat_a_location_the_summary_already_names()
+    {
+        Directory.CreateDirectory(_dir);
+        var file = Path.Combine(_dir, "a.json");
+        var inSummary = StorageErrorDescriber.Describe(new IOException("x"), file, $"File \"{file}\"");
+        var notInSummary = StorageErrorDescriber.Describe(new IOException("x"), file, "Collection \"Pets\"");
+
+        Assert.DoesNotContain("Location:", inSummary.Details);
+        Assert.StartsWith($"Location: {file}", notInSummary.Details);
+    }
+
+    [Fact]
+    public void A_permission_problem_names_the_file_for_a_file_and_the_folder_for_a_folder()
+    {
+        Directory.CreateDirectory(_dir);
+        var file = Path.Combine(_dir, "a.json");
+        File.WriteAllText(file, "{}");
+        var denied = new UnauthorizedAccessException();
+
+        var read = StorageErrorDescriber.Describe(denied, file, "Collection \"Pets\"");
+        var write = StorageErrorDescriber.Describe(denied, file, "Collection \"Pets\"", StorageOperation.Write);
+        var folder = StorageErrorDescriber.Describe(denied, _dir, "Data folder", StorageOperation.Use,
+            target: StorageTarget.Folder);
+
+        Assert.Equal($"Check the permissions of the file \"{file}\", then try again.", read.NextStep);
+        Assert.Equal($"Check the permissions of the folder it is in and, if it exists, of the file \"{file}\", then try again.", write.NextStep);
+        Assert.Equal($"Check the permissions of the folder \"{_dir}\" and of the folders above it, then try again.", folder.NextStep);
+    }
+
+    [Fact]
+    public void The_wording_follows_what_the_caller_says_not_what_is_on_disk()
+    {
+        // Nothing exists at either path: a folder a parent hides from Hermes, and a file about to be created.
+        var hiddenFolder = Path.Combine(_dir, "hidden");
+        var newFile = Path.Combine(_dir, "new.json");
+        var denied = new UnauthorizedAccessException();
+
+        var folder = StorageErrorDescriber.Describe(denied, hiddenFolder, "Data folder", StorageOperation.Use,
+            target: StorageTarget.Folder);
+        var create = StorageErrorDescriber.Describe(denied, newFile, "Collection \"Pets\"", StorageOperation.Write);
+
+        Assert.Equal($"Check the permissions of the folder \"{hiddenFolder}\" and of the folders above it, then try again.", folder.NextStep);
+        Assert.StartsWith("Check the permissions of the folder it is in and, if it exists,", create.NextStep);
+    }
+
+    [Fact]
+    public void A_startup_problem_names_the_path_once_and_its_next_step_does_not_repeat_it()
+    {
+        Directory.CreateDirectory(_dir);
+        var error = StorageErrorDescriber.Describe(new UnauthorizedAccessException(), _dir, $"Data folder \"{_dir}\"",
+            StorageOperation.Use, target: StorageTarget.Folder);
+
+        Assert.Equal(1, CountOf(_dir, error.Summary));
+        Assert.Equal("Check the permissions of that folder and of the folders above it, then try again.", error.NextStep);
+        Assert.DoesNotContain(_dir, error.NextStep);
+        Assert.DoesNotContain("Location:", error.Details);
+    }
+
+    [Fact]
+    public void A_file_summary_that_names_the_path_gets_a_next_step_that_does_not()
+    {
+        Directory.CreateDirectory(_dir);
+        var file = Path.Combine(_dir, "a.json");
+        File.WriteAllText(file, "{}");
+
+        var error = StorageErrorDescriber.Describe(new UnauthorizedAccessException(), file, $"File \"{file}\"");
+
+        Assert.Equal("Check the permissions of that file, then try again.", error.NextStep);
+    }
+
+    private static int CountOf(string text, string within) => within.Split(text).Length - 1;
+
+    [Fact]
+    public void A_failed_action_replaces_the_wording_of_the_operation()
+    {
+        var error = StorageErrorDescriber.Describe(new UnauthorizedAccessException(), Path.Combine(_dir, "a.json"),
+            "Collection \"Beta\"", StorageOperation.Write, "couldn't be renamed to \"Gamma\"");
+
+        Assert.StartsWith("Collection \"Beta\" couldn't be renamed to \"Gamma\": Hermes isn't allowed to write to it.", error.Summary);
+    }
+
+    [Fact]
+    public void A_damaged_line_lists_its_position_from_one_in_the_details_without_an_hresult()
+    {
+        var repo = new WorkspaceRepository(_dir);
+        repo.AppendHistory(new HistoryEntry { StatusCode = 200 });
+        File.AppendAllText(Directory.GetFiles(Path.Combine(_dir, "history")).Single(), "\n{\"statusCode\": 2");
+
+        var fresh = new WorkspaceRepository(_dir);
+        fresh.LoadHistory();
+        var error = Assert.Single(fresh.LoadErrors);
+
+        Assert.Contains("Line: 3, column", error.Details);
+        Assert.DoesNotContain("LineNumber", error.Details);
+        Assert.DoesNotContain("HResult", error.Details);
     }
 
     [Fact]
@@ -57,6 +158,103 @@ public class StorageErrorTests : IDisposable
         Assert.True(error.CanMoveAside);
         Assert.Equal(file, error.Location);
         AssertPlainText(error);
+    }
+
+    [Fact]
+    public void A_collection_file_without_a_name_is_reported_as_the_wrong_shape()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "collections"));
+        var file = Path.Combine(_dir, "collections", $"{Guid.NewGuid()}.json");
+        File.WriteAllText(file, "{\"foo\":1}");
+
+        var repo = new WorkspaceRepository(_dir);
+        Assert.Empty(repo.LoadCollections());
+
+        var error = Assert.Single(repo.LoadErrors);
+        Assert.StartsWith($"Collection file \"{Path.GetFileName(file)}\" couldn't be loaded: it is valid JSON but not in the form Hermes expects",
+            error.Summary);
+        Assert.Contains("name", error.Details);
+        Assert.True(error.CanMoveAside);
+        Assert.Equal(file, error.Location);
+        AssertPlainText(error);
+    }
+
+    [Fact]
+    public void A_collection_item_without_its_kind_is_reported_as_the_wrong_shape()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "collections"));
+        var file = Path.Combine(_dir, "collections", "broken.json");
+        File.WriteAllText(file,
+            "{\n  \"id\": \"7f8a3c2e-1b4d-4e5f-9a6b-0c1d2e3f4a5b\",\n  \"name\": \"Broken\",\n  \"items\": [\n    { \"name\": \"x\" }\n  ]\n}");
+
+        var repo = new WorkspaceRepository(_dir);
+        Assert.Empty(repo.LoadCollections());
+
+        var error = Assert.Single(repo.LoadErrors);
+        Assert.Equal("Collection \"Broken\" couldn't be loaded: it is valid JSON but not in the form Hermes expects.", error.Summary);
+        Assert.Equal(StorageErrorKind.InvalidJson, error.Kind);
+        Assert.True(error.CanMoveAside);
+        Assert.Equal(file, error.Location);
+        Assert.DoesNotContain("LineNumber", error.Details);
+        Assert.DoesNotContain("BytePositionInLine", error.Details);
+        Assert.DoesNotContain("HResult", error.Details);
+        Assert.Contains("$.items[0]", error.Details);
+        AssertPlainText(error);
+    }
+
+    [Fact]
+    public void A_serializer_setup_problem_is_not_turned_into_a_problem_with_the_file()
+    {
+        Directory.CreateDirectory(_dir);
+        var file = Path.Combine(_dir, "ok.json");
+        File.WriteAllText(file, "{}");
+        var options = new JsonSerializerOptions
+        {
+            TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver(),
+            Converters = { new UnsupportedConverter() },
+        };
+        var typeInfo = System.Text.Json.Serialization.Metadata.JsonTypeInfo.CreateJsonTypeInfo<Uri>(options);
+
+        var thrown = Assert.Throws<NotSupportedException>(() => JsonFileStore.Read(file, typeInfo));
+        Assert.Contains("This converter can't read anything.", thrown.Message);
+    }
+
+    [Fact]
+    public void A_history_line_without_a_kind_is_skipped_and_described_not_thrown()
+    {
+        var path = Path.Combine(_dir, "lines.jsonl");
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(path, "{\"name\":\"x\"}\n");
+        var errors = new List<StorageError>();
+
+        var items = JsonFileStore.ReadLines(path, Hermes.Core.Serialization.HermesJsonContext.Default.CollectionNode, errors, "History");
+
+        Assert.Empty(items);
+        Assert.Contains("isn't in the form Hermes expects", Assert.Single(errors).Summary);
+    }
+
+    [Fact]
+    public void A_collection_read_with_a_null_name_can_still_be_cloned()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "collections"));
+        File.WriteAllText(Path.Combine(_dir, "collections", $"{Guid.NewGuid()}.json"), "{\"name\":null}");
+
+        var collection = Assert.Single(new WorkspaceRepository(_dir).LoadCollections());
+
+        Assert.Null(Hermes.Core.Serialization.ModelCloner.Clone(collection).Name);
+    }
+
+    [Fact]
+    public void A_collection_file_with_an_empty_name_still_loads()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "collections"));
+        File.WriteAllText(Path.Combine(_dir, "collections", $"{Guid.NewGuid()}.json"), "{\"name\":\"\"}");
+
+        var repo = new WorkspaceRepository(_dir);
+        var collections = repo.LoadCollections();
+
+        Assert.Empty(repo.LoadErrors);
+        Assert.Equal("", Assert.Single(collections).Name);
     }
 
     [Fact]
@@ -169,7 +367,7 @@ public class StorageErrorTests : IDisposable
             var error = Assert.Single(repo.LoadErrors);
             Assert.Equal(StorageErrorKind.PermissionDenied, error.Kind);
             Assert.StartsWith("Collection file \"locked.json\" couldn't be loaded: Hermes isn't allowed to read it.", error.Summary);
-            Assert.StartsWith("Check the permissions of", error.NextStep);
+            Assert.Equal($"Check the permissions of the file \"{file}\", then try again.", error.NextStep);
             Assert.False(error.CanMoveAside);
             AssertPlainText(error);
             Assert.DoesNotContain("denied", error.Message);

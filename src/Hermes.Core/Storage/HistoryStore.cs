@@ -36,7 +36,7 @@ public sealed class HistoryStore(string directory, TimeProvider? timeProvider = 
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                errors.Add(StorageErrorDescriber.Describe(ex, directory, $"History folder \"{directory}\""));
+                errors.Add(StorageErrorDescriber.Describe(ex, directory, $"History folder \"{directory}\"", target: StorageTarget.Folder));
                 return [];
             }
             foreach (var file in files)

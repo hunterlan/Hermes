@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Hermes.Core.Storage;
 
@@ -6,7 +7,7 @@ namespace Hermes.Core.Storage;
 /// Turns the exception of a failed file operation into a <see cref="StorageError"/>: a plain sentence, a next step
 /// and the raw text kept for Details. Every storage message in the app goes through here so the wording stays the same.
 /// </summary>
-public static class StorageErrorDescriber
+public static partial class StorageErrorDescriber
 {
     private const string NotJson = "it isn't valid JSON";
     private const string WrongShape = "it is valid JSON but not in the form Hermes expects";
@@ -28,29 +29,35 @@ public static class StorageErrorDescriber
     /// </summary>
     /// <param name="subject">What the path holds, as the start of a sentence: <c>Collection "Pets"</c>, <c>History</c>.</param>
     /// <param name="operation">What Hermes was doing; picks the wording ("couldn't be loaded", "couldn't be saved").</param>
+    /// <param name="failedAction">
+    /// Replaces the wording picked by <paramref name="operation"/> when the failure needs saying more precisely, such as
+    /// <c>couldn't be renamed to "Gamma"</c>.
+    /// </param>
+    /// <param name="target">Whether <paramref name="path"/> is a file or a folder, as the caller knows it; the disk isn't asked.</param>
     public static StorageError Describe(Exception exception, string path, string subject,
-        StorageOperation operation = StorageOperation.Read)
+        StorageOperation operation = StorageOperation.Read, string? failedAction = null,
+        StorageTarget target = StorageTarget.File)
     {
         var kind = Classify(exception);
-        var details = DetailsOf(exception, path);
-        var lead = $"{subject} {Verb(operation)}";
+        var lead = $"{subject} {failedAction ?? Verb(operation)}";
 
         if (kind == StorageErrorKind.InvalidJson)
         {
             var position = exception is JsonException json ? PositionOf(json) : null;
             var canMoveAside = File.Exists(path);
             var problem = canMoveAside && FileParsesAsJson(path) ? WrongShape : NotJson;
-            return new StorageError(kind, $"{lead}: {problem}{position}.",
+            var summary = $"{lead}: {problem}{position}.";
+            return new StorageError(kind, summary,
                 canMoveAside
                     ? "Reveal the file to repair it, or move it aside (it is renamed to .corrupt) so Hermes starts without it."
                     : "Reveal the file to repair it.",
-                details, path, canMoveAside);
+                DetailsOf(exception, path, summary), path, canMoveAside);
         }
 
         var (reason, nextStep) = kind switch
         {
             StorageErrorKind.PermissionDenied => (PermissionReason(operation),
-                $"Check the permissions of \"{FolderOf(path)}\", then try again."),
+                PermissionNextStep(path, operation, target, lead.Contains(path, StringComparison.Ordinal))),
             StorageErrorKind.DiskFull => ("the disk is full.", "Free up disk space, then try again."),
             StorageErrorKind.FileInUse => ("another program is using it.",
                 "Close the program that has it open (a sync or backup tool, or another Hermes window), then try again."),
@@ -58,7 +65,8 @@ public static class StorageErrorDescriber
                 "Check that the folder still exists and that its drive is connected, then try again."),
             _ => (OtherReason(operation), "Try again. If it keeps happening, copy the details when you report it."),
         };
-        return new StorageError(kind, $"{lead}: {reason}", nextStep, details, path);
+        var plainSummary = $"{lead}: {reason}";
+        return new StorageError(kind, plainSummary, nextStep, DetailsOf(exception, path, plainSummary), path);
     }
 
     /// <summary>
@@ -71,9 +79,9 @@ public static class StorageErrorDescriber
         var problem = lineText is not null && ParsesAsJson(System.Text.Encoding.UTF8.GetBytes(lineText))
             ? "isn't in the form Hermes expects"
             : "isn't valid JSON";
-        return new StorageError(StorageErrorKind.InvalidJson,
-            $"{subject} couldn't be fully loaded: line {lineNumber}{column} {problem}, so that entry was skipped.",
-            null, DetailsOf(exception, path, $"Line: {lineNumber}"), path);
+        var summary = $"{subject} couldn't be fully loaded: line {lineNumber}{column} {problem}, so that entry was skipped.";
+        return new StorageError(StorageErrorKind.InvalidJson, summary, null,
+            DetailsOf(exception, path, summary, $"Line: {lineNumber}{column}"), path);
     }
 
     /// <summary>The kind of failure <paramref name="exception"/> stands for, from its type and HResult.</summary>
@@ -185,17 +193,39 @@ public static class StorageErrorDescriber
         }
     }
 
-    private static string FolderOf(string path) =>
-        Directory.Exists(path) ? path : Path.GetDirectoryName(path) is { Length: > 0 } folder ? folder : path;
-
-    private static string DetailsOf(Exception exception, string path, string? extra = null)
+    // A folder is named as one. A file needs its own permissions to be read, and its folder's to be created, replaced
+    // or removed; it may not exist yet when writing, so it is named only "if it exists". The path is spelled out only
+    // when the summary doesn't already name it.
+    private static string PermissionNextStep(string path, StorageOperation operation, StorageTarget target, bool summaryNamesPath)
     {
-        var lines = new List<string> { $"Location: {path}" };
+        var folder = summaryNamesPath ? "that folder" : $"the folder \"{path}\"";
+        var file = summaryNamesPath ? "that file" : $"the file \"{path}\"";
+        if (target == StorageTarget.Folder)
+            return $"Check the permissions of {folder} and of the folders above it, then try again.";
+        return operation == StorageOperation.Read
+            ? $"Check the permissions of {file}, then try again."
+            : $"Check the permissions of the folder it is in and, if it exists, of {file}, then try again.";
+    }
+
+    // The location is left out when the summary already names it, so a copied report doesn't say it twice. The
+    // exception's own line and position count from 0 and its HResult is the same for every JSON error, so neither is
+    // repeated; a syntax error's position is in the summary, counted from 1.
+    private static string DetailsOf(Exception exception, string path, string summary, string? extra = null)
+    {
+        var lines = new List<string>();
+        if (!summary.Contains(path, StringComparison.Ordinal))
+            lines.Add($"Location: {path}");
         if (extra is not null)
             lines.Add(extra);
-        lines.Add($"Error: {exception.GetType().FullName}: {exception.Message}");
-        if (exception.HResult != 0)
+        lines.Add($"Error: {exception.GetType().FullName}: {MessageOf(exception)}");
+        if (exception.HResult != 0 && exception is not JsonException)
             lines.Add($"HResult: 0x{exception.HResult:X8}");
         return string.Join('\n', lines);
     }
+
+    private static string MessageOf(Exception exception) =>
+        exception is JsonException ? ZeroBasedPosition().Replace(exception.Message, "") : exception.Message;
+
+    [GeneratedRegex(@"\s*\|\s*LineNumber: \d+\s*\|\s*BytePositionInLine: \d+")]
+    private static partial Regex ZeroBasedPosition();
 }
