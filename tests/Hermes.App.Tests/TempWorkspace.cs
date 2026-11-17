@@ -44,10 +44,12 @@ internal sealed class TempWorkspace : IDisposable
     public void Dispose()
     {
         // History is written in the background; deleting the folder while a file is still open fails on Windows.
-        Workspace.FlushHistoryAsync().Wait(HistoryFlushTimeout);
+        var historyFlushed = Workspace.FlushHistoryAsync().Wait(HistoryFlushTimeout);
         foreach (var folder in _locked)
             folder.Dispose();
         Workspace.Dispose();
+        if (!historyFlushed)
+            throw new TimeoutException($"History was still being written after {HistoryFlushTimeout.TotalSeconds:0} s, so {Root} was left in place.");
         if (Directory.Exists(Root))
             Directory.Delete(Root, true);
     }
