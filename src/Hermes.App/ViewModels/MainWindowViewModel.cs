@@ -609,7 +609,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
 
     /// <summary>Sends the active request, or cancels it while it's in flight.</summary>
     [RelayCommand]
-    private void SendActive() => (ActiveTab as RequestTabViewModel)?.SendOrCancel();
+    private void SendActive() => (ActiveTab as RequestTabViewModel)?.Sending.SendOrCancel();
 
     [RelayCommand]
     private void ToggleTheme() => _services.Settings.ToggleTheme();

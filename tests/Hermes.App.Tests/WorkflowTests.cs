@@ -52,7 +52,7 @@ public class WorkflowTests
         var createTab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         Assert.True(createTab.Body.IsBodyRaw);
         Assert.Equal("{\"name\":\"Ada\"}", createTab.Body.RawBody);
-        Assert.True(createTab.Variables.TryGet("base", out var baseUrl));
+        Assert.True(createTab.Preview.Variables.TryGet("base", out var baseUrl));
         Assert.Equal("https://api.example.com", baseUrl);
         Assert.True(createTab.Sections.IsBodySectionVisible);
         UiTestHelpers.Screenshot(window, "20-imported-body");
@@ -134,7 +134,7 @@ public class WorkflowTests
         vm.NewRequestCommand.Execute(null);
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         tab.UrlEditor.Url = server.Url;
-        await tab.SendCommand.ExecuteAsync(null);
+        await tab.Sending.SendCommand.ExecuteAsync(null);
 
         var cookies = new CookieManagerViewModel(App.Services.GetRequiredService<HttpClientProvider>());
         var domain = Assert.Single(cookies.Domains, d => d.Domain == "127.0.0.1");
@@ -155,7 +155,7 @@ public class WorkflowTests
             var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
             tab.UrlEditor.Url = "https://example.com/items/{{$guid}}";
 
-            Assert.Equal("https://example.com/items/{{$guid}}", tab.ResolvedUrl);
+            Assert.Equal("https://example.com/items/{{$guid}}", tab.Preview.ResolvedUrl);
         }
         finally
         {

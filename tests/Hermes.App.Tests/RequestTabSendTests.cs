@@ -48,8 +48,8 @@ public class RequestTabSendTests
         using var server = ServerAnsweringWhen(answer.Task);
         var (tab, original, window) = OpenSavedRequest(temp, server.Url);
 
-        var sending = tab.SendCommand.ExecuteAsync(null);
-        await UiTestHelpers.WaitUntil(() => tab.IsSending);
+        var sending = tab.Sending.SendCommand.ExecuteAsync(null);
+        await UiTestHelpers.WaitUntil(() => tab.Sending.IsSending);
         var savingAs = tab.SaveAsCommand.ExecuteAsync(null);
         await UiTestHelpers.WaitUntil(() => window.OwnedWindows.OfType<SaveRequestDialog>().Any());
         var dialog = window.OwnedWindows.OfType<SaveRequestDialog>().Single();
@@ -78,11 +78,11 @@ public class RequestTabSendTests
         var (tab, _, window) = OpenSavedRequest(temp, server.Url);
         temp.Workspace.History.CollectionChanged += (_, _) => throw new InvalidOperationException("History is broken");
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => tab.SendCommand.ExecuteAsync(null));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => tab.Sending.SendCommand.ExecuteAsync(null));
 
         Assert.True(tab.Response.HasResponse);
         Assert.False(tab.Response.IsLoading);
-        Assert.False(tab.IsSending);
+        Assert.False(tab.Sending.IsSending);
         window.Close();
     }
 
@@ -94,9 +94,9 @@ public class RequestTabSendTests
         using var server = ServerAnsweringWhen(answer.Task);
         var (tab, request, window) = OpenSavedRequest(temp, server.Url);
 
-        var sending = tab.SendCommand.ExecuteAsync(null);
-        await UiTestHelpers.WaitUntil(() => tab.IsSending);
-        tab.CancelSendCommand.Execute(null);
+        var sending = tab.Sending.SendCommand.ExecuteAsync(null);
+        await UiTestHelpers.WaitUntil(() => tab.Sending.IsSending);
+        tab.Sending.CancelSendCommand.Execute(null);
         await UiTestHelpers.WaitUntil(() => sending.IsCompleted);
         await sending;
 

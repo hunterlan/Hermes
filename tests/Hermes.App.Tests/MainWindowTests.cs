@@ -28,7 +28,7 @@ public class MainWindowTests
         Assert.Equal("id", Assert.Single(tab.UrlEditor.PathVariables.Rows).Key);
         tab.UrlEditor.PathVariables.Rows[0].Value = "42";
 
-        await tab.SendCommand.ExecuteAsync(null);
+        await tab.Sending.SendCommand.ExecuteAsync(null);
         UiTestHelpers.Pump();
 
         Assert.True(tab.Response.HasResponse, tab.Response.Failure?.Model.Facts);

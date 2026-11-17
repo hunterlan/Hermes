@@ -6,7 +6,7 @@
              xmlns:core="using:Hermes.Core.Models"
              x:Class="Hermes.App.Views.RequestTabView"
              x:DataType="vm:RequestTabViewModel"
-             c:VariableScopeProperties.Variables="{Binding Variables}">
+             c:VariableScopeProperties.Variables="{Binding Preview.Variables}">
   <UserControl.Styles>
     <Style Selector="Border.section">
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
@@ -18,8 +18,8 @@
     <!-- breadcrumb + name + actions -->
     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,10">
       <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}" VerticalAlignment="Center">
-        <TextBlock Classes="tertiary" Text="{Binding Breadcrumb}" IsVisible="{Binding Breadcrumb, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" VerticalAlignment="Center" />
-        <TextBlock Classes="tertiary" Text="/" IsVisible="{Binding Breadcrumb, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" VerticalAlignment="Center" />
+        <TextBlock Classes="tertiary" Text="{Binding Preview.Breadcrumb}" IsVisible="{Binding Preview.Breadcrumb, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" VerticalAlignment="Center" />
+        <TextBlock Classes="tertiary" Text="/" IsVisible="{Binding Preview.Breadcrumb, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" VerticalAlignment="Center" />
         <Panel>
           <Button Classes="ghost" Padding="4,2" Command="{Binding StartRenameCommand}" IsVisible="{Binding !IsRenaming}"
                   Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="Rename">
@@ -45,7 +45,7 @@
           </StackPanel>
         </Button>
         <Button Classes="ghost" Command="{Binding SaveAsCommand}" Content="Save As" ToolTip.Tip="Save a copy to a collection" />
-        <Button Classes="icon" Width="28" Height="28" Command="{Binding ShowCodeCommand}" ToolTip.Tip="Code snippet (cURL)">
+        <Button Classes="icon" Width="28" Height="28" Command="{Binding Preview.ShowCodeCommand}" ToolTip.Tip="Code snippet (cURL)">
           <PathIcon Data="{StaticResource IconCode}" />
         </Button>
       </StackPanel>
@@ -66,11 +66,11 @@
         </ComboBox>
         <Border Grid.Column="1" Background="{DynamicResource BorderBrush}" Margin="0,9" />
         <c:VariableTextBox Grid.Column="2" Name="UrlBox" Margin="12,0" Text="{Binding UrlEditor.Url}"
-                           PlaceholderText="Enter URL or paste cURL" SubmitCommand="{Binding SendButtonCommand}" AllowMultilineInput="True" />
+                           PlaceholderText="Enter URL or paste cURL" SubmitCommand="{Binding Sending.SendButtonCommand}" AllowMultilineInput="True" />
         <Button Grid.Column="3" Classes="send" Height="32" MinWidth="0" Padding="14,0" VerticalAlignment="Center"
-                Command="{Binding SendButtonCommand}" ToolTip.Tip="Send (Ctrl+Enter)">
+                Command="{Binding Sending.SendButtonCommand}" ToolTip.Tip="Send (Ctrl+Enter)">
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
-            <TextBlock Text="{Binding SendButtonText}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Sending.SendButtonText}" VerticalAlignment="Center" />
             <Border Classes="kbd" BorderBrush="{DynamicResource AccentInkBrush}" Opacity="0.7">
               <TextBlock Text="Ctrl ↵" Foreground="{DynamicResource AccentInkBrush}" />
             </Border>
@@ -84,9 +84,9 @@
                 IsVisible="{Binding UrlEditor.HasUrlSubstitutions}">
       <PathIcon Data="{StaticResource IconArrowRight}" Width="12" Height="12" Foreground="{DynamicResource TextSecondaryBrush}" />
       <TextBlock Classes="secondary" Text="Sends to" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
-      <SelectableTextBlock Classes="mono" Text="{Binding ResolvedUrl}" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" TextWrapping="Wrap" />
-      <Border Classes="tag warn" IsVisible="{Binding ActiveEnvironmentName, Converter={x:Static ObjectConverters.IsNotNull}}">
-        <TextBlock Text="{Binding ActiveEnvironmentName}" />
+      <SelectableTextBlock Classes="mono" Text="{Binding Preview.ResolvedUrl}" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" TextWrapping="Wrap" />
+      <Border Classes="tag warn" IsVisible="{Binding Preview.ActiveEnvironmentName, Converter={x:Static ObjectConverters.IsNotNull}}">
+        <TextBlock Text="{Binding Preview.ActiveEnvironmentName}" />
       </Border>
     </StackPanel>
 

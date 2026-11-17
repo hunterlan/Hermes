@@ -93,13 +93,13 @@ public class EnvironmentColorDisplayTests
         {
             var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
             tab.UrlEditor.Url = server.Url;
-            await tab.SendCommand.ExecuteAsync(null);
+            await tab.Sending.SendCommand.ExecuteAsync(null);
             UiTestHelpers.Pump();
             Assert.Null(tab.Response.SentWithEnvironmentName);
             Assert.False(SentWith(window).IsVisible);
 
             Workspace.ActiveEnvironment = env;
-            await tab.SendCommand.ExecuteAsync(null);
+            await tab.Sending.SendCommand.ExecuteAsync(null);
             UiTestHelpers.Pump();
             Assert.True(SentWith(window).IsVisible);
             Assert.Equal(env.Name, tab.Response.SentWithEnvironmentName);

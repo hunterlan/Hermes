@@ -20,7 +20,7 @@ public class RequestFailureViewTests
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         tab.UrlEditor.Url = url;
         configure?.Invoke(tab);
-        await tab.SendCommand.ExecuteAsync(null);
+        await tab.Sending.SendCommand.ExecuteAsync(null);
         UiTestHelpers.Pump();
         return (window, tab);
     }
@@ -46,7 +46,7 @@ public class RequestFailureViewTests
 
         var first = tab.Response.Failure;
         Click(window, "RetryButton");
-        await UiTestHelpers.WaitUntil(() => !ReferenceEquals(tab.Response.Failure, first) && !tab.IsSending);
+        await UiTestHelpers.WaitUntil(() => !ReferenceEquals(tab.Response.Failure, first) && !tab.Sending.IsSending);
 
         Assert.Equal(RequestFailureKind.ConnectionRefused, tab.Response.Failure?.Model.Kind);
         window.Close();
@@ -57,7 +57,7 @@ public class RequestFailureViewTests
     {
         var (window, tab) = await SendAsync("http://");
         var focusRequests = 0;
-        tab.UrlFocusRequested += () => focusRequests++;
+        tab.UrlEditor.FocusRequested += () => focusRequests++;
 
         Assert.Equal(RequestFailureKind.InvalidUrl, tab.Response.Failure?.Model.Kind);
         Assert.True(Find<Button>(window, "EditUrlButton").IsEffectivelyVisible);
@@ -111,7 +111,7 @@ public class RequestFailureViewTests
         tab.Body.SelectedBodyMode = RequestBodyViewModel.BodyModes.Single(mode => mode.Value == BodyMode.Binary);
         tab.Body.BinaryFilePath = "/old/payload.bin";
 
-        Assert.True(tab.UseChosenBodyFile("/new/payload.bin", "/old/payload.bin"));
+        Assert.True(tab.FailureActions.UseChosenBodyFile("/new/payload.bin", "/old/payload.bin"));
 
         Assert.Equal("/new/payload.bin", tab.Body.BinaryFilePath);
         window.Close();
@@ -128,7 +128,7 @@ public class RequestFailureViewTests
         var revealRequests = 0;
         tab.Sections.BodyRevealRequested += () => revealRequests++;
 
-        Assert.False(tab.UseChosenBodyFile("/new/payload.bin", "/resolved/payload.bin"));
+        Assert.False(tab.FailureActions.UseChosenBodyFile("/new/payload.bin", "/resolved/payload.bin"));
 
         Assert.Equal("{{payloadFile}}", tab.Body.BinaryFilePath);
         Assert.True(tab.Sections.BodyExpanded);
@@ -147,7 +147,7 @@ public class RequestFailureViewTests
             new KeyValueItem("b", "{{otherFile}}") { Kind = KeyValueKind.File },
         ]);
 
-        Assert.True(tab.UseChosenBodyFile("/new/a.txt", "/old/a.txt"));
+        Assert.True(tab.FailureActions.UseChosenBodyFile("/new/a.txt", "/old/a.txt"));
 
         var values = tab.Body.FormData.Rows.Where(row => !row.IsPlaceholder).Select(row => row.Value).ToList();
         Assert.Equal(["/new/a.txt", "{{otherFile}}"], values);
