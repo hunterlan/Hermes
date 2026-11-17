@@ -198,14 +198,14 @@ public class SensitiveHeadersTests
     [AvaloniaFact]
     public void A_live_sent_request_has_masked_header_rows_with_real_values_behind_them()
     {
-        var (window, response) = ShowSentRequest(r => r.SetSentRequest(SentRequest()), "dark");
+        var (window, response) = ShowSentRequest(r => r.Sent.SetSentRequest(SentRequest()), "dark");
 
-        Assert.Equal("POST /secret?x=1 HTTP/1.1", response.SentRequestLine);
-        Assert.Equal(["Host", "Content-Type", "Cookie", "X-Custom-Token", "Authorization"], response.SentHeaderRows.Select(row => row.Key));
-        Assert.Equal([false, false, true, true, true], response.SentHeaderRows.Select(row => row.Sensitive.IsSensitive));
-        Assert.Equal("{\"hello\": \"world\"}", response.SentBodyText);
-        Assert.True(response.HasSentBody);
-        Assert.Equal("secret-value", response.SentHeaderRows[3].Sensitive.Value);
+        Assert.Equal("POST /secret?x=1 HTTP/1.1", response.Sent.RequestLine);
+        Assert.Equal(["Host", "Content-Type", "Cookie", "X-Custom-Token", "Authorization"], response.Sent.HeaderRows.Select(row => row.Key));
+        Assert.Equal([false, false, true, true, true], response.Sent.HeaderRows.Select(row => row.Sensitive.IsSensitive));
+        Assert.Equal("{\"hello\": \"world\"}", response.Sent.BodyText);
+        Assert.True(response.Sent.HasBody);
+        Assert.Equal("secret-value", response.Sent.HeaderRows[3].Sensitive.Value);
 
         var shown = window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.Name == "ValueText").Select(text => text.Text).ToList();
         Assert.Equal(["example.test", "application/json", SensitiveHeaders.MaskText, SensitiveHeaders.MaskText, SensitiveHeaders.MaskText], shown);
@@ -220,13 +220,13 @@ public class SensitiveHeadersTests
             Response = new ResponseModel { StatusCode = 200, ReasonPhrase = "OK", ContentType = "text/plain", Body = "ok"u8.ToArray() },
             SentRequest = "GET /secret HTTP/1.1\nHost: example.test\nAuthorization: Bearer ••••••\nCookie: ••••••\n",
         };
-        var (window, response) = ShowSentRequest(r => r.SetSaved([saved], show: true), "dark");
+        var (window, response) = ShowSentRequest(r => r.Saved.SetSaved([saved], show: true), "dark");
 
-        Assert.Equal("GET /secret HTTP/1.1", response.SentRequestLine);
-        Assert.Equal(["Host", "Authorization", "Cookie"], response.SentHeaderRows.Select(row => row.Key));
-        Assert.Equal([false, true, true], response.SentHeaderRows.Select(row => row.Sensitive.IsSensitive));
-        Assert.All(response.SentHeaderRows.Skip(1), row => Assert.Equal(SensitiveHeaders.MaskText, row.Sensitive.DisplayValue));
-        Assert.False(response.HasSentBody);
+        Assert.Equal("GET /secret HTTP/1.1", response.Sent.RequestLine);
+        Assert.Equal(["Host", "Authorization", "Cookie"], response.Sent.HeaderRows.Select(row => row.Key));
+        Assert.Equal([false, true, true], response.Sent.HeaderRows.Select(row => row.Sensitive.IsSensitive));
+        Assert.All(response.Sent.HeaderRows.Skip(1), row => Assert.Equal(SensitiveHeaders.MaskText, row.Sensitive.DisplayValue));
+        Assert.False(response.Sent.HasBody);
         window.Close();
     }
 
@@ -235,10 +235,10 @@ public class SensitiveHeadersTests
     [InlineData("light")]
     public void Screenshot_of_the_sent_request(string theme)
     {
-        var (window, response) = ShowSentRequest(r => r.SetSentRequest(SentRequest()), theme);
+        var (window, response) = ShowSentRequest(r => r.Sent.SetSentRequest(SentRequest()), theme);
         UiTestHelpers.Screenshot(window, $"72-sensitive-sent-request-{theme}");
 
-        response.SentHeaderRows[4].Sensitive.IsRevealed = true;
+        response.Sent.HeaderRows[4].Sensitive.IsRevealed = true;
         UiTestHelpers.Screenshot(window, $"72-sensitive-sent-request-revealed-{theme}");
         window.Close();
     }

@@ -616,7 +616,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
     [RelayCommand]
     private void ToggleActiveResponse()
     {
-        if (ActiveTab is RequestTabViewModel { Response.ToggleCollapsedCommand: var toggle } && toggle.CanExecute(null))
+        if (ActiveTab is RequestTabViewModel { Response.Pane.ToggleCollapsedCommand: var toggle } && toggle.CanExecute(null))
             toggle.Execute(null);
     }
 

@@ -52,7 +52,7 @@ public partial class RequestTabView : UserControl
             _tab.Sections.HeadersRevealRequested -= ScrollHeadersIntoView;
             _tab.Sections.BodyRevealRequested -= ScrollBodyIntoView;
             _tab.UrlEditor.FocusRequested -= FocusUrl;
-            _tab.Response.PropertyChanged -= OnResponsePropertyChanged;
+            _tab.Response.Pane.PropertyChanged -= OnResponsePropertyChanged;
         }
         _tab = DataContext as RequestTabViewModel;
         if (_tab is not null)
@@ -61,21 +61,21 @@ public partial class RequestTabView : UserControl
             _tab.Sections.HeadersRevealRequested += ScrollHeadersIntoView;
             _tab.Sections.BodyRevealRequested += ScrollBodyIntoView;
             _tab.UrlEditor.FocusRequested += FocusUrl;
-            _tab.Response.PropertyChanged += OnResponsePropertyChanged;
+            _tab.Response.Pane.PropertyChanged += OnResponsePropertyChanged;
         }
         ApplyLayout();
     }
 
     private void OnResponsePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(ResponseViewModel.ShowsCollapsedBar) or nameof(ResponseViewModel.ResponseSplitRatio))
+        if (e.PropertyName is nameof(ResponsePaneLayoutViewModel.ShowsCollapsedBar) or nameof(ResponsePaneLayoutViewModel.ResponseSplitRatio))
             ApplyLayout();
     }
 
     /// <summary>Keeps the split the user dragged to. Dragged down to the bar's height, the pane collapses instead.</summary>
     private void OnSplitterDragCompleted(object? sender, VectorEventArgs e)
     {
-        if (IsSideBySide || _tab?.Response is not { ShowsCollapsedBar: false } response)
+        if (IsSideBySide || _tab?.Response.Pane is not { ShowsCollapsedBar: false } pane)
             return;
         // The splitter sets the two lengths in proportion to the heights it dragged them to.
         var requestLength = SplitGrid.RowDefinitions[0].Height.Value;
@@ -86,14 +86,14 @@ public partial class RequestTabView : UserControl
         var responseShare = responseLength / (requestLength + responseLength);
         if (responseShare * splitHeight <= ResponseBarHeight)
             // The share from before the drag stays, so expanding brings back the pane the user had.
-            response.IsResponseCollapsed = true;
+            pane.IsResponseCollapsed = true;
         else
-            response.ResponseSplitRatio = responseShare;
+            pane.ResponseSplitRatio = responseShare;
     }
 
     private void OnSplitterDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (_tab?.Response.ToggleCollapsedCommand is not { } toggle || !toggle.CanExecute(null))
+        if (_tab?.Response.Pane.ToggleCollapsedCommand is not { } toggle || !toggle.CanExecute(null))
             return;
         toggle.Execute(null);
         e.Handled = true;
@@ -119,8 +119,8 @@ public partial class RequestTabView : UserControl
     private void ApplyLayout()
     {
         var horizontal = IsSideBySide;
-        var collapsed = !horizontal && _tab?.Response.ShowsCollapsedBar == true;
-        var responseShare = _tab?.Response.ResponseSplitRatio ?? SessionTab.DefaultResponseSplitRatio;
+        var collapsed = !horizontal && _tab?.Response.Pane.ShowsCollapsedBar == true;
+        var responseShare = _tab?.Response.Pane.ResponseSplitRatio ?? SessionTab.DefaultResponseSplitRatio;
         SplitGrid.RowDefinitions.Clear();
         SplitGrid.ColumnDefinitions.Clear();
         if (horizontal)

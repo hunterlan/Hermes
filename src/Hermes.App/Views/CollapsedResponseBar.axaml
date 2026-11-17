@@ -4,7 +4,7 @@
              xmlns:v="using:Hermes.App.Views"
              x:Class="Hermes.App.Views.CollapsedResponseBar"
              x:DataType="vm:ResponseViewModel"
-             IsVisible="{Binding ShowsCollapsedBar}">
+             IsVisible="{Binding Pane.ShowsCollapsedBar}">
   <!-- The response pane folded to a bar at the bottom of the tab. It still says how the last send went, and a click
        anywhere on it opens the pane again. -->
   <Border Name="Bar" Height="{StaticResource ResponseBarHeight}" Background="{DynamicResource BgPrimaryBrush}"
@@ -12,7 +12,7 @@
           PointerPressed="OnBarPointerPressed" PointerReleased="OnBarPointerReleased">
     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
       <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
-        <Button Name="ExpandResponseButton" Classes="icon" Command="{Binding ToggleCollapsedCommand}"
+        <Button Name="ExpandResponseButton" Classes="icon" Command="{Binding Pane.ToggleCollapsedCommand}"
                 ToolTip.Tip="Expand response (Ctrl+J)" AutomationProperties.Name="Expand response">
           <PathIcon Data="{StaticResource IconChevronUp}" />
         </Button>

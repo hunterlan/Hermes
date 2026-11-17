@@ -68,7 +68,7 @@ public class ResponseCollapseViewTests
         var shown = Show();
         shown.Tab.Response.SetResponse(Created());
 
-        shown.Tab.Response.ToggleCollapsedCommand.Execute(null);
+        shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
         UiTestHelpers.Pump();
 
         var responseRow = SplitGrid(shown.View).RowDefinitions[2];
@@ -91,7 +91,7 @@ public class ResponseCollapseViewTests
     {
         var shown = Show();
 
-        shown.Tab.Response.ToggleCollapsedCommand.Execute(null);
+        shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
         UiTestHelpers.Pump();
 
         Assert.Contains("· not sent yet", VisibleBarTexts(shown.View));
@@ -107,7 +107,7 @@ public class ResponseCollapseViewTests
         shown.Tab.Response.SetResponse(Created());
         shown.Tab.Response.SetFailure(RequestFailure.FromMessage("Connection refused"));
 
-        shown.Tab.Response.ToggleCollapsedCommand.Execute(null);
+        shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
         UiTestHelpers.Pump();
 
         Assert.Contains("No response", VisibleBarTexts(shown.View));
@@ -123,12 +123,12 @@ public class ResponseCollapseViewTests
 
         shown.Window.KeyPressQwerty(PhysicalKey.J, RawInputModifiers.Control);
         UiTestHelpers.Pump();
-        Assert.True(shown.Tab.Response.IsResponseCollapsed);
+        Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
         Assert.Equal(BarHeight, SplitGrid(shown.View).RowDefinitions[2].ActualHeight);
 
         shown.Window.KeyPressQwerty(PhysicalKey.J, RawInputModifiers.Control);
         UiTestHelpers.Pump();
-        Assert.False(shown.Tab.Response.IsResponseCollapsed);
+        Assert.False(shown.Tab.Response.Pane.IsResponseCollapsed);
         Assert.Equal(GridUnitType.Star, SplitGrid(shown.View).RowDefinitions[2].Height.GridUnitType);
         Close(shown);
     }
@@ -140,7 +140,7 @@ public class ResponseCollapseViewTests
         shown.View.FindControl<ResponseView>("ResponsePane")!.FindControl<Button>("CollapseResponseButton")!
             .Command!.Execute(null);
         UiTestHelpers.Pump();
-        Assert.True(shown.Tab.Response.IsResponseCollapsed);
+        Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
 
         // Right of the texts, away from the chevron.
         var bar = Bar(shown.View);
@@ -149,7 +149,7 @@ public class ResponseCollapseViewTests
         shown.Window.MouseUp(point, MouseButton.Left);
         UiTestHelpers.Pump();
 
-        Assert.False(shown.Tab.Response.IsResponseCollapsed);
+        Assert.False(shown.Tab.Response.Pane.IsResponseCollapsed);
         Close(shown);
     }
 
@@ -157,7 +157,7 @@ public class ResponseCollapseViewTests
     public void The_chevron_on_the_bar_expands_once()
     {
         var shown = Show();
-        shown.Tab.Response.ToggleCollapsedCommand.Execute(null);
+        shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
         UiTestHelpers.Pump();
 
         var chevron = Bar(shown.View).FindControl<Button>("ExpandResponseButton")!;
@@ -166,7 +166,7 @@ public class ResponseCollapseViewTests
         shown.Window.MouseUp(point, MouseButton.Left);
         UiTestHelpers.Pump();
 
-        Assert.False(shown.Tab.Response.IsResponseCollapsed);
+        Assert.False(shown.Tab.Response.Pane.IsResponseCollapsed);
         Close(shown);
     }
 
@@ -183,7 +183,7 @@ public class ResponseCollapseViewTests
         shown.Window.MouseMove(start + new Point(0, -100));
         shown.Window.MouseUp(start + new Point(0, -100), MouseButton.Left);
         UiTestHelpers.Pump();
-        var draggedShare = shown.Tab.Response.ResponseSplitRatio;
+        var draggedShare = shown.Tab.Response.Pane.ResponseSplitRatio;
         Assert.True(draggedShare > 0.55, $"The response's share is {draggedShare}.");
 
         // Down to the bottom edge: the pane collapses and keeps the share it had before this drag.
@@ -194,10 +194,10 @@ public class ResponseCollapseViewTests
         shown.Window.MouseMove(new Point(start.X, bottom.Y));
         shown.Window.MouseUp(new Point(start.X, bottom.Y), MouseButton.Left);
         UiTestHelpers.Pump();
-        Assert.True(shown.Tab.Response.IsResponseCollapsed);
-        Assert.Equal(draggedShare, shown.Tab.Response.ResponseSplitRatio);
+        Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
+        Assert.Equal(draggedShare, shown.Tab.Response.Pane.ResponseSplitRatio);
 
-        shown.Tab.Response.ToggleCollapsedCommand.Execute(null);
+        shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
         UiTestHelpers.Pump();
         Assert.Equal(draggedShare, ResponseShare(shown.View), 3);
         Close(shown);
@@ -216,8 +216,8 @@ public class ResponseCollapseViewTests
         shown.Window.MouseUp(point, MouseButton.Left);
         UiTestHelpers.Pump();
 
-        Assert.True(shown.Tab.Response.IsResponseCollapsed);
-        Assert.Equal(SessionTab.DefaultResponseSplitRatio, shown.Tab.Response.ResponseSplitRatio, 3);
+        Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
+        Assert.Equal(SessionTab.DefaultResponseSplitRatio, shown.Tab.Response.Pane.ResponseSplitRatio, 3);
         Close(shown);
     }
 
@@ -227,20 +227,20 @@ public class ResponseCollapseViewTests
         var shown = Show();
         try
         {
-            shown.Tab.Response.ResponseSplitRatio = 0.3;
+            shown.Tab.Response.Pane.ResponseSplitRatio = 0.3;
             UiTestHelpers.Pump();
             Settings.ToggleTheme();
             UiTestHelpers.Pump();
             Assert.Equal(0.3, ResponseShare(shown.View), 3);
 
-            shown.Tab.Response.ToggleCollapsedCommand.Execute(null);
+            shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
             UiTestHelpers.Pump();
             Settings.ToggleTheme();
             UiTestHelpers.Pump();
-            Assert.True(shown.Tab.Response.IsResponseCollapsed);
+            Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
             Assert.Equal(BarHeight, SplitGrid(shown.View).RowDefinitions[2].ActualHeight);
 
-            shown.Tab.Response.ToggleCollapsedCommand.Execute(null);
+            shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
             UiTestHelpers.Pump();
             Assert.Equal(0.3, ResponseShare(shown.View), 3);
         }
@@ -256,8 +256,8 @@ public class ResponseCollapseViewTests
         var shown = Show();
         try
         {
-            shown.Tab.Response.ToggleCollapsedCommand.Execute(null);
-            shown.Tab.Response.SetLayoutCommand.Execute(ResponseLayout.Horizontal);
+            shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
+            shown.Tab.Response.Pane.SetLayoutCommand.Execute(ResponseLayout.Horizontal);
             UiTestHelpers.Pump();
 
             Assert.True(shown.View.FindControl<ResponseView>("ResponsePane")!.IsEffectivelyVisible);
@@ -268,17 +268,17 @@ public class ResponseCollapseViewTests
 
             shown.Window.KeyPressQwerty(PhysicalKey.J, RawInputModifiers.Control);
             UiTestHelpers.Pump();
-            Assert.True(shown.Tab.Response.IsResponseCollapsed);
+            Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
             Assert.False(Bar(shown.View).IsEffectivelyVisible);
 
-            shown.Tab.Response.SetLayoutCommand.Execute(ResponseLayout.Vertical);
+            shown.Tab.Response.Pane.SetLayoutCommand.Execute(ResponseLayout.Vertical);
             UiTestHelpers.Pump();
             Assert.True(Bar(shown.View).IsEffectivelyVisible);
             Assert.Equal(BarHeight, SplitGrid(shown.View).RowDefinitions[2].ActualHeight);
         }
         finally
         {
-            shown.Tab.Response.SetLayoutCommand.Execute(ResponseLayout.Vertical);
+            shown.Tab.Response.Pane.SetLayoutCommand.Execute(ResponseLayout.Vertical);
             Close(shown);
         }
     }
@@ -294,7 +294,7 @@ public class ResponseCollapseViewTests
         Assert.Equal("Ctrl J", item.Shortcut);
         shown.ViewModel.CommandPalette.Run(item);
 
-        Assert.True(shown.Tab.Response.IsResponseCollapsed);
+        Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
         Close(shown);
     }
 }

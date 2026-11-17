@@ -205,15 +205,15 @@ public class RequestTabRoundTripTests
         using var temp = new TempWorkspace();
         var services = RequestTabTestServices.Create(temp);
         using var original = new RequestTabViewModel(services, HttpRequestModel.CreateNew());
-        original.Response.ResponseSplitRatio = 0.3;
-        original.Response.ToggleCollapsedCommand.Execute(null);
+        original.Response.Pane.ResponseSplitRatio = 0.3;
+        original.Response.Pane.ToggleCollapsedCommand.Execute(null);
 
         var saved = original.ToSession();
         using var restored = new RequestTabViewModel(services, ModelCloner.Clone(saved.RequestDraft!));
         restored.RestoreSession(saved);
 
-        Assert.True(restored.Response.IsResponseCollapsed);
-        Assert.Equal(0.3, restored.Response.ResponseSplitRatio);
+        Assert.True(restored.Response.Pane.IsResponseCollapsed);
+        Assert.Equal(0.3, restored.Response.Pane.ResponseSplitRatio);
     }
 
     [AvaloniaFact]
@@ -227,7 +227,7 @@ public class RequestTabRoundTripTests
         using var restored = new RequestTabViewModel(services, saved.RequestDraft);
         restored.RestoreSession(saved);
 
-        Assert.False(restored.Response.IsResponseCollapsed);
-        Assert.Equal(SessionTab.DefaultResponseSplitRatio, restored.Response.ResponseSplitRatio);
+        Assert.False(restored.Response.Pane.IsResponseCollapsed);
+        Assert.Equal(SessionTab.DefaultResponseSplitRatio, restored.Response.Pane.ResponseSplitRatio);
     }
 }

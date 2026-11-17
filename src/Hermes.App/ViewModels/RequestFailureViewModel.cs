@@ -34,6 +34,13 @@ public sealed partial class RequestFailureViewModel(RequestFailure failure, Func
     /// <summary>Whether the failure offers <paramref name="action"/> as a next step.</summary>
     public bool OffersAction(RequestFailureAction action) => Model.Actions.Contains(action);
 
+    public bool CanTurnOffVerification => OffersAction(RequestFailureAction.TurnOffSslVerification);
+    public bool CanOpenRequestSettings => OffersAction(RequestFailureAction.OpenRequestSettings);
+    public bool CanEditUrl => OffersAction(RequestFailureAction.EditUrl);
+    public bool CanRetry => OffersAction(RequestFailureAction.Retry);
+    public bool CanChooseFile => OffersAction(RequestFailureAction.ChooseFile);
+    public bool CanShowHeaders => OffersAction(RequestFailureAction.ShowHeaders);
+
     [RelayCommand]
     private Task CopyDetails() => copyText(Model.ToClipboardText());
 }

@@ -167,7 +167,7 @@ public class RequestSendViewModelTests
         Assert.True(response.HasResponse);
         Assert.Single(temp.Workspace.LoadResponses(savedAs.Id));
         Assert.Empty(temp.Workspace.LoadResponses(originalId));
-        Assert.Single(response.SavedResponses);
+        Assert.Single(response.Saved.Items);
         window.Close();
     }
 }

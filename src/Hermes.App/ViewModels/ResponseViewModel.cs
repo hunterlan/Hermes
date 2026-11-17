@@ -1,10 +1,7 @@
-using System.Collections.ObjectModel;
-using System.Text;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Hermes.App.Services;
-using Hermes.Core.Formatting;
 using Hermes.Core.Headers;
 using Hermes.Core.Http;
 using Hermes.Core.Models;
@@ -15,21 +12,28 @@ namespace Hermes.App.ViewModels;
 
 public sealed partial class ResponseViewModel : ObservableObject, IDisposable
 {
-    private const string SentSection = "sent";
-
     private readonly DialogService _dialogs;
     private readonly SettingsService _settings;
-    private readonly HeaderRevealState _revealState;
     private ResponseModel? _response;
 
     public ResponseViewModel(DialogService dialogs, SettingsService settings)
     {
         _dialogs = dialogs;
         _settings = settings;
-        _revealState = new HeaderRevealState(dialogs.CopyTextAsync);
-        // The layout can change from any tab or from Settings; this tab's layout buttons and collapse follow it.
-        _settings.Changed += OnSettingsChanged;
+        Pane = new ResponsePaneLayoutViewModel(settings);
+        Sent = new SentRequestViewModel(dialogs);
+        Saved = new SavedResponsesViewModel();
+        Saved.ShowRequested += OnSavedResponseShowRequested;
     }
+
+    /// <summary>How the pane is laid out: stacked or side by side, collapsed, and its split.</summary>
+    public ResponsePaneLayoutViewModel Pane { get; }
+
+    /// <summary>The request that went out, for the "Sent request" tab.</summary>
+    public SentRequestViewModel Sent { get; }
+
+    /// <summary>The responses saved with the request.</summary>
+    public SavedResponsesViewModel Saved { get; }
 
     [ObservableProperty] public partial bool IsLoading { get; set; }
     [ObservableProperty] public partial bool HasResponse { get; set; }
@@ -54,104 +58,16 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial string? SentWithEnvironmentName { get; set; }
     [ObservableProperty] public partial EnvironmentColor SentWithEnvironmentColor { get; set; }
 
-    /// <summary>The first line of the request that went out, e.g. "GET /users HTTP/1.1", shown in the "Sent request" tab.</summary>
-    [ObservableProperty] public partial string SentRequestLine { get; set; } = "";
-
-    /// <summary>The headers that went out, sensitive ones masked until revealed.</summary>
-    [ObservableProperty] public partial List<HeaderRowViewModel> SentHeaderRows { get; set; } = [];
-
-    /// <summary>The body that went out; empty for none.</summary>
-    [ObservableProperty] public partial string SentBodyText { get; set; } = "";
-
-    public bool HasSentBody => SentBodyText.Length > 0;
-
     // Timing bar: time to first byte vs download.
     [ObservableProperty] public partial double WaitMs { get; set; }
     [ObservableProperty] public partial double DownloadMs { get; set; }
     public string WaitText => $"Wait {WaitMs:0} ms";
     public string DownloadText => $"Download {DownloadMs:0} ms";
 
-    public bool IsSideBySide => _settings.Current.Layout == ResponseLayout.Horizontal;
-
-    // ---- collapsing the pane to a bar ----
-
-    /// <summary>
-    /// The pane is folded to a bar, giving the request editor the tab. Kept in side-by-side layout, which shows the
-    /// pane in full for now, so the tab is collapsed again after switching back to stacked.
-    /// </summary>
-    [ObservableProperty] public partial bool IsResponseCollapsed { get; set; }
-
-    /// <summary>The pane's share of the stacked split while expanded, between 0 and 1. Collapsing keeps it.</summary>
-    [ObservableProperty] public partial double ResponseSplitRatio { get; set; } = SessionTab.DefaultResponseSplitRatio;
-
-    /// <summary>The bar shows instead of the full pane.</summary>
-    public bool ShowsCollapsedBar => IsResponseCollapsed && CanToggleCollapsed;
-
-    /// <summary>Only stacked layout collapses the pane for now.</summary>
-    public bool CanToggleCollapsed => !IsSideBySide;
-
-    [RelayCommand(CanExecute = nameof(CanToggleCollapsed))]
-    private void ToggleCollapsed() => IsResponseCollapsed = !IsResponseCollapsed;
-
-    /// <summary>Puts the pane back as the session kept it. A ratio that can't be a split falls back to the default.</summary>
-    public void RestorePane(bool isCollapsed, double splitRatio)
-    {
-        IsResponseCollapsed = isCollapsed;
-        ResponseSplitRatio = splitRatio is > 0 and < 1 ? splitRatio : SessionTab.DefaultResponseSplitRatio;
-    }
-
-    private void OnSettingsChanged()
-    {
-        OnPropertyChanged(nameof(IsSideBySide));
-        ToggleCollapsedCommand.NotifyCanExecuteChanged();
-    }
-
-    // ---- responses saved with the request ----
-
-    public ObservableCollection<SavedResponseItem> SavedResponses { get; } = [];
-
-    /// <summary>Set while an earlier saved response (not the latest) is on screen.</summary>
-    [ObservableProperty] public partial SavedResponseItem? ViewingEarlier { get; set; }
-
-    public bool HasSavedResponses => SavedResponses.Count > 0;
-    public string SavedResponsesLabel => SavedResponses.Count switch
-    {
-        0 => "",
-        1 => "Saved",
-        var n => $"Saved · {n - 1} earlier {(n == 2 ? "response" : "responses")}",
-    };
-
-    /// <summary>Replaces the saved list; with <paramref name="show"/> the newest one is displayed (e.g. when a tab opens).</summary>
-    public void SetSaved(IReadOnlyList<SavedResponse> saved, bool show)
-    {
-        SavedResponses.Clear();
-        for (var i = 0; i < saved.Count; i++)
-            SavedResponses.Add(new SavedResponseItem(saved[i], i == 0));
-        OnPropertyChanged(nameof(HasSavedResponses));
-        OnPropertyChanged(nameof(SavedResponsesLabel));
-        ViewingEarlier = null;
-        if (show && saved.Count > 0)
-            Show(saved[0]);
-    }
-
-    /// <summary>Puts a just-saved response in front of the list, keeping as many as the workspace stores.</summary>
-    public void AddSaved(SavedResponse saved) =>
-        SetSaved([saved, .. SavedResponses.Select(i => i.Saved).Take(WorkspaceRepository.MaxSavedResponses - 1)], show: false);
-
-    [RelayCommand]
-    private void ShowSaved(SavedResponseItem item)
-    {
-        Show(item.Saved);
-        ViewingEarlier = item.IsLatest ? null : item;
-    }
-
-    private void Show(SavedResponse saved)
+    private void OnSavedResponseShowRequested(object? sender, SavedResponse saved)
     {
         SetResponse(saved.Response);
-        // A saved request is only text, already masked where it was saved: its rows show that text.
-        var parsed = RawRequestParser.Parse(saved.SentRequest);
-        ShowSentRequest(parsed.RequestLine, parsed.Headers.Select(header =>
-            CreateSentRow(header.Name, header.Value, isAuthHeader: false)), parsed.Body);
+        Sent.SetSavedRequest(saved.SentRequest);
         if (saved.BodyOmitted)
             RawText = PrettyText = "[Body not saved: larger than 2 MB. Send again to see it.]";
         OnPropertyChanged(nameof(DisplayText));
@@ -174,13 +90,6 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
 
     /// <summary>Raised when the person picks a next step on the failure. The request tab handles it, since it owns the request.</summary>
     public event EventHandler<RequestFailureActionEventArgs>? FailureActionRequested;
-
-    public bool CanTurnOffVerification => Failure?.OffersAction(RequestFailureAction.TurnOffSslVerification) ?? false;
-    public bool CanOpenRequestSettings => Failure?.OffersAction(RequestFailureAction.OpenRequestSettings) ?? false;
-    public bool CanEditUrl => Failure?.OffersAction(RequestFailureAction.EditUrl) ?? false;
-    public bool CanRetry => Failure?.OffersAction(RequestFailureAction.Retry) ?? false;
-    public bool CanChooseFile => Failure?.OffersAction(RequestFailureAction.ChooseFile) ?? false;
-    public bool CanShowHeaders => Failure?.OffersAction(RequestFailureAction.ShowHeaders) ?? false;
 
     public bool IsPretty => ViewMode == ResponseViewMode.Pretty;
     public bool IsRaw => ViewMode == ResponseViewMode.Raw;
@@ -222,12 +131,6 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
                 break;
             case nameof(Failure):
                 OnPropertyChanged(nameof(IsEmpty));
-                OnPropertyChanged(nameof(CanTurnOffVerification));
-                OnPropertyChanged(nameof(CanOpenRequestSettings));
-                OnPropertyChanged(nameof(CanEditUrl));
-                OnPropertyChanged(nameof(CanRetry));
-                OnPropertyChanged(nameof(CanChooseFile));
-                OnPropertyChanged(nameof(CanShowHeaders));
                 break;
             case nameof(PreviewImage):
                 OnPropertyChanged(nameof(HasPreviewImage));
@@ -237,62 +140,11 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(WaitText));
                 OnPropertyChanged(nameof(DownloadText));
                 break;
-            case nameof(IsSideBySide):
-                OnPropertyChanged(nameof(CanToggleCollapsed));
-                OnPropertyChanged(nameof(ShowsCollapsedBar));
-                break;
-            case nameof(IsResponseCollapsed):
-                OnPropertyChanged(nameof(ShowsCollapsedBar));
-                break;
         }
     }
 
     [RelayCommand]
     private void SetViewMode(ResponseViewMode mode) => ViewMode = mode;
-
-    [RelayCommand]
-    private void SetLayout(ResponseLayout layout)
-    {
-        _settings.Current.Layout = layout;
-        // Raises Changed, which updates IsSideBySide here and in the other tabs.
-        _settings.SaveCurrent();
-    }
-
-    /// <summary>Shows the request as it goes out, with its real values so they can be revealed and copied.</summary>
-    public void SetSentRequest(PreparedRequest request)
-    {
-        // The text gives the request line and the body, in the same form as the wire text and the saved copy.
-        var parsed = RawRequestParser.Parse(RawRequestFormatter.Format(request));
-        var rows = new List<HeaderRowViewModel>();
-        // Host is added when the request has none of its own, as the formatter does.
-        if (request.GetHeader("Host") is null && parsed.Headers.FirstOrDefault(header => header.Name == "Host") is { } host)
-            rows.Add(CreateSentRow(host.Name, host.Value, isAuthHeader: false));
-        rows.AddRange(request.Headers.Select(header =>
-            CreateSentRow(header.Key, header.Value, request.OriginOf(header) == PreparedHeaderOrigin.Auth)));
-        ShowSentRequest(parsed.RequestLine, rows, parsed.Body);
-    }
-
-    /// <summary>Masks the revealed values of the Sent request again, for when the user leaves the tab.</summary>
-    public void HideRevealedValues()
-    {
-        _revealState.Clear();
-        foreach (var row in SentHeaderRows)
-            row.Sensitive.Hide();
-    }
-
-    private HeaderRowViewModel CreateSentRow(string name, string value, bool isAuthHeader) => new(name, value, "")
-    {
-        // Auth headers are credentials whatever their name (an API key may use any header).
-        Sensitive = _revealState.CreateValue(SentSection, name, value, isAuthHeader || SensitiveHeaders.IsSensitiveName(name)),
-    };
-
-    private void ShowSentRequest(string requestLine, IEnumerable<HeaderRowViewModel> headerRows, string body)
-    {
-        SentRequestLine = requestLine;
-        SentHeaderRows = headerRows.ToList();
-        SentBodyText = body;
-        OnPropertyChanged(nameof(HasSentBody));
-    }
 
     public void BeginLoading()
     {
@@ -312,7 +164,7 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
         _response = null;
         Failure = new RequestFailureViewModel(failure, _dialogs.CopyTextAsync);
         // A result is never hidden: the pane opens to show why there is none.
-        IsResponseCollapsed = false;
+        Pane.Expand();
     }
 
     /// <param name="sentWith">The environment the request was resolved with; null for none or a saved response, which doesn't record it.</param>
@@ -347,13 +199,13 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
         var contentType = response.ContentType ?? "";
         var isImage = contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) && !contentType.Contains("svg");
         var oldPreview = PreviewImage;
-        PreviewImage = isImage ? TryDecodeImage(response.Body) : null;
+        PreviewImage = isImage ? ResponseContentDecoder.TryDecodeImage(response.Body) : null;
         oldPreview?.Dispose();
 
         IsTooLargeForPretty = response.BodySize > _settings.Current.MaxPrettyResponseSizeMb * 1024L * 1024L;
-        RawText = isImage ? $"[{contentType} image, {FormatSize(response.BodySize)}. Use Preview to view it.]" : Decode(response);
-        Language = DetectLanguage(contentType, RawText);
-        PrettyText = IsTooLargeForPretty || isImage ? RawText : Prettify(RawText, Language);
+        RawText = isImage ? $"[{contentType} image, {FormatSize(response.BodySize)}. Use Preview to view it.]" : ResponseContentDecoder.Decode(response);
+        Language = ResponseContentDecoder.DetectLanguage(contentType, RawText);
+        PrettyText = IsTooLargeForPretty || isImage ? RawText : ResponseContentDecoder.Prettify(RawText, Language);
 
         if (isImage)
             ViewMode = ResponseViewMode.Preview;
@@ -364,7 +216,7 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(DisplayText));
         OnPropertyChanged(nameof(DisplayLanguage));
         // A result is never hidden: the pane opens when one arrives.
-        IsResponseCollapsed = false;
+        Pane.Expand();
     }
 
     public void Clear()
@@ -383,7 +235,7 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
     /// <summary>Releases the preview image; the view model is not used afterwards.</summary>
     public void Dispose()
     {
-        _settings.Changed -= OnSettingsChanged;
+        Pane.Dispose();
         var oldPreview = PreviewImage;
         PreviewImage = null;
         oldPreview?.Dispose();
@@ -420,72 +272,6 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
             return false;
         return await UserFileWriter.WriteAsync(_dialogs, "Couldn't save the response", path,
             () => File.WriteAllBytesAsync(path, response.Body));
-    }
-
-    private static string Decode(ResponseModel response)
-    {
-        Encoding encoding = Encoding.UTF8;
-        if (response.Charset is { Length: > 0 } charset)
-        {
-            try
-            {
-                encoding = Encoding.GetEncoding(charset.Trim('"'));
-            }
-            catch (ArgumentException)
-            {
-            }
-        }
-        return encoding.GetString(response.Body);
-    }
-
-    internal static string DetectLanguage(string contentType, string body)
-    {
-        if (contentType.Contains("json", StringComparison.OrdinalIgnoreCase))
-            return "json";
-        if (contentType.Contains("html", StringComparison.OrdinalIgnoreCase))
-            return "html";
-        if (contentType.Contains("xml", StringComparison.OrdinalIgnoreCase))
-            return "xml";
-        if (contentType.Contains("javascript", StringComparison.OrdinalIgnoreCase))
-            return "javascript";
-        if (contentType.Contains("css", StringComparison.OrdinalIgnoreCase))
-            return "css";
-
-        // Servers often mislabel; sniff the body.
-        var trimmed = body.AsSpan().TrimStart();
-        if (trimmed.StartsWith("{") || trimmed.StartsWith("["))
-            return "json";
-        if (trimmed.StartsWith("<!DOCTYPE html", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("<html", StringComparison.OrdinalIgnoreCase))
-            return "html";
-        if (trimmed.StartsWith("<"))
-            return "xml";
-        return "text";
-    }
-
-    private static string Prettify(string text, string language)
-    {
-        switch (language)
-        {
-            case "json":
-                return JsonFormatter.TryFormat(text, out var json) ? json : text;
-            case "xml":
-                return XmlFormatter.TryFormat(text, out var xml) ? xml : text;
-            default:
-                return text;
-        }
-    }
-
-    private static Bitmap? TryDecodeImage(byte[] bytes)
-    {
-        try
-        {
-            using var stream = new MemoryStream(bytes);
-            return new Bitmap(stream);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
     }
 
     public static string FormatDuration(TimeSpan time) =>

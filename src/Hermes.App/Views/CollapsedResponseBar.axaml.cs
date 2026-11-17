@@ -23,7 +23,7 @@ public partial class CollapsedResponseBar : UserControl
         // A press on the bar that ends somewhere else is not a click.
         var releasedOnBar = new Rect(Bar.Bounds.Size).Contains(e.GetPosition(Bar));
         if (!wasPressedOnBar || !releasedOnBar || e.InitialPressMouseButton != MouseButton.Left
-            || DataContext is not ResponseViewModel { ToggleCollapsedCommand: var toggle } || !toggle.CanExecute(null))
+            || DataContext is not ResponseViewModel { Pane.ToggleCollapsedCommand: var toggle } || !toggle.CanExecute(null))
             return;
         toggle.Execute(null);
         e.Handled = true;
