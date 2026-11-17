@@ -60,6 +60,32 @@ public class CertificateFailureViewTests
     }
 
     [AvaloniaFact]
+    public async Task Copy_details_sits_in_the_details_header_above_the_rows_and_stays_in_view()
+    {
+        using var server = new LocalHttpsServer(TestCertificates.SelfSigned());
+        var (window, tab) = await SendToSelfSignedServerAsync(server);
+        var details = Find<CollapsibleSection>(window, "FailureDetailsSection");
+        details.IsExpanded = true;
+        UiTestHelpers.Pump();
+
+        var copyButton = Find<Button>(window, "CopyFailureDetailsButton");
+        // The first row of Details is the "Server" line, which the view shows above the certificate's own rows.
+        var firstDetailLabelText = tab.Response.Failure!.Details[0].Label;
+        Assert.Equal("Server", firstDetailLabelText);
+        var firstDetailLabel = window.GetVisualDescendants().OfType<TextBlock>()
+            .First(label => label.IsEffectivelyVisible && label.Text == firstDetailLabelText);
+        var scroller = copyButton.FindAncestorOfType<ScrollViewer>()!;
+        var copyTop = copyButton.TranslatePoint(default, scroller)!.Value.Y;
+        var detailTop = firstDetailLabel.TranslatePoint(default, scroller)!.Value.Y;
+
+        // Above the rows, so a long list of details can't push it below the edge of the pane.
+        Assert.True(copyTop < detailTop, $"Copy details at {copyTop} should be above the first row at {detailTop}.");
+        Assert.True(copyTop >= 0 && copyTop + copyButton.Bounds.Height <= scroller.Viewport.Height,
+            "Copy details should be inside the visible part of the failure block without scrolling.");
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public async Task Turning_verification_off_sets_the_request_override_and_the_resent_request_succeeds()
     {
         using var server = new LocalHttpsServer(TestCertificates.SelfSigned());

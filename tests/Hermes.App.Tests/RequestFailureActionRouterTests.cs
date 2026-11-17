@@ -167,6 +167,25 @@ public class RequestFailureActionRouterTests
     }
 
     [AvaloniaFact]
+    public async Task Choose_file_for_a_path_no_field_holds_shows_the_body_without_asking_for_a_file()
+    {
+        using var request = new RoutedRequest();
+        request.Body.SelectedBodyMode = RequestBodyViewModel.BodyModes.Single(mode => mode.Value == BodyMode.Binary);
+        request.Body.BinaryFilePath = "{{payloadFile}}";
+        request.Sections.BodyExpanded = false;
+        var revealRequests = 0;
+        request.Sections.BodyRevealRequested += () => revealRequests++;
+
+        // A file picker would wait for a person in this test, so the timeout fails the test instead of hanging it.
+        await request.Router.ChooseBodyFileCommand.ExecuteAsync("/resolved/payload.bin")
+            .WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal("{{payloadFile}}", request.Body.BinaryFilePath);
+        Assert.True(request.Sections.BodyExpanded);
+        Assert.Equal(1, revealRequests);
+    }
+
+    [AvaloniaFact]
     public async Task Every_failure_action_has_a_handler()
     {
         using var request = new RoutedRequest();

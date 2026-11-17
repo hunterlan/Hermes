@@ -15,7 +15,7 @@ public static class NetworkFailureDescriber
     {
         var cause = NetworkFailureClassifier.Classify(exception);
         var host = attemptedUri.Host;
-        var endpoint = $"{host}:{attemptedUri.Port}";
+        var endpoint = FormatEndpoint(attemptedUri);
         var redirected = requestedUri != attemptedUri;
         var originalMessage = ExceptionText.Flatten(exception);
 
@@ -54,11 +54,24 @@ public static class NetworkFailureDescriber
             Headline = wording.Headline,
             Facts = wording.Facts,
             NothingWasSent = wording.NothingWasSent,
-            Details = [new FailureDetail("Server", endpoint), new FailureDetail("Error", NetworkFailureClassifier.DescribeChain(exception))],
+            Details = [CreateServerDetail(attemptedUri), new FailureDetail("Error", NetworkFailureClassifier.DescribeChain(exception))],
             // With no cause named, the message is already the facts.
             OriginalMessage = cause == NetworkFailureCause.Unknown ? null : originalMessage,
             Actions = wording.Action is { } next ? [next] : [],
         };
+    }
+
+    /// <summary>The "Server" line of Details: the host and port the failed connection was for.</summary>
+    internal static FailureDetail CreateServerDetail(Uri attemptedUri) => new("Server", FormatEndpoint(attemptedUri));
+
+    /// <summary>
+    /// The host and port as <c>host:port</c>. The host is the IDN (punycode) form, which is what goes on the wire and
+    /// what certificate facts name; an IPv6 address is in brackets so the port can be told apart.
+    /// </summary>
+    internal static string FormatEndpoint(Uri uri)
+    {
+        var host = uri.IdnHost;
+        return host.Contains(':') && !host.StartsWith('[') ? $"[{host}]:{uri.Port}" : $"{host}:{uri.Port}";
     }
 
     /// <summary>The wording and next step for one cause, before a redirect changes it.</summary>

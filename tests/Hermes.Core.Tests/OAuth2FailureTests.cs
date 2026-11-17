@@ -224,5 +224,26 @@ public sealed class OAuth2FailureTests : IDisposable
         Assert.Contains(failure.Details, detail => detail is { Label: "Error", Value: "InvalidOperationException" });
     }
 
+    [Fact]
+    public void Token_request_redirected_before_a_handshake_failure_names_one_host()
+    {
+        var failure = OAuth2FailureDescriber.FromNetworkFailure(new System.Security.Authentication.AuthenticationException("bad"),
+            new Uri("https://login.example.test/token"), new Uri("https://other.example.test:8443/token"), null, SslSettingSource.AppWide, DateTime.Now);
+
+        Assert.Contains("other.example.test", failure.Facts);
+        Assert.DoesNotContain("login.example.test", failure.Facts);
+        Assert.Equal("other.example.test:8443", failure.Details[0].Value);
+        Assert.Equal("Server", failure.Details[0].Label);
+    }
+
+    [Fact]
+    public void Timeout_names_the_token_server_the_same_way_as_the_server_row()
+    {
+        var failure = OAuth2FailureDescriber.FromTimeout(new Uri("https://[::1]:9/token"));
+
+        Assert.Contains("[::1]:9", failure.Facts);
+        Assert.Equal([new FailureDetail("Server", "[::1]:9")], failure.Details);
+    }
+
     public void Dispose() => _oauth.Dispose();
 }

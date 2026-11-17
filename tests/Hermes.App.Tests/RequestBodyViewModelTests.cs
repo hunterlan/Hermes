@@ -191,6 +191,30 @@ public class RequestBodyViewModelTests
     }
 
     [AvaloniaFact]
+    public void Holds_a_file_path_only_where_a_binary_or_form_data_file_field_has_exactly_that_path()
+    {
+        var vm = CreateBody();
+        vm.Load(new RequestBody { Mode = BodyMode.Binary, BinaryFilePath = "/old/payload.bin" });
+
+        Assert.True(vm.HoldsFilePath("/old/payload.bin"));
+        Assert.False(vm.HoldsFilePath("/resolved/payload.bin"));
+
+        vm.Load(new RequestBody
+        {
+            Mode = BodyMode.FormData,
+            FormData =
+            [
+                new("a", "/old/a.txt") { Kind = KeyValueKind.File },
+                new("b", "/old/b.txt"),
+            ],
+        });
+
+        Assert.True(vm.HoldsFilePath("/old/a.txt"));
+        Assert.False(vm.HoldsFilePath("/old/b.txt"));
+        Assert.False(vm.HoldsFilePath("/old/payload.bin"));
+    }
+
+    [AvaloniaFact]
     public void Chosen_file_replaces_only_the_form_data_rows_with_the_failed_path()
     {
         var vm = CreateBody();

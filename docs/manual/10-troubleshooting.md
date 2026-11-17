@@ -38,7 +38,8 @@ Two buttons sit under the facts:
 - **Open request settings** shows the request's Settings section, expanded, so you can change it yourself.
 
 **Details** is collapsed. It shows who the certificate was issued to and by, the dates it is valid, which check failed,
-and the original message. **Copy details** puts all of it on the clipboard for a bug report.
+and the original message. **Copy details**, next to the **Details** heading, puts all of it on the clipboard for a bug
+report.
 
 To turn verification off for every request instead, use **SSL certificate verification** in
 [Settings](09-settings.md).

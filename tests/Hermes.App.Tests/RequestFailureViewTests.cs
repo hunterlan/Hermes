@@ -137,6 +137,27 @@ public class RequestFailureViewTests
     }
 
     [AvaloniaFact]
+    public async Task Choose_file_for_a_path_from_a_variable_shows_the_body_without_asking_for_a_file()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
+        tab.Body.SelectedBodyMode = RequestBodyViewModel.BodyModes.Single(mode => mode.Value == BodyMode.Binary);
+        tab.Body.BinaryFilePath = "{{payloadFile}}";
+        tab.Sections.BodyExpanded = false;
+        var revealRequests = 0;
+        tab.Sections.BodyRevealRequested += () => revealRequests++;
+
+        // A file picker would wait for a person in this test, so the timeout fails the test instead of hanging it.
+        await tab.FailureActions.ChooseBodyFileCommand.ExecuteAsync("/resolved/payload.bin")
+            .WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal("{{payloadFile}}", tab.Body.BinaryFilePath);
+        Assert.True(tab.Sections.BodyExpanded);
+        Assert.Equal(1, revealRequests);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void Chosen_file_replaces_only_the_form_data_rows_with_the_failed_path()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();

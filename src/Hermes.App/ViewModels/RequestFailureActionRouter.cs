@@ -65,10 +65,20 @@ public sealed partial class RequestFailureActionRouter(
         await send.ExecuteAsync(null);
     }
 
-    /// <summary>"Choose file" after the body's file couldn't be read: asks for another file and uses it.</summary>
+    /// <summary>
+    /// "Choose file" after the body's file couldn't be read: asks for another file and uses it. When no field holds
+    /// the unreadable path (it came from a variable) there is nothing to replace, so no file is asked for and the
+    /// Body section is shown instead, where the user decides.
+    /// </summary>
     [RelayCommand]
     private async Task ChooseBodyFileAsync(string? unreadablePath)
     {
+        if (!body.HoldsFilePath(unreadablePath))
+        {
+            sections.RevealBody();
+            return;
+        }
+
         if (await dialogs.PickFileAsync("Select file") is { } picked)
             UseChosenBodyFile(picked, unreadablePath);
     }

@@ -125,6 +125,9 @@ public sealed partial class RequestBodyViewModel : ObservableObject
         UnsupportedJson = _unsupportedBodyJson,
     };
 
+    /// <summary>True when the body's file field, or a form-data file row, holds exactly <paramref name="path"/>.</summary>
+    public bool HoldsFilePath(string? path) => BinaryFieldHolds(path) || FormDataFileRowsHolding(path).Any();
+
     /// <summary>
     /// Puts <paramref name="picked"/> in place of the file that couldn't be read, but only where that exact path is
     /// written. When no field holds it (it came from a variable), nothing is overwritten.
@@ -133,24 +136,27 @@ public sealed partial class RequestBodyViewModel : ObservableObject
     public bool UseChosenBodyFile(string picked, string? unreadablePath)
     {
         var replaced = false;
-        if (IsBodyBinary)
+        if (BinaryFieldHolds(unreadablePath))
         {
-            if (BinaryFilePath == unreadablePath)
-            {
-                BinaryFilePath = picked;
-                replaced = true;
-            }
+            BinaryFilePath = picked;
+            replaced = true;
         }
-        else
+
+        foreach (var row in FormDataFileRowsHolding(unreadablePath).ToList())
         {
-            foreach (var row in FormData.Rows.Where(row => row.IsFile && row.Value == unreadablePath).ToList())
-            {
-                row.Value = picked;
-                replaced = true;
-            }
+            row.Value = picked;
+            replaced = true;
         }
         return replaced;
     }
+
+    /// <summary>The one rule for the binary body: its file field holds exactly <paramref name="path"/>.</summary>
+    private bool BinaryFieldHolds(string? path) => IsBodyBinary && BinaryFilePath == path;
+
+    /// <summary>The one rule for form data: the file rows whose value is exactly <paramref name="path"/>.</summary>
+    private IEnumerable<KeyValueRowViewModel> FormDataFileRowsHolding(string? path) => IsBodyBinary
+        ? []
+        : FormData.Rows.Where(row => row.IsFile && row.Value == path);
 
     partial void OnSelectedBodyModeChanged(Option<BodyMode> value)
     {

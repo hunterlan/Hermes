@@ -23,9 +23,12 @@ public static class CertificateFailureDescriber
     /// <param name="facts">What the handshake showed; null when no certificate check failed, which gives a failure in plain words: plain HTTP answered on an HTTPS URL, or else that both sides couldn't agree on how to secure the connection.</param>
     /// <param name="originalMessage">The exception's message. Kept for the Details only when no certificate facts exist, and never shown as the facts; with facts it is left out, since the facts say more.</param>
     /// <param name="now">The current time, to tell an expired certificate from one that isn't valid yet.</param>
-    /// <param name="requestedHost">The host of the request. When the facts are for another host, a redirect led there. Without facts, the host the failed handshake was with.</param>
-    public static RequestFailure Describe(CertificateFacts? facts, string originalMessage, DateTime now, string requestedHost)
+    /// <param name="requestedUri">The address the user asked for. When the facts are for another host, a redirect led there.</param>
+    /// <param name="attemptedUri">The address the failed handshake was with. Its host is the one named without facts, and it is the Server row, the first of Details.</param>
+    public static RequestFailure Describe(CertificateFacts? facts, string originalMessage, DateTime now, Uri requestedUri, Uri attemptedUri)
     {
+        var requestedHost = requestedUri.IdnHost;
+        var serverDetail = NetworkFailureDescriber.CreateServerDetail(attemptedUri);
         // Without a failed certificate check (a protocol or cipher mismatch, a dropped handshake) turning
         // verification off would not help, so no next steps are offered.
         if (facts is null)
@@ -36,9 +39,10 @@ public static class CertificateFailureDescriber
                 Kind = plainHttpAnswered ? RequestFailureKind.PlainHttpAnswered : RequestFailureKind.SecureConnectionFailed,
                 Headline = plainHttpAnswered ? "Server didn't answer over HTTPS" : "Secure connection failed",
                 Facts = plainHttpAnswered
-                    ? $"{requestedHost} answered, but not over a secure connection. If it only serves plain HTTP, change the URL to http://."
-                    : $"Hermes and {requestedHost} couldn't agree on how to secure the connection. The server may only support old TLS versions or ciphers this computer no longer allows.",
+                    ? $"{attemptedUri.IdnHost} answered, but not over a secure connection. If it only serves plain HTTP, change the URL to http://."
+                    : $"Hermes and {attemptedUri.IdnHost} couldn't agree on how to secure the connection. The server may only support old TLS versions or ciphers this computer no longer allows.",
                 NothingWasSent = true,
+                Details = [serverDetail],
                 OriginalMessage = originalMessage,
             };
         }
@@ -52,7 +56,7 @@ public static class CertificateFailureDescriber
             Facts = redirected ? RedirectNote.Prepend(facts.Host, classification.Facts) : classification.Facts,
             // After a redirect the first request went out.
             NothingWasSent = !redirected,
-            Details = CreateDetails(facts),
+            Details = [serverDetail, .. CreateDetails(facts)],
             Actions = [RequestFailureAction.TurnOffSslVerification, RequestFailureAction.OpenRequestSettings],
             ActionCaption = RiskCaption,
         };

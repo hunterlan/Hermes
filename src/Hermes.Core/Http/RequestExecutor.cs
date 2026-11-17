@@ -6,8 +6,10 @@ using Hermes.Core.Models;
 
 namespace Hermes.Core.Http;
 
-public sealed class RequestExecutor(HttpClientProvider clients) : IRequestExecutor
+public sealed class RequestExecutor(HttpClientProvider clients, TimeProvider? timeProvider = null) : IRequestExecutor
 {
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
     public async Task<ExecutionResult> ExecuteAsync(PreparedRequest request, CancellationToken cancellationToken)
     {
         HttpRequestMessage message;
@@ -115,9 +117,11 @@ public sealed class RequestExecutor(HttpClientProvider clients) : IRequestExecut
             // The handshake that failed was with the address the last redirect led to.
             var facts = clients.CertificateFailures.Find(attemptedUri.IdnHost, startTimestamp);
             if (facts is not null)
-                return CertificateFailureDescriber.Describe(facts, FindTlsMessage(ex), DateTime.Now, requestedUri.IdnHost);
+            {
+                return CertificateFailureDescriber.Describe(facts, FindTlsMessage(ex), _timeProvider.GetLocalNow().DateTime, requestedUri, attemptedUri);
+            }
 
-            var failure = CertificateFailureDescriber.Describe(null, FindTlsMessage(ex), DateTime.Now, attemptedUri.IdnHost);
+            var failure = CertificateFailureDescriber.Describe(null, FindTlsMessage(ex), _timeProvider.GetLocalNow().DateTime, requestedUri, attemptedUri);
             return WithNetworkDetails(failure, ex, requestedUri, attemptedUri);
         }
         return NetworkFailureDescriber.Describe(ex, requestedUri, attemptedUri);
@@ -135,7 +139,7 @@ public sealed class RequestExecutor(HttpClientProvider clients) : IRequestExecut
         {
             Facts = redirected ? RedirectNote.Prepend(attemptedUri.IdnHost, failure.Facts) : failure.Facts,
             NothingWasSent = !redirected,
-            Details = [new FailureDetail("Error", NetworkFailureClassifier.DescribeChain(ex))],
+            Details = [.. failure.Details, new FailureDetail("Error", NetworkFailureClassifier.DescribeChain(ex))],
             OriginalMessage = ExceptionText.Innermost(ex),
             Actions = failure.Kind == RequestFailureKind.PlainHttpAnswered && !redirected ? [RequestFailureAction.EditUrl] : [],
         };
