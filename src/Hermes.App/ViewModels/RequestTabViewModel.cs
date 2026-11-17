@@ -521,7 +521,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
                 Response.SetCancelled();
                 return;
             }
-            var result = outcome.Result!;
+            var result = outcome.Result;
             if (result.Response is { } response)
             {
                 Response.SetResponse(response, sentWith: context.Environment);
