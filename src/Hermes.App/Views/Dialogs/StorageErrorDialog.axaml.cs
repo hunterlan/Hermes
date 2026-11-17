@@ -37,6 +37,8 @@ public partial class StorageErrorDialog : Window
             });
         Header.Title = title;
         Footer.CloseButtonText = closeText;
+        if (choices.Count > 0)
+            PlaceCopyDetailsWithChoices();
         foreach (var choice in choices)
         {
             var button = new Button { Content = choice.Label };
@@ -45,6 +47,17 @@ public partial class StorageErrorDialog : Window
             button.Click += async (_, _) => await ChooseAsync(choice);
             ChoicePanel.Children.Add(button);
         }
+    }
+
+    /// <summary>
+    /// With choices, the close button (Quit) goes alone at the left edge, so it isn't mistaken for one of them; Copy
+    /// details joins the choices at the right.
+    /// </summary>
+    private void PlaceCopyDetailsWithChoices()
+    {
+        Footer.CloseButtonOnLeading = true;
+        LeadingPanel.Children.Remove(CopyDetailsButton);
+        ChoicePanel.Children.Insert(0, CopyDetailsButton);
     }
 
     private async Task ChooseAsync(StorageDialogChoice choice)

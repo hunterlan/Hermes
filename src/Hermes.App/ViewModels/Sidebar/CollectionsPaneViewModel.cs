@@ -198,9 +198,12 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         var previousName = NameOf(node);
         var saved = node switch
         {
-            CollectionNodeViewModel c => Rename(c.Model.Name, name => c.Model.Name = name, newName, c.Model),
-            FolderNodeViewModel f => Rename(f.Model.Name, name => f.Model.Name = name, newName, f.Root.Model),
-            RequestNodeViewModel r => Rename(r.Model.Name, name => r.Model.Name = name, newName, r.Root.Model),
+            CollectionNodeViewModel c => Rename(c.Model.Name, name => c.Model.Name = name, newName, c.Model,
+                $"Collection \"{c.Model.Name}\""),
+            FolderNodeViewModel f => Rename(f.Model.Name, name => f.Model.Name = name, newName, f.Root.Model,
+                $"Folder \"{f.Model.Name}\" in collection \"{f.Root.Model.Name}\""),
+            RequestNodeViewModel r => Rename(r.Model.Name, name => r.Model.Name = name, newName, r.Root.Model,
+                $"Request \"{r.Model.Name}\" in collection \"{r.Root.Model.Name}\""),
             _ => true,
         };
         if (!saved)
@@ -213,11 +216,14 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
             _host.OnRequestRenamed(renamed.Model.Id, newName);
     }
 
-    /// <summary>Sets a new name and saves the collection; puts the old name back when that fails.</summary>
-    private bool Rename(string previousName, Action<string> setName, string newName, CollectionModel collection)
+    /// <summary>
+    /// Sets a new name and saves the collection; puts the old name back when that fails, and reports the failure as
+    /// <paramref name="subject"/>, named by its old name, that couldn't be renamed.
+    /// </summary>
+    private bool Rename(string previousName, Action<string> setName, string newName, CollectionModel collection, string subject)
     {
         setName(newName);
-        if (_workspace.SaveCollection(collection))
+        if (_workspace.SaveCollection(collection, new SaveFailureWording(subject, $"couldn't be renamed to \"{newName}\"")))
             return true;
         setName(previousName);
         return false;

@@ -16,13 +16,16 @@ public sealed partial class StorageErrorDialogViewModel(
     /// <summary>The raw text of every error, separated by blank lines.</summary>
     public string DetailsText { get; } = string.Join("\n\n", errors.Select(error => error.Details));
 
+    /// <summary>What Copy details puts on the clipboard: each error's summary sentence, then its raw text.</summary>
+    public string CopyText { get; } = string.Join("\n\n", errors.Select(error => $"{error.Summary}\n{error.Details}"));
+
     [ObservableProperty]
     public partial string CopyDetailsText { get; private set; } = "Copy details";
 
     [RelayCommand]
     private async Task CopyDetails()
     {
-        await copy(DetailsText);
+        await copy(CopyText);
         CopyDetailsText = "Copied!";
     }
 }

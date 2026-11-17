@@ -26,11 +26,16 @@
         <Setter Property="Template">
           <ControlTemplate>
             <Grid ColumnDefinitions="Auto,*,Auto">
-              <ContentPresenter Content="{TemplateBinding Leading}" VerticalAlignment="Center" />
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}" VerticalAlignment="Center">
+                <Button Name="PART_LeadingCloseButton" Content="{TemplateBinding CloseButtonText}"
+                        IsCancel="{TemplateBinding ShowsLeadingCloseButton}"
+                        IsVisible="{TemplateBinding ShowsLeadingCloseButton}" />
+                <ContentPresenter Content="{TemplateBinding Leading}" VerticalAlignment="Center" />
+              </StackPanel>
               <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
                 <Button Name="PART_CloseButton" Content="{TemplateBinding CloseButtonText}"
-                        IsCancel="{TemplateBinding CloseButtonText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                        IsVisible="{TemplateBinding CloseButtonText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        IsCancel="{TemplateBinding ShowsTrailingCloseButton}"
+                        IsVisible="{TemplateBinding ShowsTrailingCloseButton}" />
                 <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
                                   IsVisible="{TemplateBinding Content, Converter={x:Static ObjectConverters.IsNotNull}}" />
               </StackPanel>

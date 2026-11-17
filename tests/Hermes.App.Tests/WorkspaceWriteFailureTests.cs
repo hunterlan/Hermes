@@ -236,6 +236,8 @@ public class WorkspaceWriteFailureTests
         Assert.Equal("List", pane.Find(request.Id)!.Name);
         Assert.Empty(host.RenamedRequests);
         Assert.Equal(2, temp.Problems.Count);
+        Assert.StartsWith("Collection \"Pets\" couldn't be renamed to \"Animals\": ", temp.Problems[0].Summary);
+        Assert.StartsWith("Request \"List\" in collection \"Pets\" couldn't be renamed to \"Fetch\": ", temp.Problems[1].Summary);
         Assert.Contains("\"name\":\"Pets\"", File.ReadAllText(temp.Repository.CollectionFile(collection.Id)).Replace(" ", ""));
     }
 
