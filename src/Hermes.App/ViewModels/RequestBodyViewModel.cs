@@ -47,6 +47,9 @@ public sealed partial class RequestBodyViewModel : ObservableObject
     /// <summary>Raised when the user changes anything in the body; not while it is being loaded.</summary>
     public event Action? Changed;
 
+    /// <summary>Raised when the user picks another body mode; not while the body is being loaded.</summary>
+    public event Action? ModeChanged;
+
     public KeyValueListViewModel FormData { get; } = new(allowFiles: true);
     public KeyValueListViewModel UrlEncoded { get; } = new();
 
@@ -149,7 +152,12 @@ public sealed partial class RequestBodyViewModel : ObservableObject
         return replaced;
     }
 
-    partial void OnSelectedBodyModeChanged(Option<BodyMode> value) => RaiseChanged();
+    partial void OnSelectedBodyModeChanged(Option<BodyMode> value)
+    {
+        if (!_loading)
+            ModeChanged?.Invoke();
+        RaiseChanged();
+    }
 
     partial void OnSelectedRawLanguageChanged(Option<RawLanguage> value) => RaiseChanged();
 

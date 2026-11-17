@@ -43,9 +43,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         HeadersEditor.Changed += UpdateDirty;
         Body = new RequestBodyViewModel(services.Dialogs);
         Body.Changed += OnAnyChanged;
-        Body.PropertyChanged += OnBodyPropertyChanged;
         Settings = new RequestSettingsViewModel(services.Settings);
-        Settings.Changed += OnSettingsEdited;
+        Settings.Changed += OnAnyChanged;
+        Sections = new ComposerSectionsViewModel(Params, Body, Settings);
 
         Auth = services.CreateAuthEditor(allowInherit: true);
         Auth.Changed += OnAnyChanged;
@@ -79,6 +79,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     public RequestHeadersViewModel HeadersEditor { get; }
     public RequestBodyViewModel Body { get; }
     public RequestSettingsViewModel Settings { get; }
+    public ComposerSectionsViewModel Sections { get; }
     public AuthEditorViewModel Auth { get; }
     public ResponseViewModel Response { get; }
 
@@ -96,37 +97,11 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     /// <summary>The URL after variable resolution, shown under the URL bar as "Sends to".</summary>
     [ObservableProperty] public partial string ResolvedUrl { get; set; } = "";
 
-    // ---- composer sections: only what the request uses is on screen; the rest waits as "Not used yet" chips ----
-
-    [ObservableProperty] public partial bool ParamsAdded { get; set; }
-    [ObservableProperty] public partial bool BodyAdded { get; set; }
-    [ObservableProperty] public partial bool SettingsAdded { get; set; }
-    [ObservableProperty] public partial bool ParamsExpanded { get; set; } = true;
-    [ObservableProperty] public partial bool HeadersExpanded { get; set; } = true;
-    [ObservableProperty] public partial bool AuthExpanded { get; set; }
-    [ObservableProperty] public partial bool BodyExpanded { get; set; } = true;
-    [ObservableProperty] public partial bool SettingsExpanded { get; set; } = true;
-
-    /// <summary>Raised when the Settings section should be brought on screen; the view scrolls to it.</summary>
-    public event Action? SettingsRevealRequested;
-
-    /// <summary>Raised when the Headers section should be brought on screen; the view scrolls to it.</summary>
-    public event Action? HeadersRevealRequested;
-
-    /// <summary>Raised when the Body section should be brought on screen; the view scrolls to it.</summary>
-    public event Action? BodyRevealRequested;
-
     /// <summary>Raised when the cursor should go to the URL; the view focuses it.</summary>
     public event Action? UrlFocusRequested;
 
-    public bool IsParamsSectionVisible => ParamsAdded || Params.ActiveCount > 0 || HasPathVariables;
-    public bool IsBodySectionVisible => BodyAdded || Body.HasBody || Body.HasUnsupportedBody || SelectedMethod is "POST" or "PUT" or "PATCH";
-    public bool IsSettingsSectionVisible => SettingsAdded || Settings.HasSettingsOverrides;
-    public bool HasUnusedSections => !IsParamsSectionVisible || !IsBodySectionVisible || !IsSettingsSectionVisible;
-
     public string? ActiveEnvironmentName => Services.Workspace.ActiveEnvironment?.Name;
 
-    public string ParamsSummary => Params.ActiveCount is var n and > 0 ? $"{n} active" : "";
     /// <summary>Whether the URL has <c>{{variables}}</c> (including dynamic ones) or <c>:path</c> variables, i.e. whether "Sends to" adds information.</summary>
     public bool HasUrlSubstitutions =>
         VariableResolver.FindVariables(Url).Any() || UrlUtilities.ParsePathVariables(Url).Count > 0;
@@ -155,9 +130,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         _syncingUrl = false;
         _loading = false;
         OnPropertyChanged(nameof(HasPathVariables));
+        Sections.HasPathVariables = HasPathVariables;
         OnPropertyChanged(nameof(Method));
         RefreshPreview();
-        NotifySections();
     }
 
     public HttpRequestModel BuildModel()
@@ -203,32 +178,15 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
                 break;
             case nameof(SelectedMethod):
                 OnPropertyChanged(nameof(Method));
-                NotifySections();
+                Sections.Method = SelectedMethod;
                 break;
             case nameof(Name):
                 Title = Name;
-                break;
-            case nameof(ParamsAdded) or nameof(BodyAdded) or nameof(SettingsAdded):
-                NotifySections();
                 break;
         }
 
         if (e.PropertyName is nameof(Name) or nameof(SelectedMethod))
             OnAnyChanged();
-    }
-
-    /// <summary>A section the user edits stays on screen even if it becomes empty again.</summary>
-    private void OnBodyPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (!_loading && e.PropertyName is nameof(RequestBodyViewModel.SelectedBodyMode))
-            BodyAdded = true;
-    }
-
-    /// <summary>A section the user edits stays on screen even if it becomes empty again.</summary>
-    private void OnSettingsEdited()
-    {
-        SettingsAdded = true;
-        OnAnyChanged();
     }
 
     private void OnAnyChanged()
@@ -237,7 +195,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             return;
         RefreshPreview();
         UpdateDirty();
-        NotifySections();
     }
 
     partial void OnUrlChanged(string value)
@@ -277,7 +234,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             Params.Load(UrlUtilities.MergeQueryParams(Params.ToModels(), UrlUtilities.ParseQuery(UrlUtilities.Split(value).Query)));
             PathVariables.Load(UrlUtilities.MergePathVariables(value, PathVariables.ToModels()));
             OnPropertyChanged(nameof(HasPathVariables));
-            NotifySections();
+            Sections.HasPathVariables = HasPathVariables;
         }
         finally
         {
@@ -291,10 +248,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 
     private void OnParamsChanged()
     {
-        NotifySections();
         if (_syncingUrl || _loading)
             return;
-        ParamsAdded = true;
+        Sections.ParamsAdded = true;
         _syncingUrl = true;
         try
         {
@@ -528,37 +484,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         await Services.Dialogs.ShowDialogAsync<object>(dialog);
     }
 
-    /// <summary>A "Not used yet" chip: brings the section on screen, expanded.</summary>
-    [RelayCommand]
-    private void AddSection(string section)
-    {
-        switch (section)
-        {
-            case "params":
-                ParamsAdded = ParamsExpanded = true;
-                break;
-            case "body":
-                BodyAdded = BodyExpanded = true;
-                break;
-            case "settings":
-                SettingsAdded = SettingsExpanded = true;
-                break;
-        }
-    }
-
-    /// <summary>Shows the Settings section, expanded, and asks the view to bring it on screen.</summary>
-    private void RevealSettings()
-    {
-        SettingsAdded = SettingsExpanded = true;
-        SettingsRevealRequested?.Invoke();
-    }
-
-    private void RevealHeaders()
-    {
-        HeadersExpanded = true;
-        HeadersRevealRequested?.Invoke();
-    }
-
     /// <summary>"Choose file" after the body's file couldn't be read: asks for another file and uses it.</summary>
     [RelayCommand]
     private async Task ChooseBodyFileAsync(string? unreadablePath)
@@ -576,10 +501,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     {
         var replaced = Body.UseChosenBodyFile(picked, unreadablePath);
         if (!replaced)
-        {
-            BodyAdded = BodyExpanded = true;
-            BodyRevealRequested?.Invoke();
-        }
+            Sections.RevealBody();
         return replaced;
     }
 
@@ -591,7 +513,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
                 TurnOffVerificationAndResendCommand.Execute(null);
                 break;
             case RequestFailureAction.OpenRequestSettings:
-                RevealSettings();
+                Sections.RevealSettings();
                 break;
             case RequestFailureAction.EditUrl:
                 UrlFocusRequested?.Invoke();
@@ -603,7 +525,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
                 ChooseBodyFileCommand.Execute(args.Failure.Subject);
                 break;
             case RequestFailureAction.ShowHeaders:
-                RevealHeaders();
+                Sections.RevealHeaders();
                 break;
             case RequestFailureAction.OpenAppSettings:
                 OpenAppSettingsCommand.Execute(null);
@@ -622,15 +544,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     {
         Settings.VerifySslOverride = false;
         await SendCommand.ExecuteAsync(null);
-    }
-
-    private void NotifySections()
-    {
-        OnPropertyChanged(nameof(IsParamsSectionVisible));
-        OnPropertyChanged(nameof(IsBodySectionVisible));
-        OnPropertyChanged(nameof(IsSettingsSectionVisible));
-        OnPropertyChanged(nameof(HasUnusedSections));
-        OnPropertyChanged(nameof(ParamsSummary));
     }
 
     [RelayCommand]

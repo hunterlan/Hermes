@@ -96,8 +96,8 @@
         <StackPanel Margin="0,0,8,12">
 
           <!-- Params -->
-          <Border Classes="section" BorderThickness="0" IsVisible="{Binding IsParamsSectionVisible}">
-            <c:CollapsibleSection Header="Params" Summary="{Binding ParamsSummary}" IsExpanded="{Binding ParamsExpanded}">
+          <Border Classes="section" BorderThickness="0" IsVisible="{Binding Sections.IsParamsSectionVisible}">
+            <c:CollapsibleSection Header="Params" Summary="{Binding Sections.ParamsSummary}" IsExpanded="{Binding Sections.ParamsExpanded}">
               <StackPanel Spacing="{StaticResource Spacing8}" Margin="0,0,0,12">
                 <v:KeyValueTable DataContext="{Binding Params}" />
                 <StackPanel Spacing="{StaticResource Spacing8}" IsVisible="{Binding HasPathVariables}" Margin="0,4,0,0">
@@ -109,8 +109,8 @@
           </Border>
 
           <!-- Body -->
-          <Border Name="BodySection" Classes="section" IsVisible="{Binding IsBodySectionVisible}">
-            <c:CollapsibleSection Header="Body" Summary="{Binding Body.Summary}" IsExpanded="{Binding BodyExpanded}">
+          <Border Name="BodySection" Classes="section" IsVisible="{Binding Sections.IsBodySectionVisible}">
+            <c:CollapsibleSection Header="Body" Summary="{Binding Body.Summary}" IsExpanded="{Binding Sections.BodyExpanded}">
               <c:CollapsibleSection.HeaderActions>
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}" DataContext="{Binding Body}" x:DataType="vm:RequestBodyViewModel">
                   <ComboBox ItemsSource="{x:Static vm:RequestBodyViewModel.RawLanguages}" SelectedItem="{Binding SelectedRawLanguage}"
@@ -125,7 +125,7 @@
 
           <!-- Headers: yours, then the ones Hermes adds, so nothing sent is invisible -->
           <Border Name="HeadersSection" Classes="section">
-            <c:CollapsibleSection Header="Headers" Summary="{Binding HeadersEditor.Summary}" IsExpanded="{Binding HeadersExpanded}">
+            <c:CollapsibleSection Header="Headers" Summary="{Binding HeadersEditor.Summary}" IsExpanded="{Binding Sections.HeadersExpanded}">
               <StackPanel Spacing="{StaticResource Spacing8}" Margin="0,0,0,12">
                 <v:KeyValueTable DataContext="{Binding HeadersEditor.Headers}" />
                 <v:HeaderListView Heading="Inherited" Hint="untick to skip one for this request only"
@@ -139,29 +139,29 @@
           <!-- Auth: one line with where it comes from; expand to change it -->
           <Border Classes="section">
             <c:CollapsibleSection Header="Auth" Summary="{Binding Auth.Summary}" SummaryForeground="{DynamicResource TextSecondaryBrush}"
-                                  IsExpanded="{Binding AuthExpanded}">
+                                  IsExpanded="{Binding Sections.AuthExpanded}">
               <v:AuthEditorView DataContext="{Binding Auth}" Margin="0,0,0,12" />
             </c:CollapsibleSection>
           </Border>
 
           <!-- Settings -->
-          <Border Name="SettingsSection" Classes="section" IsVisible="{Binding IsSettingsSectionVisible}">
-            <c:CollapsibleSection Header="Settings" IsExpanded="{Binding SettingsExpanded}"
+          <Border Name="SettingsSection" Classes="section" IsVisible="{Binding Sections.IsSettingsSectionVisible}">
+            <c:CollapsibleSection Header="Settings" IsExpanded="{Binding Sections.SettingsExpanded}"
                                   Summary="{Binding Settings.HasSettingsOverrides, Converter={x:Static vm:UiConverters.OverridesSummary}}">
               <v:RequestSettingsView DataContext="{Binding Settings}" />
             </c:CollapsibleSection>
           </Border>
 
           <!-- Not used yet -->
-          <Border Classes="section" Padding="0,12,0,0" IsVisible="{Binding HasUnusedSections}">
+          <Border Classes="section" Padding="0,12,0,0" IsVisible="{Binding Sections.HasUnusedSections}">
             <WrapPanel ItemSpacing="{StaticResource Spacing8}" LineSpacing="{StaticResource Spacing8}">
               <TextBlock Classes="tertiary" Text="Not used yet" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
-              <Button Classes="chip" Content="+ Query params" Command="{Binding AddSectionCommand}" CommandParameter="params"
-                      IsVisible="{Binding !IsParamsSectionVisible}" />
-              <Button Classes="chip" Content="+ Body" Command="{Binding AddSectionCommand}" CommandParameter="body"
-                      IsVisible="{Binding !IsBodySectionVisible}" />
-              <Button Classes="chip" Content="+ Settings" Command="{Binding AddSectionCommand}" CommandParameter="settings"
-                      IsVisible="{Binding !IsSettingsSectionVisible}" />
+              <Button Classes="chip" Content="+ Query params" Command="{Binding Sections.AddSectionCommand}" CommandParameter="params"
+                      IsVisible="{Binding !Sections.IsParamsSectionVisible}" />
+              <Button Classes="chip" Content="+ Body" Command="{Binding Sections.AddSectionCommand}" CommandParameter="body"
+                      IsVisible="{Binding !Sections.IsBodySectionVisible}" />
+              <Button Classes="chip" Content="+ Settings" Command="{Binding Sections.AddSectionCommand}" CommandParameter="settings"
+                      IsVisible="{Binding !Sections.IsSettingsSectionVisible}" />
             </WrapPanel>
           </Border>
         </StackPanel>

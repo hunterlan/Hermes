@@ -160,11 +160,11 @@ public class TokenFailureViewTests
         try
         {
             var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-            Assert.False(tab.IsSettingsSectionVisible);
+            Assert.False(tab.Sections.IsSettingsSectionVisible);
 
             ShowAuthFailure(tab.Auth, RequestFailureAction.OpenRequestSettings);
             tab.Auth.RunFailureActionCommand.Execute(null);
-            Assert.True(tab.SettingsExpanded);
+            Assert.True(tab.Sections.SettingsExpanded);
 
             ShowAuthFailure(tab.Auth, RequestFailureAction.OpenAppSettings);
             tab.Auth.RunFailureActionCommand.Execute(null);

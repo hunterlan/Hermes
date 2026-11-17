@@ -84,16 +84,16 @@ public class CertificateFailureViewTests
     {
         using var server = new LocalHttpsServer(TestCertificates.SelfSigned());
         var (window, tab) = await SendToSelfSignedServerAsync(server);
-        Assert.False(tab.IsSettingsSectionVisible);
+        Assert.False(tab.Sections.IsSettingsSectionVisible);
         var revealRequests = 0;
-        tab.SettingsRevealRequested += () => revealRequests++;
+        tab.Sections.SettingsRevealRequested += () => revealRequests++;
 
         var openSettingsButton = Find<Button>(window, "OpenRequestSettingsButton");
         openSettingsButton.Command!.Execute(openSettingsButton.CommandParameter);
         UiTestHelpers.Pump();
 
-        Assert.True(tab.IsSettingsSectionVisible);
-        Assert.True(tab.SettingsExpanded);
+        Assert.True(tab.Sections.IsSettingsSectionVisible);
+        Assert.True(tab.Sections.SettingsExpanded);
         Assert.Equal(1, revealRequests);
         Assert.True(Find<Border>(window, "SettingsSection").IsEffectivelyVisible);
         Assert.Null(tab.Settings.VerifySslOverride);
