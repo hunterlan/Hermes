@@ -40,6 +40,6 @@ public sealed class RequestSendService(WorkspaceService workspace, IRequestExecu
             DurationMs = (long)(result.Response?.TotalTime.TotalMilliseconds ?? 0),
         });
 
-        return new RequestSendOutcome { Result = result, SavedResponse = saved };
+        return RequestSendOutcome.Completed(result, saved);
     }
 }
