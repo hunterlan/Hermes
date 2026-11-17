@@ -384,6 +384,9 @@ public partial class MainWindow : Window
             case Key.K:
                 Run(vm.OpenCommandPaletteCommand);
                 break;
+            case Key.J:
+                Run(vm.ToggleActiveResponseCommand);
+                break;
             case Key.E:
                 EnvironmentButton.Flyout?.ShowAt(EnvironmentButton);
                 break;

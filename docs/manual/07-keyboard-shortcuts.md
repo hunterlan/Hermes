@@ -14,6 +14,7 @@
 | Ctrl+O | Import |
 | Ctrl+, | Settings |
 | Ctrl+\ | Toggle sidebar |
+| Ctrl+J | Collapse / expand the response (stacked layout) |
 | F1 | Open this manual |
 | Ctrl+F | Search in the body / response editor |
 | F2 / Delete / Enter | Rename / delete / open the selected sidebar item |

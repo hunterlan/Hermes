@@ -198,4 +198,36 @@ public class RequestTabRoundTripTests
             ModelCloner.Serialize(HttpRequestModel.CreateNew()));
         Assert.Equal(ModelCloner.Serialize(model), ModelCloner.Serialize(restored.BuildModel()));
     }
+
+    [AvaloniaFact]
+    public void A_collapsed_response_and_its_split_come_back_from_the_session()
+    {
+        using var temp = new TempWorkspace();
+        var services = RequestTabTestServices.Create(temp);
+        using var original = new RequestTabViewModel(services, HttpRequestModel.CreateNew());
+        original.Response.ResponseSplitRatio = 0.3;
+        original.Response.ToggleCollapsedCommand.Execute(null);
+
+        var saved = original.ToSession();
+        using var restored = new RequestTabViewModel(services, ModelCloner.Clone(saved.RequestDraft!));
+        restored.RestoreSession(saved);
+
+        Assert.True(restored.Response.IsResponseCollapsed);
+        Assert.Equal(0.3, restored.Response.ResponseSplitRatio);
+    }
+
+    [AvaloniaFact]
+    public void A_tab_from_a_session_without_the_response_pane_comes_back_expanded_at_half()
+    {
+        using var temp = new TempWorkspace();
+        var services = RequestTabTestServices.Create(temp);
+        // What an older session file gives: no response pane values, so their defaults.
+        var saved = new SessionTab { Kind = SessionTabKind.Request, RequestDraft = HttpRequestModel.CreateNew() };
+
+        using var restored = new RequestTabViewModel(services, saved.RequestDraft);
+        restored.RestoreSession(saved);
+
+        Assert.False(restored.Response.IsResponseCollapsed);
+        Assert.Equal(SessionTab.DefaultResponseSplitRatio, restored.Response.ResponseSplitRatio);
+    }
 }

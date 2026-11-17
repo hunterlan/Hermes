@@ -237,6 +237,37 @@ public class StorageTests : IDisposable
     }
 
     [Fact]
+    public void A_session_from_before_the_response_pane_could_collapse_loads_expanded_at_half()
+    {
+        var repo = new WorkspaceRepository(_dir);
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(repo.SessionFile, """
+            { "tabs": [ { "kind": "Request", "entityId": "6f9619ff-8b86-d011-b42d-00c04fc964ff", "isPinned": true } ] }
+            """);
+
+        var tab = Assert.Single(repo.LoadSession().Tabs);
+
+        Assert.True(tab.IsPinned);
+        Assert.False(tab.IsResponseCollapsed);
+        Assert.Equal(SessionTab.DefaultResponseSplitRatio, tab.ResponseSplitRatio);
+    }
+
+    [Fact]
+    public void A_request_tab_keeps_its_collapsed_response_and_split_in_the_session()
+    {
+        var repo = new WorkspaceRepository(_dir);
+        repo.SaveSession(new SessionState
+        {
+            Tabs = [new SessionTab { Kind = SessionTabKind.Request, IsResponseCollapsed = true, ResponseSplitRatio = 0.3 }],
+        });
+
+        var tab = Assert.Single(new WorkspaceRepository(_dir).LoadSession().Tabs);
+
+        Assert.True(tab.IsResponseCollapsed);
+        Assert.Equal(0.3, tab.ResponseSplitRatio);
+    }
+
+    [Fact]
     public void Duplicate_gives_new_ids()
     {
         var folder = new FolderModel { Items = [new HttpRequestModel()] };

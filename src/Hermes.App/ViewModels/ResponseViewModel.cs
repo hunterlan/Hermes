@@ -13,12 +13,23 @@ using Hermes.Core.Web;
 
 namespace Hermes.App.ViewModels;
 
-public sealed partial class ResponseViewModel(DialogService dialogs, SettingsService settings) : ObservableObject, IDisposable
+public sealed partial class ResponseViewModel : ObservableObject, IDisposable
 {
     private const string SentSection = "sent";
 
-    private readonly HeaderRevealState _revealState = new(dialogs.CopyTextAsync);
+    private readonly DialogService _dialogs;
+    private readonly SettingsService _settings;
+    private readonly HeaderRevealState _revealState;
     private ResponseModel? _response;
+
+    public ResponseViewModel(DialogService dialogs, SettingsService settings)
+    {
+        _dialogs = dialogs;
+        _settings = settings;
+        _revealState = new HeaderRevealState(dialogs.CopyTextAsync);
+        // The layout can change from any tab or from Settings; this tab's layout buttons and collapse follow it.
+        _settings.Changed += OnSettingsChanged;
+    }
 
     [ObservableProperty] public partial bool IsLoading { get; set; }
     [ObservableProperty] public partial bool HasResponse { get; set; }
@@ -60,7 +71,40 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     public string WaitText => $"Wait {WaitMs:0} ms";
     public string DownloadText => $"Download {DownloadMs:0} ms";
 
-    public bool IsSideBySide => settings.Current.Layout == ResponseLayout.Horizontal;
+    public bool IsSideBySide => _settings.Current.Layout == ResponseLayout.Horizontal;
+
+    // ---- collapsing the pane to a bar ----
+
+    /// <summary>
+    /// The pane is folded to a bar, giving the request editor the tab. Kept in side-by-side layout, which shows the
+    /// pane in full for now, so the tab is collapsed again after switching back to stacked.
+    /// </summary>
+    [ObservableProperty] public partial bool IsResponseCollapsed { get; set; }
+
+    /// <summary>The pane's share of the stacked split while expanded, between 0 and 1. Collapsing keeps it.</summary>
+    [ObservableProperty] public partial double ResponseSplitRatio { get; set; } = SessionTab.DefaultResponseSplitRatio;
+
+    /// <summary>The bar shows instead of the full pane.</summary>
+    public bool ShowsCollapsedBar => IsResponseCollapsed && CanToggleCollapsed;
+
+    /// <summary>Only stacked layout collapses the pane for now.</summary>
+    public bool CanToggleCollapsed => !IsSideBySide;
+
+    [RelayCommand(CanExecute = nameof(CanToggleCollapsed))]
+    private void ToggleCollapsed() => IsResponseCollapsed = !IsResponseCollapsed;
+
+    /// <summary>Puts the pane back as the session kept it. A ratio that can't be a split falls back to the default.</summary>
+    public void RestorePane(bool isCollapsed, double splitRatio)
+    {
+        IsResponseCollapsed = isCollapsed;
+        ResponseSplitRatio = splitRatio is > 0 and < 1 ? splitRatio : SessionTab.DefaultResponseSplitRatio;
+    }
+
+    private void OnSettingsChanged()
+    {
+        OnPropertyChanged(nameof(IsSideBySide));
+        ToggleCollapsedCommand.NotifyCanExecuteChanged();
+    }
 
     // ---- responses saved with the request ----
 
@@ -193,6 +237,13 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
                 OnPropertyChanged(nameof(WaitText));
                 OnPropertyChanged(nameof(DownloadText));
                 break;
+            case nameof(IsSideBySide):
+                OnPropertyChanged(nameof(CanToggleCollapsed));
+                OnPropertyChanged(nameof(ShowsCollapsedBar));
+                break;
+            case nameof(IsResponseCollapsed):
+                OnPropertyChanged(nameof(ShowsCollapsedBar));
+                break;
         }
     }
 
@@ -202,9 +253,9 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     [RelayCommand]
     private void SetLayout(ResponseLayout layout)
     {
-        settings.Current.Layout = layout;
-        settings.SaveCurrent();
-        OnPropertyChanged(nameof(IsSideBySide));
+        _settings.Current.Layout = layout;
+        // Raises Changed, which updates IsSideBySide here and in the other tabs.
+        _settings.SaveCurrent();
     }
 
     /// <summary>Shows the request as it goes out, with its real values so they can be revealed and copied.</summary>
@@ -259,7 +310,9 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         IsLoading = false;
         HasResponse = false;
         _response = null;
-        Failure = new RequestFailureViewModel(failure, dialogs.CopyTextAsync);
+        Failure = new RequestFailureViewModel(failure, _dialogs.CopyTextAsync);
+        // A result is never hidden: the pane opens to show why there is none.
+        IsResponseCollapsed = false;
     }
 
     /// <param name="sentWith">The environment the request was resolved with; null for none or a saved response, which doesn't record it.</param>
@@ -297,7 +350,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         PreviewImage = isImage ? TryDecodeImage(response.Body) : null;
         oldPreview?.Dispose();
 
-        IsTooLargeForPretty = response.BodySize > settings.Current.MaxPrettyResponseSizeMb * 1024L * 1024L;
+        IsTooLargeForPretty = response.BodySize > _settings.Current.MaxPrettyResponseSizeMb * 1024L * 1024L;
         RawText = isImage ? $"[{contentType} image, {FormatSize(response.BodySize)}. Use Preview to view it.]" : Decode(response);
         Language = DetectLanguage(contentType, RawText);
         PrettyText = IsTooLargeForPretty || isImage ? RawText : Prettify(RawText, Language);
@@ -310,6 +363,8 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         HasResponse = true;
         OnPropertyChanged(nameof(DisplayText));
         OnPropertyChanged(nameof(DisplayLanguage));
+        // A result is never hidden: the pane opens when one arrives.
+        IsResponseCollapsed = false;
     }
 
     public void Clear()
@@ -328,6 +383,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     /// <summary>Releases the preview image; the view model is not used afterwards.</summary>
     public void Dispose()
     {
+        _settings.Changed -= OnSettingsChanged;
         var oldPreview = PreviewImage;
         PreviewImage = null;
         oldPreview?.Dispose();
@@ -344,7 +400,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     private async Task Copy()
     {
         if (HasResponse)
-            await dialogs.CopyTextAsync(DisplayText);
+            await _dialogs.CopyTextAsync(DisplayText);
     }
 
     [RelayCommand]
@@ -353,7 +409,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
         if (_response is null)
             return;
         var ext = MimeTypes.ExtensionFor(_response.ContentType);
-        if (await dialogs.SaveFileAsync("Save response", "response" + ext, ext) is { } path)
+        if (await _dialogs.SaveFileAsync("Save response", "response" + ext, ext) is { } path)
             await WriteToFileAsync(path);
     }
 
@@ -362,7 +418,7 @@ public sealed partial class ResponseViewModel(DialogService dialogs, SettingsSer
     {
         if (_response is not { } response)
             return false;
-        return await UserFileWriter.WriteAsync(dialogs, "Couldn't save the response", path,
+        return await UserFileWriter.WriteAsync(_dialogs, "Couldn't save the response", path,
             () => File.WriteAllBytesAsync(path, response.Body));
     }
 

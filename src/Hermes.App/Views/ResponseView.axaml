@@ -5,32 +5,87 @@
              xmlns:v="using:Hermes.App.Views"
              xmlns:core="using:Hermes.Core.Models"
              x:Class="Hermes.App.Views.ResponseView"
-             x:DataType="vm:ResponseViewModel">
-  <Panel>
+             x:DataType="vm:ResponseViewModel"
+             IsVisible="{Binding !ShowsCollapsedBar}">
+  <!-- collapsed, the request tab shows CollapsedResponseBar instead -->
+  <Grid RowDefinitions="Auto,*">
+    <!-- header: the collapse chevron, how the last send went, and the layout switch -->
+    <Grid Name="ResponseHeader" ColumnDefinitions="Auto,*,Auto" Margin="0,2,0,4">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
+        <Button Name="CollapseResponseButton" Classes="icon" Command="{Binding ToggleCollapsedCommand}" IsVisible="{Binding CanToggleCollapsed}"
+                ToolTip.Tip="Collapse response (Ctrl+J)" AutomationProperties.Name="Collapse response">
+          <PathIcon Data="{StaticResource IconChevronDown}" />
+        </Button>
+        <TextBlock Text="Response" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
+      </StackPanel>
+      <Grid Grid.Column="1" ColumnDefinitions="Auto,Auto,Auto,*" Margin="8,0,0,0" IsVisible="{Binding HasResponse}"
+            Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}">
+        <v:ResponseStatusTag />
+        <TextBlock Grid.Column="1" Classes="mono secondary" Text="{Binding TimeText}" ToolTip.Tip="{Binding TimingDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="2" Classes="mono secondary" Text="{Binding SizeText}" ToolTip.Tip="{Binding SizeDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
+        <!-- the environment this response was sent with, which may differ from the one active now -->
+        <Grid Grid.Column="3" Name="SentWithEnvironment" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Spacing6}" Margin="12,0,8,0"
+              HorizontalAlignment="Left" VerticalAlignment="Center"
+              IsVisible="{Binding SentWithEnvironmentName, Converter={x:Static ObjectConverters.IsNotNull}}"
+              ToolTip.Tip="{Binding SentWithEnvironmentName, StringFormat='Sent with {0}'}"
+              AutomationProperties.Name="{Binding SentWithEnvironmentName, StringFormat='Sent with {0}'}">
+          <c:EnvironmentColorDot Color="{Binding SentWithEnvironmentColor}" />
+          <TextBlock Grid.Column="1" Classes="mono secondary" Text="{Binding SentWithEnvironmentName}" VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis" />
+        </Grid>
+      </Grid>
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource Spacing2}">
+        <Border Classes="tag warn" Margin="0,0,6,0" IsVisible="{Binding ViewingEarlier, Converter={x:Static ObjectConverters.IsNotNull}}"
+                ToolTip.Tip="{Binding ViewingEarlier.Label}">
+          <TextBlock Text="Earlier response" />
+        </Border>
+        <Button Classes="outline" FontSize="{StaticResource FontSizeSmall}" MinHeight="26" Padding="10,2" Margin="0,0,6,0" IsVisible="{Binding HasSavedResponses}"
+                ToolTip.Tip="Responses are saved with the request">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
+            <TextBlock Text="{Binding SavedResponsesLabel}" VerticalAlignment="Center" />
+            <PathIcon Data="{StaticResource IconChevronDown}" Width="11" Height="11" />
+          </StackPanel>
+          <Button.Flyout>
+            <MenuFlyout ItemsSource="{Binding SavedResponses}" Placement="BottomEdgeAlignedRight">
+              <MenuFlyout.ItemContainerTheme>
+                <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}" x:DataType="vm:SavedResponseItem">
+                  <Setter Property="Header" Value="{Binding Label}" />
+                  <Setter Property="Command" Value="{Binding $parent[UserControl].((vm:ResponseViewModel)DataContext).ShowSavedCommand}" />
+                  <Setter Property="CommandParameter" Value="{Binding}" />
+                </ControlTheme>
+              </MenuFlyout.ItemContainerTheme>
+            </MenuFlyout>
+          </Button.Flyout>
+        </Button>
+        <Button Classes="icon layout" Classes.on="{Binding IsSideBySide}" Command="{Binding SetLayoutCommand}"
+                CommandParameter="{x:Static core:ResponseLayout.Horizontal}" ToolTip.Tip="Side by side" AutomationProperties.Name="Side by side layout">
+          <PathIcon Data="{StaticResource IconLayoutSide}" />
+        </Button>
+        <Button Classes="icon layout" Classes.on="{Binding !IsSideBySide}" Command="{Binding SetLayoutCommand}"
+                CommandParameter="{x:Static core:ResponseLayout.Vertical}" ToolTip.Tip="Stacked" AutomationProperties.Name="Stacked layout">
+          <PathIcon Data="{StaticResource IconLayoutStacked}" />
+        </Button>
+      </StackPanel>
+    </Grid>
+
     <!-- empty state -->
-    <StackPanel IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="{StaticResource Spacing10}">
+    <StackPanel Grid.Row="1" IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="{StaticResource Spacing10}">
       <PathIcon Data="{StaticResource IconLogo}" Width="40" Height="40" Foreground="{DynamicResource TextTertiaryBrush}" />
       <TextBlock Classes="secondary" Text="Send the request to see the response here" HorizontalAlignment="Center" />
       <Border Classes="kbd" HorizontalAlignment="Center"><TextBlock Text="Ctrl ↵" /></Border>
     </StackPanel>
 
     <!-- loading -->
-    <StackPanel IsVisible="{Binding IsLoading}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="{StaticResource Spacing10}" ZIndex="2">
+    <StackPanel Grid.Row="1" IsVisible="{Binding IsLoading}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="{StaticResource Spacing10}" ZIndex="2">
       <ProgressBar IsIndeterminate="True" Width="200" />
       <TextBlock Classes="secondary" Text="Sending request…" HorizontalAlignment="Center" />
     </StackPanel>
 
     <!-- no response: say why in four parts: headline, facts, next step, details (collapsed) -->
-    <ScrollViewer IsVisible="{Binding Failure, Converter={x:Static ObjectConverters.IsNotNull}}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer Grid.Row="1" IsVisible="{Binding Failure, Converter={x:Static ObjectConverters.IsNotNull}}" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
       <StackPanel Name="FailurePanel" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="{StaticResource Spacing14}"
                   MaxWidth="{StaticResource WidthFailureMax}" Margin="20">
-        <Border Classes="status" HorizontalAlignment="Left" Background="{DynamicResource BgTertiaryBrush}"
-                BorderBrush="{DynamicResource TextTertiaryBrush}" BorderThickness="1">
-          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
-            <PathIcon Data="{StaticResource IconCancel}" Width="13" Height="13" Foreground="{DynamicResource TextSecondaryBrush}" />
-            <TextBlock Text="No response" Foreground="{DynamicResource TextSecondaryBrush}" />
-          </StackPanel>
-        </Border>
+        <v:ResponseStatusTag HorizontalAlignment="Left" />
 
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Spacing10}">
           <Border Width="{StaticResource SizeFailureIconTile}" Height="{StaticResource SizeFailureIconTile}" VerticalAlignment="Top"
@@ -99,62 +154,8 @@
     </ScrollViewer>
 
     <!-- response -->
-    <Grid RowDefinitions="Auto,*,Auto" IsVisible="{Binding HasResponse}" Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}">
-      <!-- status: icon + text + colour, never colour alone -->
-      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" Margin="0,2,0,4">
-        <Panel>
-          <c:IconTag Classes="status" Kind="Ok" Icon="{StaticResource IconCheck}" Text="{Binding StatusText}" IsVisible="{Binding IsSuccess}" />
-          <c:IconTag Classes="status" Kind="Info" Icon="{StaticResource IconArrowRight}" Text="{Binding StatusText}" IsVisible="{Binding IsRedirect}" />
-          <c:IconTag Classes="status" Kind="Warn" Icon="{StaticResource IconAlert}" Text="{Binding StatusText}" IsVisible="{Binding IsClientError}" />
-          <c:IconTag Classes="status" Kind="Err" Icon="{StaticResource IconClose}" Text="{Binding StatusText}" IsVisible="{Binding IsServerError}" />
-        </Panel>
-        <TextBlock Grid.Column="1" Classes="mono secondary" Text="{Binding TimeText}" ToolTip.Tip="{Binding TimingDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="2" Classes="mono secondary" Text="{Binding SizeText}" ToolTip.Tip="{Binding SizeDetails}" Margin="12,0,0,0" VerticalAlignment="Center" />
-        <!-- the environment this response was sent with, which may differ from the one active now -->
-        <Grid Grid.Column="3" Name="SentWithEnvironment" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Spacing6}" Margin="12,0,8,0"
-              HorizontalAlignment="Left" VerticalAlignment="Center"
-              IsVisible="{Binding SentWithEnvironmentName, Converter={x:Static ObjectConverters.IsNotNull}}"
-              ToolTip.Tip="{Binding SentWithEnvironmentName, StringFormat='Sent with {0}'}"
-              AutomationProperties.Name="{Binding SentWithEnvironmentName, StringFormat='Sent with {0}'}">
-          <c:EnvironmentColorDot Color="{Binding SentWithEnvironmentColor}" />
-          <TextBlock Grid.Column="1" Classes="mono secondary" Text="{Binding SentWithEnvironmentName}" VerticalAlignment="Center"
-                     TextTrimming="CharacterEllipsis" />
-        </Grid>
-        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="{StaticResource Spacing2}">
-          <Border Classes="tag warn" Margin="0,0,6,0" IsVisible="{Binding ViewingEarlier, Converter={x:Static ObjectConverters.IsNotNull}}"
-                  ToolTip.Tip="{Binding ViewingEarlier.Label}">
-            <TextBlock Text="Earlier response" />
-          </Border>
-          <Button Classes="outline" FontSize="{StaticResource FontSizeSmall}" MinHeight="26" Padding="10,2" Margin="0,0,6,0" IsVisible="{Binding HasSavedResponses}"
-                  ToolTip.Tip="Responses are saved with the request">
-            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
-              <TextBlock Text="{Binding SavedResponsesLabel}" VerticalAlignment="Center" />
-              <PathIcon Data="{StaticResource IconChevronDown}" Width="11" Height="11" />
-            </StackPanel>
-            <Button.Flyout>
-              <MenuFlyout ItemsSource="{Binding SavedResponses}" Placement="BottomEdgeAlignedRight">
-                <MenuFlyout.ItemContainerTheme>
-                  <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}" x:DataType="vm:SavedResponseItem">
-                    <Setter Property="Header" Value="{Binding Label}" />
-                    <Setter Property="Command" Value="{Binding $parent[UserControl].((vm:ResponseViewModel)DataContext).ShowSavedCommand}" />
-                    <Setter Property="CommandParameter" Value="{Binding}" />
-                  </ControlTheme>
-                </MenuFlyout.ItemContainerTheme>
-              </MenuFlyout>
-            </Button.Flyout>
-          </Button>
-          <Button Classes="icon layout" Classes.on="{Binding IsSideBySide}" Command="{Binding SetLayoutCommand}"
-                  CommandParameter="{x:Static core:ResponseLayout.Horizontal}" ToolTip.Tip="Side by side" AutomationProperties.Name="Side by side layout">
-            <PathIcon Data="{StaticResource IconLayoutSide}" />
-          </Button>
-          <Button Classes="icon layout" Classes.on="{Binding !IsSideBySide}" Command="{Binding SetLayoutCommand}"
-                  CommandParameter="{x:Static core:ResponseLayout.Vertical}" ToolTip.Tip="Stacked" AutomationProperties.Name="Stacked layout">
-            <PathIcon Data="{StaticResource IconLayoutStacked}" />
-          </Button>
-        </StackPanel>
-      </Grid>
-
-      <TabControl Grid.Row="1" Padding="0" Margin="0">
+    <Grid Grid.Row="1" RowDefinitions="*,Auto" IsVisible="{Binding HasResponse}" Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}">
+      <TabControl Padding="0" Margin="0">
         <TabItem Header="Body">
           <Grid RowDefinitions="Auto,*">
             <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,6,0,6">
@@ -290,7 +291,7 @@
       </TabControl>
 
       <!-- timing: what we measure, nothing invented -->
-      <StackPanel Grid.Row="2" Spacing="{StaticResource Spacing6}" Margin="0,10,0,0">
+      <StackPanel Grid.Row="1" Spacing="{StaticResource Spacing6}" Margin="0,10,0,0">
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
           <TextBlock Text="Timing" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" />
           <TextBlock Classes="mono tertiary" FontSize="{StaticResource FontSizeSmall}" Text="{Binding TimeText, StringFormat='{}{0} total'}" />
@@ -311,5 +312,5 @@
         </StackPanel>
       </StackPanel>
     </Grid>
-  </Panel>
+  </Grid>
 </UserControl>

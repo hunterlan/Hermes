@@ -171,6 +171,8 @@
       <Border Grid.Row="1" Name="SplitterLine" Height="1" VerticalAlignment="Center" Background="{DynamicResource BorderBrush}" IsHitTestVisible="False" />
 
       <v:ResponseView Grid.Row="2" Name="ResponsePane" DataContext="{Binding Response}" Margin="0,4,0,8" />
+      <!-- the response pane collapsed (stacked layout); ApplyLayout gives its row the bar's height -->
+      <v:CollapsedResponseBar Grid.Row="2" Name="ResponseBar" DataContext="{Binding Response}" />
     </Grid>
   </Grid>
 </UserControl>
