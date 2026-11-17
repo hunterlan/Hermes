@@ -101,8 +101,14 @@ file it is, and why, in a dialog. Each problem comes with a next step:
 | Another program is using it | Close the program that has the file open (a sync or backup tool, or another Hermes window), then try again. |
 | It or its folder wasn't found | Check that the folder still exists and that its drive is connected, then try again. |
 
-The technical message is kept under **Details**; choose **Copy details** to put it on the clipboard, for example to
-include in a bug report.
+The technical message is kept under **Details**; choose **Copy details** to put it, after the sentence that says what
+failed, on the clipboard, for example to include in a bug report. Once you move a file aside, its next step is removed.
+
+A rename that can't be saved names the old name and the new one, for example `Collection "Beta" couldn't be renamed to
+"Gamma"`, and the sidebar keeps the old name.
+
+When Hermes can't start because of the data folder, **Quit** is at the left of the dialog, apart from **Copy details**,
+**Use default folder** and **Choose another folder**.
 
 A damaged line in a history file is skipped and reported once; the other entries load normally.
 

@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
@@ -39,6 +40,34 @@ public class DialogChromeTests
         var close = footer.GetVisualDescendants().OfType<Button>().Single(button => button.IsVisible);
         Assert.Equal("Close", close.Content);
         close.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        UiTestHelpers.Pump();
+
+        Assert.True(closed);
+    }
+
+    [AvaloniaFact]
+    public void Footer_close_button_can_sit_at_the_left_edge_and_still_close_the_window()
+    {
+        var footer = new DialogFooter
+        {
+            CloseButtonText = "Quit",
+            CloseButtonOnLeading = true,
+            Content = new Button { Content = "Use default folder" },
+        };
+        var window = new Window { Width = 400, Content = footer };
+        var closed = false;
+        window.Closed += (_, _) => closed = true;
+        window.Show();
+        UiTestHelpers.Pump();
+
+        var visible = footer.GetVisualDescendants().OfType<Button>().Where(button => button.IsVisible).ToList();
+        var quit = Assert.Single(visible, button => button.Content as string == "Quit");
+        var other = Assert.Single(visible, button => button.Content as string == "Use default folder");
+        Assert.True(quit.IsCancel);
+        Assert.True(quit.TranslatePoint(new Point(0, 0), window)!.Value.X
+            < other.TranslatePoint(new Point(0, 0), window)!.Value.X);
+
+        quit.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
         UiTestHelpers.Pump();
 
         Assert.True(closed);

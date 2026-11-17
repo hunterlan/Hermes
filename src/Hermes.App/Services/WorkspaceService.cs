@@ -166,12 +166,14 @@ public sealed class WorkspaceService : IDisposable
     }
 
     /// <summary>Writes <paramref name="collection"/>. False, after reporting it, when it couldn't be written.</summary>
-    public bool SaveCollection(CollectionModel collection) => !Report(TrySaveCollection(collection));
+    /// <param name="failure">How to word a failure when the save is part of something else, such as a rename; null for the plain wording.</param>
+    public bool SaveCollection(CollectionModel collection, SaveFailureWording? failure = null) =>
+        !Report(TrySaveCollection(collection, failure));
 
     /// <summary>Like <see cref="SaveCollection"/>, but returns the error instead of reporting it. Null when it worked.</summary>
-    public StorageError? TrySaveCollection(CollectionModel collection)
+    public StorageError? TrySaveCollection(CollectionModel collection, SaveFailureWording? failure = null)
     {
-        if (TrySaveCollectionFile(collection) is { } error)
+        if (TrySaveCollectionFile(collection, failure) is { } error)
             return error;
         CollectionChanged?.Invoke(collection);
         VariablesChanged?.Invoke();
@@ -288,9 +290,9 @@ public sealed class WorkspaceService : IDisposable
     private static bool IsDescendant(FolderModel ancestor, FolderModel candidate) =>
         ancestor.Items.OfType<FolderModel>().Any(f => f == candidate || IsDescendant(f, candidate));
 
-    private StorageError? TrySaveCollectionFile(CollectionModel collection) =>
+    private StorageError? TrySaveCollectionFile(CollectionModel collection, SaveFailureWording? failure = null) =>
         Attempt(() => _repository.SaveCollection(collection), _repository.CollectionFile(collection.Id),
-            CollectionSubject(collection), StorageOperation.Write);
+            failure?.Subject ?? CollectionSubject(collection), StorageOperation.Write, failure?.FailedAction);
 
     private static string CollectionSubject(CollectionModel collection) => $"Collection \"{collection.Name}\"";
 
@@ -359,7 +361,8 @@ public sealed class WorkspaceService : IDisposable
     // ---- reporting ----
 
     /// <summary>Runs a write and describes the failure of a file operation. Null when it worked.</summary>
-    private static StorageError? Attempt(Action write, string path, string subject, StorageOperation operation)
+    private static StorageError? Attempt(Action write, string path, string subject, StorageOperation operation,
+        string? failedAction = null)
     {
         try
         {
@@ -368,7 +371,7 @@ public sealed class WorkspaceService : IDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return StorageErrorDescriber.Describe(ex, path, subject, operation);
+            return StorageErrorDescriber.Describe(ex, path, subject, operation, failedAction);
         }
     }
 

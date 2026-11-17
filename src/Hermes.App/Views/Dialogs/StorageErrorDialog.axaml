@@ -33,7 +33,9 @@
     </ScrollViewer>
     <c:DialogFooter Grid.Row="2" Name="Footer">
       <c:DialogFooter.Leading>
-        <Button Classes="outline" Content="{Binding CopyDetailsText}" Command="{Binding CopyDetailsCommand}" />
+        <StackPanel Name="LeadingPanel" Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
+          <Button Name="CopyDetailsButton" Classes="outline" Content="{Binding CopyDetailsText}" Command="{Binding CopyDetailsCommand}" />
+        </StackPanel>
       </c:DialogFooter.Leading>
       <StackPanel Name="ChoicePanel" Orientation="Horizontal" Spacing="{StaticResource Spacing8}" />
     </c:DialogFooter>

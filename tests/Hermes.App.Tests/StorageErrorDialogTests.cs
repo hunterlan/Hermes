@@ -1,4 +1,5 @@
 using System.Runtime.Versioning;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
@@ -148,6 +149,121 @@ public class StorageErrorDialogTests : IDisposable
             button => button.IsVisible && Equals(button.Content, "Move aside"));
         dialog.Close();
     }
+
+    [AvaloniaFact]
+    public void Moving_a_file_aside_removes_its_next_step_and_reveal_then_names_the_folder()
+    {
+        Directory.CreateDirectory(_dir);
+        var file = Path.Combine(_dir, "bad.json");
+        File.WriteAllText(file, "{ \"name\": \"Pets\", ");
+        var error = StorageErrorDescriber.Describe(new System.Text.Json.JsonException(), file, "Collection \"Pets\"");
+        var dialog = new StorageErrorDialog("Some files couldn't be loaded", [error], []);
+        dialog.Show();
+        UiTestHelpers.Pump();
+        Assert.Contains(error.NextStep!, VisibleTexts(dialog));
+        Assert.Single(dialog.GetVisualDescendants().OfType<Button>(), button => button.IsVisible && Equals(button.Content, "Reveal file"));
+
+        Click(ButtonNamed(dialog, "Move aside"));
+
+        Assert.DoesNotContain(error.NextStep!, VisibleTexts(dialog));
+        Assert.Contains(VisibleTexts(dialog), text => text?.StartsWith("Moved aside to bad.json.corrupt") == true);
+        ButtonNamed(dialog, "Reveal folder");
+        dialog.Close();
+    }
+
+    [AvaloniaFact]
+    public void Reveal_names_a_folder_a_folder_and_a_file_a_file()
+    {
+        Directory.CreateDirectory(_dir);
+        var file = Path.Combine(_dir, "a.json");
+        File.WriteAllText(file, "{}");
+        var folderError = StorageError.Plain("The folder can't be used.", location: _dir);
+        var fileError = StorageError.Plain("The file can't be read.", location: file);
+        var dialog = new StorageErrorDialog("Storage problem", [folderError, fileError], []);
+        dialog.Show();
+        UiTestHelpers.Pump();
+
+        var labels = dialog.GetVisualDescendants().OfType<Button>().Where(button => button.IsVisible)
+            .Select(button => button.Content as string).ToList();
+        Assert.Contains("Reveal folder", labels);
+        Assert.Contains("Reveal file", labels);
+        dialog.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task Copy_details_starts_with_the_summary_sentence()
+    {
+        var error = StorageErrorDescriber.Describe(new IOException("No space left on device", unchecked((int)0x80070070)),
+            Path.Combine(_dir, "a.json"), "Collection \"Pets\"", StorageOperation.Write);
+        string? copied = null;
+        var viewModel = new StorageErrorDialogViewModel([error], _ => Task.CompletedTask, text =>
+        {
+            copied = text;
+            return Task.CompletedTask;
+        });
+
+        await viewModel.CopyDetailsCommand.ExecuteAsync(null);
+
+        Assert.StartsWith(error.Summary + "\n", copied);
+        Assert.Contains("No space left on device", copied);
+    }
+
+    [AvaloniaFact]
+    public void Quit_sits_apart_from_the_choices_and_the_other_actions()
+    {
+        var dialog = new StorageErrorDialog("Hermes can't start", [StorageError.Plain("The folder can't be used.")],
+            StartupFolderChoices.For(Path.Combine(Path.GetTempPath(), "somewhere-else")), closeText: "Quit");
+        dialog.Show();
+        UiTestHelpers.Pump();
+
+        var buttons = dialog.GetVisualDescendants().OfType<Button>().Where(button => button.IsVisible).ToList();
+        var left = buttons.Min(button => LeftEdge(dialog, button));
+        var quit = ButtonNamed(dialog, "Quit");
+        Assert.Equal(left, LeftEdge(dialog, quit));
+        foreach (var label in new[] { "Copy details", "Use default folder", "Choose another folder" })
+            Assert.True(LeftEdge(dialog, ButtonNamed(dialog, label)) > LeftEdge(dialog, quit) + quit.Bounds.Width);
+        Assert.True(LeftEdge(dialog, ButtonNamed(dialog, "Copy details"))
+            < LeftEdge(dialog, ButtonNamed(dialog, "Use default folder")));
+        dialog.Close();
+    }
+
+    [AvaloniaFact]
+    public void Quit_is_the_footers_own_close_button_and_closes_the_dialog_without_a_result()
+    {
+        var dialog = new StorageErrorDialog("Hermes can't start", [StorageError.Plain("The folder can't be used.")],
+            [new StorageDialogChoice("Use default folder", "default-folder")], closeText: "Quit");
+        var closed = false;
+        dialog.Closed += (_, _) => closed = true;
+        dialog.Show();
+        UiTestHelpers.Pump();
+
+        var quit = ButtonNamed(dialog, "Quit");
+        Assert.Equal("PART_LeadingCloseButton", quit.Name);
+        Assert.True(quit.IsCancel);
+        Click(quit);
+        UiTestHelpers.Pump();
+
+        Assert.True(closed);
+        Assert.Null(dialog.Result);
+    }
+
+    [AvaloniaFact]
+    public void A_plain_notice_keeps_its_close_button_at_the_right_of_copy_details()
+    {
+        var dialog = new StorageErrorDialog("Storage problem", [StorageError.Plain("Something happened.")], []);
+        dialog.Show();
+        UiTestHelpers.Pump();
+
+        Assert.True(LeftEdge(dialog, ButtonNamed(dialog, "Close"))
+            > LeftEdge(dialog, ButtonNamed(dialog, "Copy details")));
+        dialog.Close();
+    }
+
+    private static double LeftEdge(Window window, Control control) =>
+        control.TranslatePoint(new Point(0, 0), window)!.Value.X;
+
+    private static List<string?> VisibleTexts(Window window) =>
+        window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsVisible).Select(text => text.Text).ToList();
 
     [AvaloniaFact]
     public void A_choice_closes_the_dialog_with_its_id()
