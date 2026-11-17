@@ -33,13 +33,13 @@ public static class AuthInheritance
     }
 
     /// <summary>Items under a container that set their own auth, and how many requests end up using the container's auth.</summary>
-    public static (List<AuthOverride> Overrides, int Inheriting, int Total) Usage(IEnumerable<CollectionNode> items)
+    public static AuthUsage Usage(IEnumerable<CollectionNode> items)
     {
         var overrides = new List<AuthOverride>();
         var inheriting = 0;
         var total = 0;
         Walk(items, inherited: true);
-        return (overrides, inheriting, total);
+        return new AuthUsage(overrides, inheriting, total);
 
         void Walk(IEnumerable<CollectionNode> nodes, bool inherited)
         {

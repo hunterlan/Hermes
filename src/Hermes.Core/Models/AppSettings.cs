@@ -26,4 +26,11 @@ public sealed class AppSettings
     /// others share those views and cost a short reload when opened.
     /// </summary>
     public int TabViewPoolSize { get; set; } = 3;
+
+    /// <summary>
+    /// A separate object with the same values, to change and pass to <c>SettingsService.Update</c> so the current
+    /// settings aren't edited in place. Every setting is a value or a string, so a shallow copy is a full one; a setting
+    /// that holds a list or another object needs its own copy here.
+    /// </summary>
+    public AppSettings Copy() => (AppSettings)MemberwiseClone();
 }

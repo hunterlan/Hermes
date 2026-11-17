@@ -139,10 +139,10 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     [RelayCommand]
     private async Task AddRequest(TreeNodeViewModel? node)
     {
-        if (ContainerOf(node) is not var (collection, folder))
+        if (ContainerOf(node) is not { } container)
             return;
         var request = new HttpRequestModel { Name = "New Request" };
-        if (!_workspace.AddNode(collection, folder, request))
+        if (!_workspace.AddNode(container.Collection, container.Folder, request))
             return;
         ExpandTo(request.Id);
         if (Find(request.Id) is { } created)
@@ -156,10 +156,10 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     [RelayCommand]
     private void AddFolder(TreeNodeViewModel? node)
     {
-        if (ContainerOf(node) is not var (collection, folder))
+        if (ContainerOf(node) is not { } container)
             return;
         var newFolder = new FolderModel { Name = "New Folder" };
-        if (!_workspace.AddNode(collection, folder, newFolder))
+        if (!_workspace.AddNode(container.Collection, container.Folder, newFolder))
             return;
         if (Find(newFolder.Id)?.Parent is { } parent)
             parent.IsExpanded = true;
@@ -167,14 +167,18 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     }
 
     /// <summary>The collection/folder a new item goes into: the node itself, or a request's parent.</summary>
-    private static (CollectionModel Collection, FolderModel? Folder)? ContainerOf(TreeNodeViewModel? node) => node switch
+    private static NodeContainer? ContainerOf(TreeNodeViewModel? node) => node switch
     {
-        CollectionNodeViewModel c => (c.Model, null),
-        FolderNodeViewModel f => (f.Root.Model, f.Model),
-        RequestNodeViewModel { Parent: FolderNodeViewModel pf } r => (r.Root.Model, pf.Model),
-        RequestNodeViewModel r => (r.Root.Model, null),
+        CollectionNodeViewModel c => new NodeContainer(c.Model, null),
+        FolderNodeViewModel f => new NodeContainer(f.Root.Model, f.Model),
+        RequestNodeViewModel { Parent: FolderNodeViewModel pf } r => new NodeContainer(r.Root.Model, pf.Model),
+        RequestNodeViewModel r => new NodeContainer(r.Root.Model, null),
         _ => null,
     };
+
+    /// <param name="Collection">The collection a new item goes into.</param>
+    /// <param name="Folder">The folder inside it, or null for the collection's top level.</param>
+    private sealed record NodeContainer(CollectionModel Collection, FolderModel? Folder);
 
     // ---- rename ----
 
@@ -199,11 +203,11 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         var saved = node switch
         {
             CollectionNodeViewModel c => Rename(c.Model.Name, name => c.Model.Name = name, newName, c.Model,
-                $"Collection \"{c.Model.Name}\""),
+                WorkspaceService.CollectionSubject(c.Model)),
             FolderNodeViewModel f => Rename(f.Model.Name, name => f.Model.Name = name, newName, f.Root.Model,
-                $"Folder \"{f.Model.Name}\" in collection \"{f.Root.Model.Name}\""),
+                WorkspaceService.FolderSubject(f.Model, f.Root.Model)),
             RequestNodeViewModel r => Rename(r.Model.Name, name => r.Model.Name = name, newName, r.Root.Model,
-                $"Request \"{r.Model.Name}\" in collection \"{r.Root.Model.Name}\""),
+                WorkspaceService.RequestSubject(r.Model, r.Root.Model)),
             _ => true,
         };
         if (!saved)
@@ -329,7 +333,9 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         int index;
         if (position == DropPosition.Inside)
         {
-            (collection, folder) = ContainerOf(target)!.Value;
+            var container = ContainerOf(target)!;
+            collection = container.Collection;
+            folder = container.Folder;
             index = int.MaxValue;
             target.IsExpanded = true;
         }

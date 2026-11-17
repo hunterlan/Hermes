@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -79,7 +80,7 @@ public static partial class KeychainFailureClassifier
                 return code;
         foreach (var link in chain)
             if (ErrorCodeInMessage().Match(link.Message) is { Success: true } match
-                && int.TryParse(match.Groups[1].Value, out var code))
+                && int.TryParse(match.Groups[1].Value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var code))
                 return code;
         foreach (var link in chain)
             if (StatusFromText(link.Message) is { } code)
