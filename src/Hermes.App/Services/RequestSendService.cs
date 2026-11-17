@@ -5,8 +5,9 @@ using Hermes.Core.Secrets;
 namespace Hermes.App.Services;
 
 /// <summary>
-/// Sends a prepared request, then keeps its masked response with the saved request and writes the history entry,
-/// in that order. The tab decides what to show; this decides what is recorded.
+/// Sends a request in two steps, so the result is on screen before anything is written: <see cref="SendAsync"/>
+/// executes it, the tab shows the result, then <see cref="Record"/> keeps the masked response with the saved request
+/// and writes the history entry, in that order.
 /// A cancelled token means the user cancelled or the tab was closed: nothing is recorded, even if a response had
 /// just arrived.
 /// </summary>
@@ -15,31 +16,44 @@ public sealed class RequestSendService(WorkspaceService workspace, IRequestExecu
     private readonly WorkspaceService _workspace = workspace;
     private readonly IRequestExecutor _executor = executor;
 
-    public async Task<RequestSendOutcome> SendAsync(RequestSendInput input, CancellationToken cancellationToken)
+    public async Task<RequestSendOutcome> SendAsync(PreparedRequest request, CancellationToken cancellationToken)
     {
-        var result = await _executor.ExecuteAsync(input.Prepared.Request, cancellationToken);
-        if (result.Cancelled || cancellationToken.IsCancellationRequested)
-            return RequestSendOutcome.CancelledSend;
+        var result = await _executor.ExecuteAsync(request, cancellationToken);
+        return result.Cancelled || cancellationToken.IsCancellationRequested
+            ? RequestSendOutcome.CancelledSend
+            : RequestSendOutcome.Completed(result);
+    }
+
+    /// <summary>
+    /// Keeps the response with <see cref="CompletedSend.KeepResponseWith"/>, then adds the history entry. Returns the
+    /// response as stored, or null when none was (no request to keep it with, no response, or it couldn't be written).
+    /// UI thread only: the history entry goes into <see cref="WorkspaceService.History"/>, which the UI shows, and a
+    /// storage problem is reported to the UI.
+    /// </summary>
+    public SavedResponse? Record(CompletedSend send, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+            return null;
 
         // Responses are kept with saved requests, so reopening shows the last result and earlier ones.
         // The saved copy has credentials masked; the one on screen stays exact.
         SavedResponse? saved = null;
-        if (result.Response is { } response && _workspace.Find(input.RequestId) is not null)
+        if (send.Result.Response is { } response && send.KeepResponseWith is { } requestId)
         {
-            saved = _workspace.SaveResponse(input.RequestId, new SavedResponse
+            saved = _workspace.SaveResponse(requestId, new SavedResponse
             {
                 Response = response,
-                SentRequest = SecretMasker.MaskCredentialHeaders(RawRequestFormatter.Format(input.Prepared.Masked)),
+                SentRequest = SecretMasker.MaskCredentialHeaders(RawRequestFormatter.Format(send.MaskedRequest)),
             });
         }
 
         _workspace.AddHistory(new HistoryEntry
         {
-            Request = input.Model,
-            StatusCode = result.Response?.StatusCode,
-            DurationMs = (long)(result.Response?.TotalTime.TotalMilliseconds ?? 0),
+            Request = send.Model,
+            StatusCode = send.Result.Response?.StatusCode,
+            DurationMs = (long)(send.Result.Response?.TotalTime.TotalMilliseconds ?? 0),
         });
 
-        return RequestSendOutcome.Completed(result, saved);
+        return saved;
     }
 }
