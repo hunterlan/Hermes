@@ -7,10 +7,17 @@ namespace Hermes.Core.Http;
 /// <summary>
 /// Says what went wrong with a network call from the exception types and error codes (<see cref="SocketError"/>,
 /// <see cref="HttpRequestError"/>), never from message text, which differs between operating systems and languages.
+/// It looks at the exception alone; the callers that know more about when it was thrown say so beforehand
+/// (see <see cref="ConnectionSetupFailure"/>).
 /// </summary>
 public static class NetworkFailureClassifier
 {
-    /// <summary>Looks through the exception and everything it wraps; the most specific cause found wins.</summary>
+    /// <summary>
+    /// Looks through the exception and everything it wraps; the most specific cause found wins. Only the exception
+    /// types and codes count, so a generic code (such as InvalidArgument or NotConnected) is never read as the
+    /// server's doing. A bare <see cref="SocketException"/> from a request's connection setup is given its context
+    /// first, by <see cref="ConnectionSetupFailure.Wrap"/>.
+    /// </summary>
     public static NetworkFailureCause Classify(Exception exception)
     {
         // A generic "the connection failed" on an outer exception is kept only when nothing inside is more specific.

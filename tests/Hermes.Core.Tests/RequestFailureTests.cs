@@ -58,10 +58,21 @@ public sealed class RequestFailureTests : IDisposable
 
         var failure = await SendExpectingFailure(new HttpRequestModel { Url = $"http://127.0.0.1:{port.Port}/" });
 
-        Assert.Equal(RequestFailureKind.ConnectionClosed, failure.Kind);
-        Assert.Equal("Connection was closed by the server", failure.Headline);
-        Assert.Equal("The server closed the connection before the response finished.", failure.Facts);
-        Assert.False(failure.NothingWasSent);
+        // Where the reset lands is a race. Reaching the client while the connection is being set up gives a bare
+        // socket error (nothing was sent); reaching it later gives a closed connection (a request went out).
+        if (failure.Kind == RequestFailureKind.ConnectionFailed)
+        {
+            Assert.Equal("Couldn't connect to the server", failure.Headline);
+            Assert.Equal($"The connection to 127.0.0.1:{port.Port} couldn't be made.", failure.Facts);
+            Assert.True(failure.NothingWasSent);
+        }
+        else
+        {
+            Assert.Equal(RequestFailureKind.ConnectionClosed, failure.Kind);
+            Assert.Equal("Connection was closed by the server", failure.Headline);
+            Assert.Equal("The server closed the connection before the response finished.", failure.Facts);
+            Assert.False(failure.NothingWasSent);
+        }
         Assert.Equal([RequestFailureAction.Retry], failure.Actions);
     }
 
@@ -140,6 +151,51 @@ public sealed class RequestFailureTests : IDisposable
 
         Assert.Equal(NetworkFailureCause.ConnectionClosed, NetworkFailureClassifier.Classify(exception));
         Assert.Equal("IOException > SocketException (ConnectionReset)", NetworkFailureClassifier.DescribeChain(exception));
+    }
+
+    // The bare SocketException that macOS (InvalidArgument) and Linux (NotConnected) raise from SendAsync when the
+    // server reset the connection while it was being set up, before the request was sent.
+    [Theory]
+    [InlineData(SocketError.InvalidArgument)]
+    [InlineData(SocketError.NotConnected)]
+    public void A_bare_socket_error_from_connection_setup_says_the_connection_couldnt_be_made(SocketError code)
+    {
+        var exception = ConnectionSetupFailure.Wrap(new SocketException((int)code));
+
+        var failure = NetworkFailureDescriber.Describe(exception, new Uri("http://example.test:8080/"), new Uri("http://example.test:8080/"));
+
+        Assert.Equal(RequestFailureKind.ConnectionFailed, failure.Kind);
+        Assert.Equal("Couldn't connect to the server", failure.Headline);
+        Assert.Equal("The connection to example.test:8080 couldn't be made.", failure.Facts);
+        Assert.True(failure.NothingWasSent);
+        Assert.Equal($"HttpRequestException (ConnectionError) > SocketException ({code})", failure.Details.Single(detail => detail.Label == "Error").Value);
+    }
+
+    [Fact]
+    public void A_bare_refusal_from_connection_setup_is_still_a_refusal()
+    {
+        var exception = ConnectionSetupFailure.Wrap(new SocketException((int)SocketError.ConnectionRefused));
+
+        Assert.Equal(NetworkFailureCause.ConnectionRefused, NetworkFailureClassifier.Classify(exception));
+    }
+
+    [Theory]
+    [InlineData(SocketError.InvalidArgument)]
+    [InlineData(SocketError.NotConnected)]
+    public void The_same_socket_error_from_elsewhere_is_not_blamed_on_the_server(SocketError code)
+    {
+        var bare = new SocketException((int)code);
+        var inIo = new IOException("Unable to read data from the transport connection", new SocketException((int)code));
+
+        Assert.Equal(NetworkFailureCause.Unknown, NetworkFailureClassifier.Classify(bare));
+        Assert.Equal(NetworkFailureCause.Unknown, NetworkFailureClassifier.Classify(inIo));
+        Assert.Same(inIo, ConnectionSetupFailure.Wrap(inIo));
+    }
+
+    [Fact]
+    public void An_io_exception_with_an_invalid_argument_message_is_not_a_closed_connection()
+    {
+        Assert.Equal(NetworkFailureCause.Unknown, NetworkFailureClassifier.Classify(new IOException("Invalid argument")));
     }
 
     [Fact]

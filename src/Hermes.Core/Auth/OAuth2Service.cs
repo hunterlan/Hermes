@@ -109,7 +109,7 @@ public sealed class OAuth2Service : IDisposable
         {
             // A redirect rewrites the request's address, so the request holds the address that failed.
             var certificateFacts = _clients.CertificateFailures.Find(tokenUri.IdnHost, startTimestamp);
-            return Fail(OAuth2FailureDescriber.FromNetworkFailure(ex, tokenUri, request.RequestUri ?? tokenUri, certificateFacts, sslSource, _timeProvider.GetLocalNow().DateTime));
+            return Fail(OAuth2FailureDescriber.FromNetworkFailure(ConnectionSetupFailure.Wrap(ex), tokenUri, request.RequestUri ?? tokenUri, certificateFacts, sslSource, _timeProvider.GetLocalNow().DateTime));
         }
     }
 

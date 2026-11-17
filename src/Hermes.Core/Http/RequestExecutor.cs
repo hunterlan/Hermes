@@ -72,7 +72,7 @@ public sealed class RequestExecutor(HttpClientProvider clients, TimeProvider? ti
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or SocketException or OperationCanceledException)
         {
-            return new ExecutionResult { Failure = Describe(ex, requestedUri, message.RequestUri!, startTimestamp), ResolvedUrl = request.Url };
+            return new ExecutionResult { Failure = Describe(ConnectionSetupFailure.Wrap(ex), requestedUri, message.RequestUri!, startTimestamp), ResolvedUrl = request.Url };
         }
     }
 
