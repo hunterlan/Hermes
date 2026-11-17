@@ -74,6 +74,8 @@ public static partial class RequestBuildFailureDescriber
             Headline = "Body file can't be read",
             Facts = facts,
             NothingWasSent = true,
+            // The chain starts at the system's exception: BodyFileException is Hermes's own wrapper.
+            Details = [new FailureDetail("Error", NetworkFailureClassifier.DescribeChain(bodyFile.InnerException!))],
             OriginalMessage = ExceptionText.Flatten(bodyFile),
             Actions = [RequestFailureAction.ChooseFile],
             Subject = path,

@@ -67,6 +67,11 @@
 
         <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" IsVisible="{Binding Failure.HasDetails}">
           <c:CollapsibleSection Name="FailureDetailsSection" Header="Details" IsExpanded="{Binding Failure.IsDetailsExpanded}">
+            <!-- in the header, so it sits right under the next steps and never below a long list of details -->
+            <c:CollapsibleSection.HeaderActions>
+              <Button Name="CopyFailureDetailsButton" Classes="ghost" Content="Copy details"
+                      FontSize="{StaticResource FontSizeSmall}" Command="{Binding Failure.CopyDetailsCommand}" />
+            </c:CollapsibleSection.HeaderActions>
             <StackPanel Spacing="{StaticResource Spacing8}" Margin="0,0,0,4">
               <ItemsControl ItemsSource="{Binding Failure.Details}" Grid.IsSharedSizeScope="True">
                 <ItemsControl.ItemTemplate>
@@ -87,8 +92,6 @@
                 <SelectableTextBlock Name="FailureOriginalMessageText" Classes="mono" Text="{Binding Failure.OriginalMessage}"
                                      FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
               </Border>
-              <Button Name="CopyFailureDetailsButton" Classes="ghost" HorizontalAlignment="Left" Content="Copy details"
-                      FontSize="{StaticResource FontSizeSmall}" Command="{Binding Failure.CopyDetailsCommand}" />
             </StackPanel>
           </c:CollapsibleSection>
         </Border>

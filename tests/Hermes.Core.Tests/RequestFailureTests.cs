@@ -183,6 +183,9 @@ public sealed class RequestFailureTests : IDisposable
         Assert.Equal("Body file can't be read", failure.Headline);
         Assert.Equal($"{path} doesn't exist.", failure.Facts);
         Assert.Equal(path, failure.Subject);
+        var errorChain = Assert.Single(failure.Details, detail => detail.Label == "Error").Value;
+        Assert.EndsWith("NotFoundException", errorChain);
+        Assert.DoesNotContain(nameof(BodyFileException), errorChain);
         Assert.True(failure.NothingWasSent);
         Assert.Equal([RequestFailureAction.ChooseFile], failure.Actions);
         Assert.False(string.IsNullOrWhiteSpace(failure.OriginalMessage));

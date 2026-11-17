@@ -26,7 +26,25 @@ public sealed class CertificateFailureTests : IDisposable
             RequestPreparer.Prepare(new HttpRequestModel { Url = url, Settings = { VerifySsl = verifySsl } }, RequestContext.Empty),
             TestContext.Current.CancellationToken);
 
+    private static Uri Site(string host) => new($"https://{host}/");
+
     private static string Detail(RequestFailure failure, string label) => failure.Details.Single(detail => detail.Label == label).Value;
+
+    [Fact]
+    public async Task Certificate_validity_is_judged_by_the_clock_it_is_given()
+    {
+        var server = StartServer(TestCertificates.Expired());
+        // Four years back, before the certificate (valid from three years ago until two) began.
+        var clock = TestClock.NoonOn(DateOnly.FromDateTime(DateTime.Now.AddYears(-4)));
+        var executor = new RequestExecutor(_clients, clock);
+
+        var failure = (await executor.ExecuteAsync(
+            RequestPreparer.Prepare(new HttpRequestModel { Url = server.Url }, RequestContext.Empty),
+            TestContext.Current.CancellationToken)).Failure;
+
+        Assert.NotNull(failure);
+        Assert.Equal("Certificate isn't valid yet", failure.Headline);
+    }
 
     [Fact]
     public async Task Expired_certificate_names_the_host_and_the_date()
@@ -42,6 +60,8 @@ public sealed class CertificateFailureTests : IDisposable
         Assert.StartsWith("The certificate for 127.0.0.1 expired on ", failure.Facts);
         Assert.Contains(expiry, failure.Facts);
         Assert.Equal("Expired Test Server", Detail(failure, "Issued to"));
+        Assert.Equal(new Uri(server.Url).Authority, Detail(failure, "Server"));
+        Assert.Equal("Server", failure.Details[0].Label);
         Assert.Contains("NotTimeValid", Detail(failure, "Check failed"));
         Assert.True(failure.NothingWasSent);
         Assert.Equal([RequestFailureAction.TurnOffSslVerification, RequestFailureAction.OpenRequestSettings], failure.Actions);
@@ -130,7 +150,7 @@ public sealed class CertificateFailureTests : IDisposable
     public void Not_yet_valid_certificate_says_when_it_starts()
     {
         var failure = CertificateFailureDescriber.Describe(CreateFacts(chainStatus: X509ChainStatusFlags.NotTimeValid,
-            notBefore: new DateTime(2031, 3, 4), notAfter: new DateTime(2032, 3, 4)), "bad", new DateTime(2026, 1, 1), "example.test");
+            notBefore: new DateTime(2031, 3, 4), notAfter: new DateTime(2032, 3, 4)), "bad", new DateTime(2026, 1, 1), Site("example.test"), Site("example.test"));
 
         Assert.Equal(RequestFailureKind.CertificateExpired, failure.Kind);
         Assert.Equal("Certificate isn't valid yet", failure.Headline);
@@ -141,7 +161,7 @@ public sealed class CertificateFailureTests : IDisposable
     public void Expired_certificate_in_the_chain_with_a_valid_leaf_is_not_called_expired_on_a_future_date()
     {
         var failure = CertificateFailureDescriber.Describe(CreateFacts(chainStatus: X509ChainStatusFlags.NotTimeValid,
-            notBefore: new DateTime(2020, 1, 1), notAfter: new DateTime(2030, 1, 1)), "bad", new DateTime(2026, 1, 1), "example.test");
+            notBefore: new DateTime(2020, 1, 1), notAfter: new DateTime(2030, 1, 1)), "bad", new DateTime(2026, 1, 1), Site("example.test"), Site("example.test"));
 
         Assert.Equal(RequestFailureKind.CertificateExpired, failure.Kind);
         Assert.Equal("A certificate in the chain has expired", failure.Headline);
@@ -153,7 +173,7 @@ public sealed class CertificateFailureTests : IDisposable
     public void Failure_on_a_host_reached_by_redirect_says_so_and_does_not_claim_nothing_was_sent()
     {
         var failure = CertificateFailureDescriber.Describe(CreateFacts(chainStatus: X509ChainStatusFlags.UntrustedRoot),
-            "bad", DateTime.Now, "first.example.test");
+            "bad", DateTime.Now, Site("first.example.test"), Site("example.test"));
 
         Assert.StartsWith("The request was redirected to example.test. ", failure.Facts);
         Assert.False(failure.NothingWasSent);
@@ -225,7 +245,7 @@ public sealed class CertificateFailureTests : IDisposable
     [Fact]
     public void Missing_certificate_gives_the_general_wording_and_keeps_the_message_in_details()
     {
-        var failure = CertificateFailureDescriber.Describe(null, "The  handshake\nfailed", DateTime.Now, "example.test");
+        var failure = CertificateFailureDescriber.Describe(null, "The  handshake\nfailed", DateTime.Now, Site("example.test"), Site("example.test"));
 
         Assert.Equal(RequestFailureKind.SecureConnectionFailed, failure.Kind);
         Assert.Equal("Secure connection failed", failure.Headline);
@@ -241,7 +261,7 @@ public sealed class CertificateFailureTests : IDisposable
     [Fact]
     public void Authentication_failure_without_a_certificate_check_does_not_show_dotnet_wording()
     {
-        var failure = CertificateFailureDescriber.Describe(null, "Authentication failed, see inner exception.", DateTime.Now, "old.example.test");
+        var failure = CertificateFailureDescriber.Describe(null, "Authentication failed, see inner exception.", DateTime.Now, Site("old.example.test"), Site("old.example.test"));
 
         Assert.Equal(RequestFailureKind.SecureConnectionFailed, failure.Kind);
         Assert.DoesNotContain("inner exception", failure.Facts);
@@ -266,6 +286,7 @@ public sealed class CertificateFailureTests : IDisposable
         Assert.Equal(CertificateFailureDescriber.PlainHttpAnsweredMessage, failure.OriginalMessage);
         Assert.Equal([RequestFailureAction.EditUrl], failure.Actions);
         Assert.StartsWith("HttpRequestException (SecureConnectionError) > AuthenticationException", Detail(failure, "Error"));
+        Assert.Equal($"127.0.0.1:{listener.Port}", Detail(failure, "Server"));
     }
 
     [Fact]
@@ -288,12 +309,13 @@ public sealed class CertificateFailureTests : IDisposable
         var chain = Detail(failure, "Error");
         Assert.StartsWith("HttpRequestException (SecureConnectionError) > ", chain);
         Assert.DoesNotContain("see inner exception", failure.OriginalMessage);
+        Assert.Equal($"127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}", Detail(failure, "Server"));
     }
 
     [Fact]
     public void Chain_problem_without_a_case_of_its_own_gives_the_general_failure_with_the_check_named()
     {
-        var failure = CertificateFailureDescriber.Describe(CreateFacts(chainStatus: X509ChainStatusFlags.Revoked), "revoked", DateTime.Now, "example.test");
+        var failure = CertificateFailureDescriber.Describe(CreateFacts(chainStatus: X509ChainStatusFlags.Revoked), "revoked", DateTime.Now, Site("example.test"), Site("example.test"));
 
         Assert.Equal(RequestFailureKind.SecureConnectionFailed, failure.Kind);
         Assert.Equal("The certificate for example.test didn't pass a security check. Details say which one.", failure.Facts);
@@ -305,7 +327,7 @@ public sealed class CertificateFailureTests : IDisposable
     {
         var names = Enumerable.Range(1, 8).Select(number => $"host{number}.test").ToList();
         var failure = CertificateFailureDescriber.Describe(CreateFacts(
-            policyErrors: System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch, names: names), "bad", DateTime.Now, "example.test");
+            policyErrors: System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch, names: names), "bad", DateTime.Now, Site("example.test"), Site("example.test"));
 
         Assert.Equal("Issued for host1.test, host2.test, host3.test, host4.test, host5.test and 3 more, not example.test. Check the URL.", failure.Facts);
     }
@@ -321,6 +343,38 @@ public sealed class CertificateFailureTests : IDisposable
         Assert.Empty(failure.Actions);
         Assert.False(failure.HasDetails);
         Assert.Equal("Request failed\nRequest timed out after 200 ms.", failure.ToClipboardText().ReplaceLineEndings("\n"));
+    }
+
+    [Fact]
+    public void Server_row_is_first_with_or_without_certificate_facts()
+    {
+        var withFacts = CertificateFailureDescriber.Describe(CreateFacts(chainStatus: X509ChainStatusFlags.UntrustedRoot), "bad", DateTime.Now,
+            Site("example.test"), Site("example.test"));
+        var withoutFacts = CertificateFailureDescriber.Describe(null, "bad", DateTime.Now, Site("example.test"), Site("example.test"));
+
+        Assert.Equal(new FailureDetail("Server", "example.test:443"), withFacts.Details[0]);
+        Assert.Equal([new FailureDetail("Server", "example.test:443")], withoutFacts.Details);
+    }
+
+    [Fact]
+    public void Server_row_uses_the_punycode_host_and_brackets_an_ipv6_address()
+    {
+        var idn = CertificateFailureDescriber.Describe(null, "bad", DateTime.Now, new Uri("https://b\u00fccher.example:8443/"), new Uri("https://b\u00fccher.example:8443/"));
+        var ipv6 = CertificateFailureDescriber.Describe(null, "bad", DateTime.Now, new Uri("https://[::1]:8443/"), new Uri("https://[::1]:8443/"));
+
+        Assert.Equal("xn--bcher-kva.example:8443", idn.Details[0].Value);
+        Assert.Contains("xn--bcher-kva.example", idn.Facts);
+        Assert.Equal("[::1]:8443", ipv6.Details[0].Value);
+    }
+
+    [Fact]
+    public void Without_facts_the_host_in_the_wording_is_the_attempted_one_after_a_redirect()
+    {
+        var failure = CertificateFailureDescriber.Describe(null, "bad", DateTime.Now, Site("first.example.test"), Site("second.example.test"));
+
+        Assert.Contains("second.example.test", failure.Facts);
+        Assert.DoesNotContain("first.example.test", failure.Facts);
+        Assert.Equal("second.example.test:443", failure.Details[0].Value);
     }
 
     private static CertificateFacts CreateFacts(X509ChainStatusFlags chainStatus = X509ChainStatusFlags.NoError,

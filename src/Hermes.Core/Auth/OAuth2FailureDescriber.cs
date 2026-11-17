@@ -140,8 +140,8 @@ public static class OAuth2FailureDescriber
     {
         Kind = RequestFailureKind.ConnectionFailed,
         Headline = "Server didn't answer",
-        Facts = $"{tokenUri.Host}:{tokenUri.Port} didn't answer the token request in time.",
-        Details = [new FailureDetail("Server", $"{tokenUri.Host}:{tokenUri.Port}")],
+        Facts = $"{NetworkFailureDescriber.FormatEndpoint(tokenUri)} didn't answer the token request in time.",
+        Details = [NetworkFailureDescriber.CreateServerDetail(tokenUri)],
         Actions = [RequestFailureAction.Retry],
     };
 
@@ -153,7 +153,7 @@ public static class OAuth2FailureDescriber
         if (NetworkFailureClassifier.Classify(exception) != NetworkFailureCause.SecureConnectionFailed)
             return NetworkFailureDescriber.Describe(exception, requestedUri, attemptedUri);
 
-        var failure = CertificateFailureDescriber.Describe(certificateFacts, RequestExecutor.FindTlsMessage(exception), now, requestedUri.IdnHost);
+        var failure = CertificateFailureDescriber.Describe(certificateFacts, RequestExecutor.FindTlsMessage(exception), now, requestedUri, attemptedUri);
         // Without a failed certificate check, turning verification off would not help.
         if (certificateFacts is null)
             return failure;
