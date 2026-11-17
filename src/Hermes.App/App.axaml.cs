@@ -142,6 +142,7 @@ public partial class App : Application
         services.AddSingleton<HttpClientProvider>();
         services.AddSingleton<IRequestExecutor, RequestExecutor>();
         services.AddSingleton<RequestSendService>();
+        services.AddSingleton<RequestSaveService>();
         services.AddSingleton<OAuth2Service>();
         services.AddSingleton<DialogService>();
         services.AddSingleton(sp => new UnexpectedErrorHandler(sp.GetRequiredService<DialogService>(), QuitAfterUnexpectedError));
