@@ -14,6 +14,17 @@ public class RequestSendServiceTests : IDisposable
     private readonly HttpClientProvider _clients = new();
     private readonly RequestSendService _service;
 
+    /// <summary>Cancels at the one point that matters: the response is in hand and nothing is recorded yet.</summary>
+    private sealed class CancelAfterResponseExecutor(IRequestExecutor inner, CancellationTokenSource toCancel) : IRequestExecutor
+    {
+        public async Task<ExecutionResult> ExecuteAsync(PreparedRequest request, CancellationToken cancellationToken)
+        {
+            var result = await inner.ExecuteAsync(request, cancellationToken);
+            await toCancel.CancelAsync();
+            return result;
+        }
+    }
+
     public RequestSendServiceTests()
     {
         _service = new RequestSendService(_temp.Workspace, new RequestExecutor(_clients));
@@ -139,14 +150,7 @@ public class RequestSendServiceTests : IDisposable
         using var server = OkServer();
         var request = SavedRequest(server.Url);
         using var cts = new CancellationTokenSource();
-        var executor = new RequestExecutor(_clients);
-        // Cancels at the one point that matters: the response is in hand and nothing is recorded yet.
-        var service = new RequestSendService(_temp.Workspace, async (prepared, token) =>
-        {
-            var result = await executor.ExecuteAsync(prepared, token);
-            await cts.CancelAsync();
-            return result;
-        });
+        var service = new RequestSendService(_temp.Workspace, new CancelAfterResponseExecutor(new RequestExecutor(_clients), cts));
 
         var outcome = await service.SendAsync(InputFor(request), cts.Token);
 

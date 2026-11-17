@@ -10,26 +10,14 @@ namespace Hermes.App.Services;
 /// A cancelled token means the user cancelled or the tab was closed: nothing is recorded, even if a response had
 /// just arrived.
 /// </summary>
-public sealed class RequestSendService
+public sealed class RequestSendService(WorkspaceService workspace, IRequestExecutor executor)
 {
-    private readonly WorkspaceService _workspace;
-    private readonly Func<PreparedRequest, CancellationToken, Task<ExecutionResult>> _execute;
-
-    public RequestSendService(WorkspaceService workspace, RequestExecutor executor)
-        : this(workspace, executor.ExecuteAsync)
-    {
-    }
-
-    /// <summary>Takes the execution as a function so a test can act between the response arriving and it being recorded.</summary>
-    internal RequestSendService(WorkspaceService workspace, Func<PreparedRequest, CancellationToken, Task<ExecutionResult>> execute)
-    {
-        _workspace = workspace;
-        _execute = execute;
-    }
+    private readonly WorkspaceService _workspace = workspace;
+    private readonly IRequestExecutor _executor = executor;
 
     public async Task<RequestSendOutcome> SendAsync(RequestSendInput input, CancellationToken cancellationToken)
     {
-        var result = await _execute(input.Prepared.Request, cancellationToken);
+        var result = await _executor.ExecuteAsync(input.Prepared.Request, cancellationToken);
         if (result.Cancelled || cancellationToken.IsCancellationRequested)
             return RequestSendOutcome.CancelledSend;
 
