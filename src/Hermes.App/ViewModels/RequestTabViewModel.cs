@@ -507,13 +507,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         _sendCts = new CancellationTokenSource();
         try
         {
-            var outcome = await Services.Sender.SendAsync(new RequestSendInput
-            {
-                Model = model,
-                Prepared = pair,
-                RequestId = RequestId,
-            }, _sendCts.Token);
-            // A tab closed during the send updates nothing; closing cancels the send, so nothing was recorded either.
+            var outcome = await Services.Sender.SendAsync(prepared, _sendCts.Token);
+            // A tab closed during the send updates and records nothing; closing cancels the send.
             if (_isClosed)
                 return;
             if (outcome.Cancelled)
@@ -521,15 +516,23 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
                 Response.SetCancelled();
                 return;
             }
+            // Shown first, so a problem while recording can't keep the response off screen.
             var result = outcome.Result;
             if (result.Response is { } response)
-            {
                 Response.SetResponse(response, sentWith: context.Environment);
-                if (outcome.SavedResponse is { } saved)
-                    Response.AddSaved(saved);
-            }
             else
                 Response.SetFailure(result.Failure ?? RequestFailure.FromMessage("Unknown error"));
+
+            // The request this tab is now: Save As during the send made it a new one, and the response goes with that.
+            var saved = Services.Sender.Record(new CompletedSend
+            {
+                Model = model,
+                MaskedRequest = pair.Masked,
+                Result = result,
+                KeepResponseWith = IsPersisted ? RequestId : null,
+            }, _sendCts.Token);
+            if (saved is not null)
+                Response.AddSaved(saved);
         }
         finally
         {
