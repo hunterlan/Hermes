@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Globalization;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -45,12 +44,14 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         Body = new RequestBodyViewModel(services.Dialogs);
         Body.Changed += OnAnyChanged;
         Body.PropertyChanged += OnBodyPropertyChanged;
+        Settings = new RequestSettingsViewModel(services.Settings);
+        Settings.Changed += OnSettingsEdited;
 
         Auth = services.CreateAuthEditor(allowInherit: true);
         Auth.Changed += OnAnyChanged;
         Auth.ScopeProvider = () => CreateContext().BuildScope();
-        Auth.VerifySslProvider = () => VerifySsl;
-        Auth.SslSourceProvider = () => VerifySslOverride is null ? SslSettingSource.AppWide : SslSettingSource.Request;
+        Auth.VerifySslProvider = () => Settings.VerifySsl;
+        Auth.SslSourceProvider = () => Settings.VerifySslOverride is null ? SslSettingSource.AppWide : SslSettingSource.Request;
         Auth.FailureActionRequested += OnFailureActionRequested;
         Auth.InheritedAuthProvider = () => CreateContext().ResolveAuth(AuthConfig.Inherit());
         Auth.ChainProvider = () => (AuthInheritance.OuterLevels(CreateContext()), "Request", Name);
@@ -77,6 +78,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     public KeyValueListViewModel PathVariables { get; } = new(keysReadOnly: true);
     public RequestHeadersViewModel HeadersEditor { get; }
     public RequestBodyViewModel Body { get; }
+    public RequestSettingsViewModel Settings { get; }
     public AuthEditorViewModel Auth { get; }
     public ResponseViewModel Response { get; }
 
@@ -85,10 +87,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUrlSubstitutions))]
     public partial string Url { get; set; } = "";
-    /// <summary>The request's own setting; null follows the app setting.</summary>
-    [ObservableProperty] public partial bool? FollowRedirectsOverride { get; set; }
-    [ObservableProperty] public partial bool? VerifySslOverride { get; set; }
-    [ObservableProperty] public partial string TimeoutText { get; set; } = "";
 
     [ObservableProperty] public partial bool IsSending { get; set; }
     [ObservableProperty] public partial VariableScope Variables { get; set; } = VariableScope.Empty;
@@ -123,23 +121,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 
     public bool IsParamsSectionVisible => ParamsAdded || Params.ActiveCount > 0 || HasPathVariables;
     public bool IsBodySectionVisible => BodyAdded || Body.HasBody || Body.HasUnsupportedBody || SelectedMethod is "POST" or "PUT" or "PATCH";
-    /// <summary>The effective setting, shown by the toggle; turning the toggle makes it an override.</summary>
-    public bool FollowRedirects
-    {
-        get => FollowRedirectsOverride ?? Services.Settings.Current.FollowRedirects;
-        set => FollowRedirectsOverride = value;
-    }
-
-    public bool VerifySsl
-    {
-        get => VerifySslOverride ?? Services.Settings.Current.VerifySsl;
-        set => VerifySslOverride = value;
-    }
-
-    public bool HasSettingsOverrides => FollowRedirectsOverride is not null || VerifySslOverride is not null || TimeoutMs is not null;
-
-    private int? TimeoutMs => int.TryParse(TimeoutText, NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite, CultureInfo.InvariantCulture, out var t) && t >= 0 ? t : null;
-    public bool IsSettingsSectionVisible => SettingsAdded || HasSettingsOverrides;
+    public bool IsSettingsSectionVisible => SettingsAdded || Settings.HasSettingsOverrides;
     public bool HasUnusedSections => !IsParamsSectionVisible || !IsBodySectionVisible || !IsSettingsSectionVisible;
 
     public string? ActiveEnvironmentName => Services.Workspace.ActiveEnvironment?.Name;
@@ -167,9 +149,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         HeadersEditor.Load(model.Headers, model.SkippedInheritedHeaders);
         Body.Load(model.Body);
         Auth.Load(model.Auth);
-        FollowRedirectsOverride = model.Settings.FollowRedirects;
-        VerifySslOverride = model.Settings.VerifySsl;
-        TimeoutText = model.Settings.TimeoutMs?.ToString(CultureInfo.InvariantCulture) ?? "";
+        Settings.Load(model.Settings);
         _description = model.Description;
         _eventsJson = model.EventsJson;
         _syncingUrl = false;
@@ -196,12 +176,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             SkippedInheritedHeaders = [.. HeadersEditor.SkippedInheritedHeaders],
             Body = Body.ToModel(),
             Auth = Auth.ToModel(),
-            Settings = new RequestSettings
-            {
-                FollowRedirects = FollowRedirectsOverride,
-                VerifySsl = VerifySslOverride,
-                TimeoutMs = TimeoutMs,
-            },
+            Settings = Settings.ToModel(),
         };
     }
 
@@ -238,14 +213,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
                 break;
         }
 
-        // A section the user edits stays on screen even if it becomes empty again.
-        if (!_loading)
-        {
-            if (e.PropertyName is nameof(FollowRedirectsOverride) or nameof(VerifySslOverride) or nameof(TimeoutText))
-                SettingsAdded = true;
-        }
-
-        if (e.PropertyName is nameof(Name) or nameof(SelectedMethod) or nameof(FollowRedirectsOverride) or nameof(VerifySslOverride) or nameof(TimeoutText))
+        if (e.PropertyName is nameof(Name) or nameof(SelectedMethod))
             OnAnyChanged();
     }
 
@@ -256,6 +224,13 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             BodyAdded = true;
     }
 
+    /// <summary>A section the user edits stays on screen even if it becomes empty again.</summary>
+    private void OnSettingsEdited()
+    {
+        SettingsAdded = true;
+        OnAnyChanged();
+    }
+
     private void OnAnyChanged()
     {
         if (_loading)
@@ -264,10 +239,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         UpdateDirty();
         NotifySections();
     }
-
-    partial void OnFollowRedirectsOverrideChanged(bool? value) => OnPropertyChanged(nameof(FollowRedirects));
-
-    partial void OnVerifySslOverrideChanged(bool? value) => OnPropertyChanged(nameof(VerifySsl));
 
     partial void OnUrlChanged(string value)
     {
@@ -360,12 +331,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
 
     // ---- variables / workspace ----
 
-    // The toggles show the app setting where the request has no override.
-    public override void OnSettingsChanged()
-    {
-        OnPropertyChanged(nameof(FollowRedirects));
-        OnPropertyChanged(nameof(VerifySsl));
-    }
+    public override void OnSettingsChanged() => Settings.OnAppSettingsChanged();
 
     public override void OnVariablesChanged()
     {
@@ -674,24 +640,14 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     [RelayCommand]
     private async Task TurnOffVerificationAndResendAsync()
     {
-        VerifySslOverride = false;
+        Settings.VerifySslOverride = false;
         await SendCommand.ExecuteAsync(null);
-    }
-
-    /// <summary>Drops the request's own settings, so it follows the app settings again.</summary>
-    [RelayCommand]
-    private void UseDefaultSettings()
-    {
-        FollowRedirectsOverride = null;
-        VerifySslOverride = null;
-        TimeoutText = "";
     }
 
     private void NotifySections()
     {
         OnPropertyChanged(nameof(IsParamsSectionVisible));
         OnPropertyChanged(nameof(IsBodySectionVisible));
-        OnPropertyChanged(nameof(HasSettingsOverrides));
         OnPropertyChanged(nameof(IsSettingsSectionVisible));
         OnPropertyChanged(nameof(HasUnusedSections));
         OnPropertyChanged(nameof(ParamsSummary));

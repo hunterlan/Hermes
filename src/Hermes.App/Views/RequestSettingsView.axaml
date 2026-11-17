@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             xmlns:c="using:Hermes.App.Controls"
+             x:Class="Hermes.App.Views.RequestSettingsView"
+             x:DataType="vm:RequestSettingsViewModel">
+  <StackPanel Spacing="{StaticResource Spacing16}" Margin="0,4,0,12" MaxWidth="720" HorizontalAlignment="Left">
+    <c:SettingRow Title="Automatically follow redirects" Hint="Follow HTTP 3xx responses as redirects.">
+      <ToggleSwitch IsChecked="{Binding FollowRedirects}" />
+    </c:SettingRow>
+    <c:SettingRow Title="Enable SSL certificate verification" Hint="Verify SSL certificates when sending a request.">
+      <ToggleSwitch IsChecked="{Binding VerifySsl}" />
+    </c:SettingRow>
+    <c:SettingRow Title="Request timeout (ms)"
+                  Hint="Overrides the app-wide timeout for this request. Empty = use app setting, 0 = no timeout.">
+      <TextBox Text="{Binding TimeoutText}" Width="120" PlaceholderText="Default" />
+    </c:SettingRow>
+    <Button Classes="ghost" HorizontalAlignment="Left" Content="Use app defaults" Command="{Binding UseDefaultSettingsCommand}"
+            IsVisible="{Binding HasSettingsOverrides}" />
+  </StackPanel>
+</UserControl>

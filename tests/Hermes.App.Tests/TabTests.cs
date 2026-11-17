@@ -69,18 +69,18 @@ public class TabTests
 
         Assert.Equal(appVerifies, tab.BuildModel().Settings.VerifySsl);
         Assert.Null(tab.BuildModel().Settings.FollowRedirects);
-        Assert.True(tab.HasSettingsOverrides);
+        Assert.True(tab.Settings.HasSettingsOverrides);
 
-        tab.UseDefaultSettingsCommand.Execute(null);
+        tab.Settings.UseDefaultSettingsCommand.Execute(null);
         Assert.Null(tab.BuildModel().Settings.VerifySsl);
-        Assert.False(tab.HasSettingsOverrides);
+        Assert.False(tab.Settings.HasSettingsOverrides);
 
         // Without an override the toggle follows the app setting as it changes.
         var settings = App.Services.GetRequiredService<SettingsService>();
         var changed = new List<string?>();
-        tab.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        tab.Settings.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
         settings.Update(settings.Current);
-        Assert.Contains(nameof(RequestTabViewModel.VerifySsl), changed);
+        Assert.Contains(nameof(RequestSettingsViewModel.VerifySsl), changed);
         window.Close();
     }
 

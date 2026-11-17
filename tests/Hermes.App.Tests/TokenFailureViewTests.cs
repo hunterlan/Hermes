@@ -132,10 +132,10 @@ public class TokenFailureViewTests
             var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
             Assert.Equal(SslSettingSource.AppWide, tab.Auth.SslSourceProvider());
 
-            tab.VerifySslOverride = false;
+            tab.Settings.VerifySslOverride = false;
             Assert.Equal(SslSettingSource.Request, tab.Auth.SslSourceProvider());
 
-            tab.UseDefaultSettingsCommand.Execute(null);
+            tab.Settings.UseDefaultSettingsCommand.Execute(null);
             Assert.Equal(SslSettingSource.AppWide, tab.Auth.SslSourceProvider());
         }
         finally
