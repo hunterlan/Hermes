@@ -25,10 +25,10 @@ public class TabDisposalTests
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         tab.UrlEditor.Url = server.Url;
 
-        tab.SendButtonCommand.Execute(null);
-        await UiTestHelpers.WaitUntil(() => tab.IsSending);
+        tab.Sending.SendButtonCommand.Execute(null);
+        await UiTestHelpers.WaitUntil(() => tab.Sending.IsSending);
         vm.RemoveTab(tab);
-        await UiTestHelpers.WaitUntil(() => !tab.IsSending);
+        await UiTestHelpers.WaitUntil(() => !tab.Sending.IsSending);
 
         Assert.False(tab.Response.HasResponse);
         Assert.Equal(historyBefore, workspace.History.Count);

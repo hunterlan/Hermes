@@ -36,7 +36,7 @@ public class SidebarTests
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         Assert.True(tab.IsPersisted);
         Assert.False(tab.IsDirty);
-        Assert.Equal($"{collection.Model.Name} / Users", tab.Breadcrumb);
+        Assert.Equal($"{collection.Model.Name} / Users", tab.Preview.Breadcrumb);
 
         tab.UrlEditor.Url = "https://api.example.com/users";
         tab.SelectedMethod = "POST";
@@ -144,11 +144,11 @@ public class SidebarTests
         vm.NewRequestCommand.Execute(null);
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         tab.UrlEditor.Url = "{{baseUrl}}/env-test";
-        Assert.True(tab.Variables.TryGet("baseUrl", out _));
-        Assert.Empty(tab.FindUnresolvedVariables());
+        Assert.True(tab.Preview.Variables.TryGet("baseUrl", out _));
+        Assert.Empty(tab.Sending.FindUnresolvedVariables());
 
         var historyBefore = Workspace.History.Count;
-        await tab.SendCommand.ExecuteAsync(null);
+        await tab.Sending.SendCommand.ExecuteAsync(null);
         Assert.True(tab.Response.HasResponse, tab.Response.Failure?.Model.Facts);
         Assert.Contains("/env-test", tab.Response.RawText);
         Assert.Equal(historyBefore + 1, Workspace.History.Count);
@@ -164,7 +164,7 @@ public class SidebarTests
 
         vm.SelectedEnvironment = vm.EnvironmentOptions[0];
         Assert.Null(Workspace.ActiveEnvironment);
-        Assert.Equal(["baseUrl"], tab.FindUnresolvedVariables());
+        Assert.Equal(["baseUrl"], tab.Sending.FindUnresolvedVariables());
         window.Close();
     }
 

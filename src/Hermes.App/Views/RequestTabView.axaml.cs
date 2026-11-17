@@ -44,7 +44,7 @@ public partial class RequestTabView : UserControl
             _tab.Sections.SettingsRevealRequested -= ScrollSettingsIntoView;
             _tab.Sections.HeadersRevealRequested -= ScrollHeadersIntoView;
             _tab.Sections.BodyRevealRequested -= ScrollBodyIntoView;
-            _tab.UrlFocusRequested -= FocusUrl;
+            _tab.UrlEditor.FocusRequested -= FocusUrl;
         }
         _tab = DataContext as RequestTabViewModel;
         if (_tab is not null)
@@ -52,7 +52,7 @@ public partial class RequestTabView : UserControl
             _tab.Sections.SettingsRevealRequested += ScrollSettingsIntoView;
             _tab.Sections.HeadersRevealRequested += ScrollHeadersIntoView;
             _tab.Sections.BodyRevealRequested += ScrollBodyIntoView;
-            _tab.UrlFocusRequested += FocusUrl;
+            _tab.UrlEditor.FocusRequested += FocusUrl;
         }
     }
 

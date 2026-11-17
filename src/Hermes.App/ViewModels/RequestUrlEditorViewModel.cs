@@ -37,6 +37,9 @@ public sealed partial class RequestUrlEditorViewModel : ObservableObject
     /// </summary>
     public event EventHandler<CurlPastedEventArgs>? CurlPasted;
 
+    /// <summary>Raised when the cursor should go to the URL; the view focuses it.</summary>
+    public event Action? FocusRequested;
+
     public KeyValueListViewModel Params { get; } = new();
     public KeyValueListViewModel PathVariables { get; } = new(keysReadOnly: true);
 
@@ -69,6 +72,9 @@ public sealed partial class RequestUrlEditorViewModel : ObservableObject
         }
         OnPropertyChanged(nameof(HasPathVariables));
     }
+
+    /// <summary>Asks the view to put the cursor in the URL, e.g. after "Edit URL" on an invalid URL.</summary>
+    public void RequestFocus() => FocusRequested?.Invoke();
 
     partial void OnUrlChanged(string value)
     {

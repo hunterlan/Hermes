@@ -23,7 +23,7 @@ public class CertificateFailureViewTests
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         tab.UrlEditor.Url = server.Url;
-        await tab.SendCommand.ExecuteAsync(null);
+        await tab.Sending.SendCommand.ExecuteAsync(null);
         UiTestHelpers.Pump();
         return (window, tab);
     }
@@ -108,7 +108,7 @@ public class CertificateFailureViewTests
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         tab.UrlEditor.Url = $"https://127.0.0.1:{listener.Port}/";
 
-        await tab.SendCommand.ExecuteAsync(null);
+        await tab.Sending.SendCommand.ExecuteAsync(null);
         UiTestHelpers.Pump();
 
         Assert.Equal(RequestFailureKind.PlainHttpAnswered, tab.Response.Failure?.Model.Kind);
@@ -145,7 +145,7 @@ public class CertificateFailureViewTests
         }
 
         // Turning verification off, retrying and choosing a file start work; let it finish before the window goes.
-        await UiTestHelpers.WaitUntil(() => !tab.IsSending && !tab.TurnOffVerificationAndResendCommand.IsRunning && !tab.ChooseBodyFileCommand.IsRunning);
+        await UiTestHelpers.WaitUntil(() => !tab.Sending.IsSending && !tab.FailureActions.TurnOffVerificationAndResendCommand.IsRunning && !tab.FailureActions.ChooseBodyFileCommand.IsRunning);
         services.OpenSettingsAsync = originalOpenSettings;
         window.Close();
     }

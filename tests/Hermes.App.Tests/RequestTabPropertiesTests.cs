@@ -54,13 +54,13 @@ public class RequestTabPropertiesTests
         using var temp = new TempWorkspace();
         using var tab = OpenTab(temp);
         var announced = new List<string?>();
-        tab.PropertyChanged += (_, e) => announced.Add(e.PropertyName);
+        tab.Sending.PropertyChanged += (_, e) => announced.Add(e.PropertyName);
 
-        tab.IsSending = true;
+        tab.Sending.IsSending = true;
 
-        Assert.Equal("Cancel", tab.SendButtonText);
-        Assert.Same(tab.CancelSendCommand, tab.SendButtonCommand);
-        Assert.Contains(nameof(RequestTabViewModel.SendButtonText), announced);
-        Assert.Contains(nameof(RequestTabViewModel.SendButtonCommand), announced);
+        Assert.Equal("Cancel", tab.Sending.SendButtonText);
+        Assert.Same(tab.Sending.CancelSendCommand, tab.Sending.SendButtonCommand);
+        Assert.Contains(nameof(RequestSendViewModel.SendButtonText), announced);
+        Assert.Contains(nameof(RequestSendViewModel.SendButtonCommand), announced);
     }
 }

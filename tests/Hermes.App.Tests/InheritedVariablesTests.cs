@@ -106,8 +106,8 @@ public class InheritedVariablesTests
             Assert.Contains(boxes, box => box.PlaceholderText == "Token");
             // Params and headers each show their rows' values, with a trailing blank row.
             Assert.True(boxes.Count(box => box.PlaceholderText == "Value") >= 4);
-            Assert.All(boxes, box => Assert.Same(tab.Variables, box.Variables));
-            Assert.True(tab.Variables.TryGet("requestVar", out _));
+            Assert.All(boxes, box => Assert.Same(tab.Preview.Variables, box.Variables));
+            Assert.True(tab.Preview.Variables.TryGet("requestVar", out _));
         }
         finally
         {
@@ -131,7 +131,7 @@ public class InheritedVariablesTests
             vm.SelectedEnvironment = vm.EnvironmentOptions.Single(o => o.Model == environment);
             UiTestHelpers.Pump();
 
-            Assert.Same(tab.Variables, urlBox.Variables);
+            Assert.Same(tab.Preview.Variables, urlBox.Variables);
             Assert.True(urlBox.Variables!.TryGet("requestVar", out _));
         }
         finally

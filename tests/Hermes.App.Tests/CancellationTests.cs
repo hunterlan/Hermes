@@ -24,15 +24,15 @@ public class CancellationTests
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         tab.UrlEditor.Url = server.Url;
 
-        tab.SendButtonCommand.Execute(null);
-        await UiTestHelpers.WaitUntil(() => tab.IsSending);
+        tab.Sending.SendButtonCommand.Execute(null);
+        await UiTestHelpers.WaitUntil(() => tab.Sending.IsSending);
 
-        Assert.Same(tab.CancelSendCommand, tab.SendButtonCommand);
-        Assert.True(tab.SendButtonCommand.CanExecute(null));
-        tab.SendButtonCommand.Execute(null);
-        await UiTestHelpers.WaitUntil(() => !tab.IsSending);
+        Assert.Same(tab.Sending.CancelSendCommand, tab.Sending.SendButtonCommand);
+        Assert.True(tab.Sending.SendButtonCommand.CanExecute(null));
+        tab.Sending.SendButtonCommand.Execute(null);
+        await UiTestHelpers.WaitUntil(() => !tab.Sending.IsSending);
 
-        Assert.Same(tab.SendCommand, tab.SendButtonCommand);
+        Assert.Same(tab.Sending.SendCommand, tab.Sending.SendButtonCommand);
         Assert.False(tab.Response.HasResponse);
         window.Close();
     }
@@ -46,10 +46,10 @@ public class CancellationTests
         tab.UrlEditor.Url = server.Url;
 
         vm.SendActiveCommand.Execute(null);
-        await UiTestHelpers.WaitUntil(() => tab.IsSending);
+        await UiTestHelpers.WaitUntil(() => tab.Sending.IsSending);
         Assert.True(vm.SendActiveCommand.CanExecute(null));
         vm.SendActiveCommand.Execute(null);
-        await UiTestHelpers.WaitUntil(() => !tab.IsSending);
+        await UiTestHelpers.WaitUntil(() => !tab.Sending.IsSending);
         window.Close();
     }
 
