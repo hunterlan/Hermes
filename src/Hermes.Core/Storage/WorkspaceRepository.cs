@@ -67,7 +67,7 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
     // ---- collections ----
 
     public List<CollectionModel> LoadCollections() =>
-        LoadAll(CollectionsDir, DataFolderCheck.CollectionsSubject, "Collection", p => JsonFileStore.Read(p, HermesJsonContext.Default.CollectionModel))
+        LoadAll(CollectionsDir, DataFolderCheck.CollectionsSubject, "Collection", ReadCollection)
             .Select(c =>
             {
                 SecretFields.Restore(c, Secrets.Get(CollectionOwner(c.Id)));
@@ -75,6 +75,10 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
             })
             .OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
+
+    // A file without a name, such as {"foo":1}, fails to read: CollectionModel.Name is required, though it may be empty.
+    private static CollectionModel? ReadCollection(string path) =>
+        JsonFileStore.Read(path, HermesJsonContext.Default.CollectionModel);
 
     public void SaveCollection(CollectionModel collection) =>
         JsonFileStore.Write(CollectionFile(collection.Id),
@@ -226,7 +230,7 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            LoadErrors.Add(StorageErrorDescriber.Describe(ex, dir, $"{folderSubject} \"{dir}\""));
+            LoadErrors.Add(StorageErrorDescriber.Describe(ex, dir, $"{folderSubject} \"{dir}\"", target: StorageTarget.Folder));
             return list;
         }
         foreach (var file in files)

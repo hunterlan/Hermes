@@ -52,7 +52,7 @@ public partial class App : Application
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             ShowStartupProblem(desktop, dataDirectory,
-                StorageErrorDescriber.Describe(ex, dataDirectory, $"Data folder \"{dataDirectory}\"", StorageOperation.Use), showWindow);
+                StorageErrorDescriber.Describe(ex, dataDirectory, $"Data folder \"{dataDirectory}\"", StorageOperation.Use, target: StorageTarget.Folder), showWindow);
             return;
         }
         if (_dataFolderLock is null)

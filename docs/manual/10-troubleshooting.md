@@ -95,8 +95,8 @@ file it is, and why, in a dialog. Each problem comes with a next step:
 
 | Message | What to do |
 |---|---|
-| It isn't valid JSON (line 41, column 8) | The file is damaged, often cut short by a crash or a sync tool. Choose **Reveal file** to repair it by hand, or **Move aside** to rename it to `.corrupt` so Hermes starts without it. Nothing is deleted. |
-| Hermes isn't allowed to read or write it | Check the permissions of the folder, then try again. |
+| It isn't valid JSON (line 41, column 8), or it is valid JSON but not in the form Hermes expects, for example a collection file with no name | The file is damaged, often cut short by a crash or a sync tool. Choose **Reveal file** to repair it by hand, or **Move aside** to rename it to `.corrupt` so Hermes starts without it. Nothing is deleted. |
+| Hermes isn't allowed to read or write it | Check the permissions of the file (and of the folder it is in, when saving), or of the folder and the folders above it, then try again. |
 | The disk is full | Free up disk space, then try again. |
 | Another program is using it | Close the program that has the file open (a sync or backup tool, or another Hermes window), then try again. |
 | It or its folder wasn't found | Check that the folder still exists and that its drive is connected, then try again. |

@@ -29,7 +29,8 @@ public sealed class SavedResponseStore(string directory)
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return new SavedResponses(items, [StorageErrorDescriber.Describe(ex, DirectoryFor(requestId), "Saved responses")]);
+            return new SavedResponses(items, [StorageErrorDescriber.Describe(ex, DirectoryFor(requestId), "Saved responses",
+                target: StorageTarget.Folder)]);
         }
         foreach (var file in files)
         {
