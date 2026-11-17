@@ -13,12 +13,9 @@ namespace Hermes.App.Services;
 /// </summary>
 public sealed class RequestSendService(WorkspaceService workspace, IRequestExecutor executor)
 {
-    private readonly WorkspaceService _workspace = workspace;
-    private readonly IRequestExecutor _executor = executor;
-
     public async Task<RequestSendOutcome> SendAsync(PreparedRequest request, CancellationToken cancellationToken)
     {
-        var result = await _executor.ExecuteAsync(request, cancellationToken);
+        var result = await executor.ExecuteAsync(request, cancellationToken);
         return result.Cancelled || cancellationToken.IsCancellationRequested
             ? RequestSendOutcome.CancelledSend
             : RequestSendOutcome.Completed(result);
@@ -40,14 +37,14 @@ public sealed class RequestSendService(WorkspaceService workspace, IRequestExecu
         SavedResponse? saved = null;
         if (send.Result.Response is { } response && send.KeepResponseWith is { } requestId)
         {
-            saved = _workspace.SaveResponse(requestId, new SavedResponse
+            saved = workspace.SaveResponse(requestId, new SavedResponse
             {
                 Response = response,
                 SentRequest = SecretMasker.MaskCredentialHeaders(RawRequestFormatter.Format(send.MaskedRequest)),
             });
         }
 
-        _workspace.AddHistory(new HistoryEntry
+        workspace.AddHistory(new HistoryEntry
         {
             Request = send.Model,
             StatusCode = send.Result.Response?.StatusCode,
