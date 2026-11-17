@@ -8,6 +8,7 @@ namespace Hermes.App.ViewModels;
 public sealed class TabServices(
     WorkspaceService workspace,
     RequestSendService sender,
+    RequestSaveService saver,
     OAuth2Service oauth,
     DialogService dialogs,
     SettingsService settings,
@@ -23,6 +24,7 @@ public sealed class TabServices(
     public ManualService Manual { get; } = manual;
     public TimeProvider TimeProvider { get; } = timeProvider;
     public RequestSendService Sender { get; } = sender;
+    public RequestSaveService Saver { get; } = saver;
 
     /// <summary>
     /// Opens (or focuses) the tab of the folder or collection with the given id. Set by the main window, which owns

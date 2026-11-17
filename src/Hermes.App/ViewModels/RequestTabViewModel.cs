@@ -476,16 +476,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     {
         if (Services.Workspace.Find(RequestId) is { } location)
         {
-            var model = BuildModel();
-            var index = location.Container.IndexOf(location.Node);
-            var previous = location.Container[index];
-            location.Container[index] = model;
-            if (!await WriteWithRetryAsync(() => Services.Workspace.TrySaveCollection(location.Collection)))
-            {
-                // Not on disk, so not in the collection either; the edits stay in the tab.
-                location.Container[location.Container.IndexOf(model)] = previous;
+            // When the write is given up, the edits stay in the tab.
+            if (!await Services.Saver.SaveExistingAsync(location, BuildModel()))
                 return false;
-            }
             _savedSnapshot = CurrentSnapshot();
             UpdateDirty();
             return true;
@@ -512,7 +505,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             RequestId = Guid.NewGuid();
         Name = target.Name;
         var model = BuildModel();
-        if (!await WriteNewRequestAsync(target, model))
+        if (!await Services.Saver.SaveNewAsync(target, model))
         {
             // Not on disk, so the tab is still the unsaved request it was.
             RequestId = previousId;
@@ -525,19 +518,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         RefreshVariables();
         Auth.RefreshInherited();
         return true;
-    }
-
-    // A new collection is written once, with the request in it, so a failure can't leave an empty collection behind.
-    private async Task<bool> WriteNewRequestAsync(SaveRequestTarget target, HttpRequestModel model)
-    {
-        if (!target.IsNewCollection)
-            return await WriteWithRetryAsync(() => Services.Workspace.TryAddNode(target.Collection, target.Folder, model));
-
-        target.Collection.Items.Add(model);
-        if (await WriteWithRetryAsync(() => Services.Workspace.TryAddCollection(target.Collection)))
-            return true;
-        target.Collection.Items.Remove(model);
-        return false;
     }
 
     [RelayCommand]
