@@ -222,6 +222,8 @@ public class WorkspaceWriteFailureTests
         var collection = temp.Workspace.CreateCollection("Pets");
         var request = new HttpRequestModel { Name = "List" };
         temp.Workspace.AddNode(collection, null, request);
+        var folder = new FolderModel { Name = "Cats" };
+        temp.Workspace.AddNode(collection, null, folder);
         var host = new NullTabHost();
         var pane = new CollectionsPaneViewModel(temp.Workspace, new Hermes.App.Services.DialogService(), host);
         using var locked = temp.Lock("collections");
@@ -229,15 +231,18 @@ public class WorkspaceWriteFailureTests
 
         pane.CommitRename(pane.Find(collection.Id)!, "Animals");
         pane.CommitRename(pane.Find(request.Id)!, "Fetch");
+        pane.CommitRename(pane.Find(folder.Id)!, "Dogs");
 
         Assert.Equal("Pets", collection.Name);
         Assert.Equal("List", request.Name);
         Assert.Equal("Pets", pane.Find(collection.Id)!.Name);
         Assert.Equal("List", pane.Find(request.Id)!.Name);
         Assert.Empty(host.RenamedRequests);
-        Assert.Equal(2, temp.Problems.Count);
+        Assert.Equal(3, temp.Problems.Count);
         Assert.StartsWith("Collection \"Pets\" couldn't be renamed to \"Animals\": ", temp.Problems[0].Summary);
         Assert.StartsWith("Request \"List\" in collection \"Pets\" couldn't be renamed to \"Fetch\": ", temp.Problems[1].Summary);
+        Assert.StartsWith("Folder \"Cats\" in collection \"Pets\" couldn't be renamed to \"Dogs\": ", temp.Problems[2].Summary);
+        Assert.Equal("Cats", folder.Name);
         Assert.Contains("\"name\":\"Pets\"", File.ReadAllText(temp.Repository.CollectionFile(collection.Id)).Replace(" ", ""));
     }
 

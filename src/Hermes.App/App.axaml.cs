@@ -105,8 +105,9 @@ public partial class App : Application
         }
         var settings = Services.GetRequiredService<SettingsService>();
         var chosenFolder = result.ChoiceId == StartupFolderChoices.ChooseFolder ? result.Folder : null;
-        settings.Current.DataDirectory = chosenFolder;
-        if (settings.Update(settings.Current) is { } failure)
+        var changed = settings.Current.Copy();
+        changed.DataDirectory = chosenFolder;
+        if (settings.Update(changed) is { } failure)
         {
             var notice = new StorageErrorDialog("Hermes can't start", [failure], [], closeText: "Quit");
             notice.Closed += (_, _) => desktop.Shutdown();

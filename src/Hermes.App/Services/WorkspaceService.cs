@@ -294,7 +294,18 @@ public sealed class WorkspaceService : IDisposable
         Attempt(() => _repository.SaveCollection(collection), _repository.CollectionFile(collection.Id),
             failure?.Subject ?? CollectionSubject(collection), StorageOperation.Write, failure?.FailedAction);
 
-    private static string CollectionSubject(CollectionModel collection) => $"Collection \"{collection.Name}\"";
+    /// <summary>How a collection is named at the start of a storage message: <c>Collection "Pets"</c>.</summary>
+    public static string CollectionSubject(CollectionModel collection) => $"Collection \"{collection.Name}\"";
+
+    /// <summary>How a folder is named in a storage message about its collection's file.</summary>
+    public static string FolderSubject(FolderModel folder, CollectionModel collection) =>
+        $"Folder \"{folder.Name}\" in {InCollection(collection)}";
+
+    /// <summary>How a request is named in a storage message about its collection's file.</summary>
+    public static string RequestSubject(HttpRequestModel request, CollectionModel collection) =>
+        $"Request \"{request.Name}\" in {InCollection(collection)}";
+
+    private static string InCollection(CollectionModel collection) => $"collection \"{collection.Name}\"";
 
     // ---- environments ----
 

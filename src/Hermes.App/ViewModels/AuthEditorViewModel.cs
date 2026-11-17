@@ -108,9 +108,10 @@ public sealed partial class AuthEditorViewModel : ObservableObject, IDisposable
         {
             if (ContainedItemsProvider is not { } items)
                 return null;
-            var (overrides, inheriting, _) = AuthInheritance.Usage(items());
-            var used = inheriting == 1 ? "Used by 1 request" : $"Used by {inheriting} requests";
-            return overrides.Count == 0 ? $"{used}." : $"{used}. {overrides.Count} {(overrides.Count == 1 ? "overrides" : "override")}.";
+            var usage = AuthInheritance.Usage(items());
+            var used = usage.Inheriting == 1 ? "Used by 1 request" : $"Used by {usage.Inheriting} requests";
+            var overrideCount = usage.Overrides.Count;
+            return overrideCount == 0 ? $"{used}." : $"{used}. {overrideCount} {(overrideCount == 1 ? "overrides" : "override")}.";
         }
     }
 

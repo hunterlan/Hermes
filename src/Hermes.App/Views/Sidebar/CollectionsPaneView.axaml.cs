@@ -104,12 +104,13 @@ public partial class CollectionsPaneView : UserControl
         e.DragEffects = DragDropEffects.None;
         if (_dragged is null || ViewModel is not { } vm || !e.DataTransfer.Contains(NodeFormat))
             return;
-        if (TargetRow(e) is not var (row, target))
+        if (TargetRow(e) is not { } targetRow)
         {
             SetDropTarget(null);
             return;
         }
-        var position = PositionIn(row, target, e);
+        var target = targetRow.Node;
+        var position = PositionIn(targetRow.Row, target, e);
         if (vm.CanDrop(_dragged, target, position))
         {
             e.DragEffects = DragDropEffects.Move;
@@ -123,19 +124,23 @@ public partial class CollectionsPaneView : UserControl
 
     private void OnDrop(object? sender, DragEventArgs e)
     {
-        if (_dragged is { } dragged && ViewModel is { } vm && TargetRow(e) is var (row, target))
-            vm.Drop(dragged, target, PositionIn(row, target, e));
+        if (_dragged is { } dragged && ViewModel is { } vm && TargetRow(e) is { } targetRow)
+            vm.Drop(dragged, targetRow.Node, PositionIn(targetRow.Row, targetRow.Node, e));
         SetDropTarget(null);
     }
 
-    private static (Control Row, TreeNodeViewModel Node)? TargetRow(DragEventArgs e)
+    private static DropTargetRow? TargetRow(DragEventArgs e)
     {
         // Walk up to the row border defined in the item template (its child is the Grid with class "row").
         for (var v = e.Source as Visual; v is not null; v = v.GetVisualParent())
             if (v is Border { DataContext: TreeNodeViewModel node, Child: Grid grid } border && grid.Classes.Contains("row"))
-                return (border, node);
+                return new DropTargetRow(border, node);
         return null;
     }
+
+    /// <param name="Row">The row's border, to measure where in it the pointer is.</param>
+    /// <param name="Node">The tree node the row shows.</param>
+    private sealed record DropTargetRow(Control Row, TreeNodeViewModel Node);
 
     /// <summary>Upper/lower quarter = before/after; middle = inside (for folders and collections).</summary>
     private static DropPosition PositionIn(Control row, TreeNodeViewModel target, DragEventArgs e)
