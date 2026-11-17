@@ -7,7 +7,6 @@ using Hermes.App.Services;
 using Hermes.App.Views.Dialogs;
 using Hermes.Core.Auth;
 using Hermes.Core.CodeGen;
-using Hermes.Core.Formatting;
 using Hermes.Core.Headers;
 using Hermes.Core.Http;
 using Hermes.Core.Import;
@@ -31,27 +30,8 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     // Preserved, not editable in the UI.
     private string? _description;
     private string? _eventsJson;
-    private string? _unsupportedBodyJson;
 
     public static IReadOnlyList<string> Methods { get; } = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
-
-    public static IReadOnlyList<Option<BodyMode>> BodyModes { get; } =
-    [
-        new("none", BodyMode.None),
-        new("form-data", BodyMode.FormData),
-        new("x-www-form-urlencoded", BodyMode.UrlEncoded),
-        new("raw", BodyMode.Raw),
-        new("binary", BodyMode.Binary),
-    ];
-
-    public static IReadOnlyList<Option<RawLanguage>> RawLanguages { get; } =
-    [
-        new("Text", RawLanguage.Text),
-        new("JavaScript", RawLanguage.JavaScript),
-        new("JSON", RawLanguage.Json),
-        new("HTML", RawLanguage.Html),
-        new("XML", RawLanguage.Xml),
-    ];
 
     public RequestTabViewModel(TabServices services, HttpRequestModel model, string? savedSnapshot = null) : base(services)
     {
@@ -62,9 +42,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             id => Services.OpenContainerAsync?.Invoke(id) ?? Task.CompletedTask, services.Dialogs.CopyTextAsync);
         HeadersEditor.Headers.Changed += OnAnyChanged;
         HeadersEditor.Changed += UpdateDirty;
-        FormData.Changed += OnAnyChanged;
-        UrlEncoded.Changed += OnAnyChanged;
-        FormData.PickFile = () => services.Dialogs.PickFileAsync("Select file");
+        Body = new RequestBodyViewModel(services.Dialogs);
+        Body.Changed += OnAnyChanged;
+        Body.PropertyChanged += OnBodyPropertyChanged;
 
         Auth = services.CreateAuthEditor(allowInherit: true);
         Auth.Changed += OnAnyChanged;
@@ -96,8 +76,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     public KeyValueListViewModel Params { get; } = new();
     public KeyValueListViewModel PathVariables { get; } = new(keysReadOnly: true);
     public RequestHeadersViewModel HeadersEditor { get; }
-    public KeyValueListViewModel FormData { get; } = new(allowFiles: true);
-    public KeyValueListViewModel UrlEncoded { get; } = new();
+    public RequestBodyViewModel Body { get; }
     public AuthEditorViewModel Auth { get; }
     public ResponseViewModel Response { get; }
 
@@ -106,10 +85,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUrlSubstitutions))]
     public partial string Url { get; set; } = "";
-    [ObservableProperty] public partial Option<BodyMode> SelectedBodyMode { get; set; } = BodyModes[0];
-    [ObservableProperty] public partial Option<RawLanguage> SelectedRawLanguage { get; set; } = RawLanguages[2];
-    [ObservableProperty] public partial string RawBody { get; set; } = "";
-    [ObservableProperty] public partial string? BinaryFilePath { get; set; }
     /// <summary>The request's own setting; null follows the app setting.</summary>
     [ObservableProperty] public partial bool? FollowRedirectsOverride { get; set; }
     [ObservableProperty] public partial bool? VerifySslOverride { get; set; }
@@ -147,7 +122,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     public event Action? UrlFocusRequested;
 
     public bool IsParamsSectionVisible => ParamsAdded || Params.ActiveCount > 0 || HasPathVariables;
-    public bool IsBodySectionVisible => BodyAdded || HasBody || HasUnsupportedBody || SelectedMethod is "POST" or "PUT" or "PATCH";
+    public bool IsBodySectionVisible => BodyAdded || Body.HasBody || Body.HasUnsupportedBody || SelectedMethod is "POST" or "PUT" or "PATCH";
     /// <summary>The effective setting, shown by the toggle; turning the toggle makes it an override.</summary>
     public bool FollowRedirects
     {
@@ -170,28 +145,11 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     public string? ActiveEnvironmentName => Services.Workspace.ActiveEnvironment?.Name;
 
     public string ParamsSummary => Params.ActiveCount is var n and > 0 ? $"{n} active" : "";
-    public string BodySummary => SelectedBodyMode.Value == BodyMode.Raw ? SelectedRawLanguage.Label : SelectedBodyMode.Label;
     /// <summary>Whether the URL has <c>{{variables}}</c> (including dynamic ones) or <c>:path</c> variables, i.e. whether "Sends to" adds information.</summary>
     public bool HasUrlSubstitutions =>
         VariableResolver.FindVariables(Url).Any() || UrlUtilities.ParsePathVariables(Url).Count > 0;
     public bool HasPathVariables => PathVariables.Rows.Count > 0;
-    public bool HasBody => SelectedBodyMode.Value != BodyMode.None;
-    public bool IsBodyNone => SelectedBodyMode.Value == BodyMode.None;
-    public bool IsBodyFormData => SelectedBodyMode.Value == BodyMode.FormData;
-    public bool IsBodyUrlEncoded => SelectedBodyMode.Value == BodyMode.UrlEncoded;
-    public bool IsBodyRaw => SelectedBodyMode.Value == BodyMode.Raw;
-    public bool IsBodyBinary => SelectedBodyMode.Value == BodyMode.Binary;
-    public bool HasUnsupportedBody => _unsupportedBodyJson is not null && IsBodyNone;
-    public string RawEditorLanguage => SelectedRawLanguage.Value switch
-    {
-        RawLanguage.Json => "json",
-        RawLanguage.Xml => "xml",
-        RawLanguage.Html => "html",
-        RawLanguage.JavaScript => "javascript",
-        _ => "text",
-    };
     public string SendButtonText => IsSending ? "Cancel" : "Send";
-    public string BinaryFileLabel => string.IsNullOrEmpty(BinaryFilePath) ? "No file selected" : Path.GetFileName(BinaryFilePath);
 
     // ---- load / build ----
 
@@ -207,23 +165,16 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         Params.Load(model.QueryParams.Count > 0 ? model.QueryParams : UrlUtilities.ParseQuery(UrlUtilities.Split(model.Url).Query));
         PathVariables.Load(UrlUtilities.MergePathVariables(model.Url, model.PathVariables));
         HeadersEditor.Load(model.Headers, model.SkippedInheritedHeaders);
-        SelectedBodyMode = BodyModes.First(m => m.Value == model.Body.Mode);
-        SelectedRawLanguage = RawLanguages.First(l => l.Value == model.Body.RawLanguage);
-        RawBody = model.Body.Raw;
-        FormData.Load(model.Body.FormData);
-        UrlEncoded.Load(model.Body.UrlEncoded);
-        BinaryFilePath = model.Body.BinaryFilePath;
+        Body.Load(model.Body);
         Auth.Load(model.Auth);
         FollowRedirectsOverride = model.Settings.FollowRedirects;
         VerifySslOverride = model.Settings.VerifySsl;
         TimeoutText = model.Settings.TimeoutMs?.ToString(CultureInfo.InvariantCulture) ?? "";
         _description = model.Description;
         _eventsJson = model.EventsJson;
-        _unsupportedBodyJson = model.Body.UnsupportedJson;
         _syncingUrl = false;
         _loading = false;
         OnPropertyChanged(nameof(HasPathVariables));
-        OnPropertyChanged(nameof(HasUnsupportedBody));
         OnPropertyChanged(nameof(Method));
         RefreshPreview();
         NotifySections();
@@ -243,16 +194,7 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
             PathVariables = PathVariables.ToModels(),
             Headers = HeadersEditor.Headers.ToModels(),
             SkippedInheritedHeaders = [.. HeadersEditor.SkippedInheritedHeaders],
-            Body = new RequestBody
-            {
-                Mode = SelectedBodyMode.Value,
-                Raw = RawBody,
-                RawLanguage = SelectedRawLanguage.Value,
-                FormData = FormData.ToModels(),
-                UrlEncoded = UrlEncoded.ToModels(),
-                BinaryFilePath = BinaryFilePath,
-                UnsupportedJson = _unsupportedBodyJson,
-            },
+            Body = Body.ToModel(),
             Auth = Auth.ToModel(),
             Settings = new RequestSettings
             {
@@ -280,24 +222,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         base.OnPropertyChanged(e);
         switch (e.PropertyName)
         {
-            case nameof(SelectedBodyMode):
-                OnPropertyChanged(nameof(HasBody));
-                OnPropertyChanged(nameof(IsBodyNone));
-                OnPropertyChanged(nameof(IsBodyFormData));
-                OnPropertyChanged(nameof(IsBodyUrlEncoded));
-                OnPropertyChanged(nameof(IsBodyRaw));
-                OnPropertyChanged(nameof(IsBodyBinary));
-                OnPropertyChanged(nameof(HasUnsupportedBody));
-                break;
-            case nameof(SelectedRawLanguage):
-                OnPropertyChanged(nameof(RawEditorLanguage));
-                break;
             case nameof(IsSending):
                 OnPropertyChanged(nameof(SendButtonText));
                 OnPropertyChanged(nameof(SendButtonCommand));
-                break;
-            case nameof(BinaryFilePath):
-                OnPropertyChanged(nameof(BinaryFileLabel));
                 break;
             case nameof(SelectedMethod):
                 OnPropertyChanged(nameof(Method));
@@ -314,16 +241,19 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         // A section the user edits stays on screen even if it becomes empty again.
         if (!_loading)
         {
-            if (e.PropertyName is nameof(SelectedBodyMode))
-                BodyAdded = true;
-            else if (e.PropertyName is nameof(FollowRedirectsOverride) or nameof(VerifySslOverride) or nameof(TimeoutText))
+            if (e.PropertyName is nameof(FollowRedirectsOverride) or nameof(VerifySslOverride) or nameof(TimeoutText))
                 SettingsAdded = true;
         }
 
-        if (e.PropertyName is nameof(Name) or nameof(SelectedMethod) or nameof(SelectedBodyMode) or nameof(SelectedRawLanguage)
-            or nameof(RawBody) or nameof(BinaryFilePath) or nameof(FollowRedirectsOverride) or nameof(VerifySslOverride)
-            or nameof(TimeoutText))
+        if (e.PropertyName is nameof(Name) or nameof(SelectedMethod) or nameof(FollowRedirectsOverride) or nameof(VerifySslOverride) or nameof(TimeoutText))
             OnAnyChanged();
+    }
+
+    /// <summary>A section the user edits stays on screen even if it becomes empty again.</summary>
+    private void OnBodyPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (!_loading && e.PropertyName is nameof(RequestBodyViewModel.SelectedBodyMode))
+            BodyAdded = true;
     }
 
     private void OnAnyChanged()
@@ -645,37 +575,12 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     }
 
     [RelayCommand]
-    private void Beautify()
-    {
-        switch (SelectedRawLanguage.Value)
-        {
-            case RawLanguage.Json:
-                RawBody = JsonFormatter.Format(RawBody);
-                break;
-            case RawLanguage.Xml or RawLanguage.Html:
-                if (XmlFormatter.TryFormat(RawBody, out var xml))
-                    RawBody = xml;
-                break;
-        }
-    }
-
-    [RelayCommand]
-    private async Task SelectBinaryFile()
-    {
-        if (await Services.Dialogs.PickFileAsync("Select file") is { } path)
-            BinaryFilePath = path;
-    }
-
-    [RelayCommand]
     private async Task ShowCode()
     {
         var prepared = RequestPreparer.Prepare(BuildModel(), CreateContext(), includeDefaultHeaders: false);
         var dialog = new CodeSnippetDialog { DataContext = new CodeSnippetViewModel(CurlGenerator.Generate(prepared), Services.Dialogs) };
         await Services.Dialogs.ShowDialogAsync<object>(dialog);
     }
-
-    [RelayCommand]
-    private void SetBodyMode(BodyMode mode) => SelectedBodyMode = BodyModes.First(m => m.Value == mode);
 
     /// <summary>A "Not used yet" chip: brings the section on screen, expanded.</summary>
     [RelayCommand]
@@ -717,31 +622,13 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
     }
 
     /// <summary>
-    /// Puts <paramref name="picked"/> in place of the file that couldn't be read, but only where that exact path is
-    /// written. When no field holds it (it came from a variable), nothing is overwritten and the Body section is
-    /// shown, so the user decides.
+    /// Puts <paramref name="picked"/> in place of the file that couldn't be read. When the body has no field holding
+    /// that path (it came from a variable), nothing is overwritten and the Body section is shown, so the user decides.
     /// </summary>
     /// <returns>True when a field was replaced.</returns>
     public bool UseChosenBodyFile(string picked, string? unreadablePath)
     {
-        var replaced = false;
-        if (IsBodyBinary)
-        {
-            if (BinaryFilePath == unreadablePath)
-            {
-                BinaryFilePath = picked;
-                replaced = true;
-            }
-        }
-        else
-        {
-            foreach (var row in FormData.Rows.Where(row => row.IsFile && row.Value == unreadablePath).ToList())
-            {
-                row.Value = picked;
-                replaced = true;
-            }
-        }
-
+        var replaced = Body.UseChosenBodyFile(picked, unreadablePath);
         if (!replaced)
         {
             BodyAdded = BodyExpanded = true;
@@ -808,7 +695,6 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable
         OnPropertyChanged(nameof(IsSettingsSectionVisible));
         OnPropertyChanged(nameof(HasUnusedSections));
         OnPropertyChanged(nameof(ParamsSummary));
-        OnPropertyChanged(nameof(BodySummary));
     }
 
     [RelayCommand]

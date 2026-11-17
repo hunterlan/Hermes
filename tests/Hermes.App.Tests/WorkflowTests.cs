@@ -50,8 +50,8 @@ public class WorkflowTests
         var create = (HttpRequestModel)((FolderModel)collection.Items[0]).Items[1];
         await vm.OpenRequestAsync(create);
         var createTab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
-        Assert.True(createTab.IsBodyRaw);
-        Assert.Equal("{\"name\":\"Ada\"}", createTab.RawBody);
+        Assert.True(createTab.Body.IsBodyRaw);
+        Assert.Equal("{\"name\":\"Ada\"}", createTab.Body.RawBody);
         Assert.True(createTab.Variables.TryGet("base", out var baseUrl));
         Assert.Equal("https://api.example.com", baseUrl);
         Assert.True(createTab.IsBodySectionVisible);
