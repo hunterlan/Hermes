@@ -72,8 +72,8 @@ public class MainWindowTests
 
         Assert.Equal("POST", tab.SelectedMethod);
         Assert.Equal("https://api.example.com/users", tab.Url);
-        Assert.True(tab.IsBodyRaw);
-        Assert.Equal("{\"name\":\"x\"}", tab.RawBody);
+        Assert.True(tab.Body.IsBodyRaw);
+        Assert.Equal("{\"name\":\"x\"}", tab.Body.RawBody);
         UiTestHelpers.Screenshot(window, "03-curl-import");
         window.Close();
     }

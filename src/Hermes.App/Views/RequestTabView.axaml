@@ -110,46 +110,16 @@
 
           <!-- Body -->
           <Border Name="BodySection" Classes="section" IsVisible="{Binding IsBodySectionVisible}">
-            <c:CollapsibleSection Header="Body" Summary="{Binding BodySummary}" IsExpanded="{Binding BodyExpanded}">
+            <c:CollapsibleSection Header="Body" Summary="{Binding Body.Summary}" IsExpanded="{Binding BodyExpanded}">
               <c:CollapsibleSection.HeaderActions>
-                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}">
-                  <ComboBox ItemsSource="{x:Static vm:RequestTabViewModel.RawLanguages}" SelectedItem="{Binding SelectedRawLanguage}"
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing6}" DataContext="{Binding Body}" x:DataType="vm:RequestBodyViewModel">
+                  <ComboBox ItemsSource="{x:Static vm:RequestBodyViewModel.RawLanguages}" SelectedItem="{Binding SelectedRawLanguage}"
                             IsVisible="{Binding IsBodyRaw}" MinWidth="100" MinHeight="26" Padding="8,2" FontSize="{StaticResource FontSizeSmall}" />
                   <Button Classes="outline" Content="Format" FontSize="{StaticResource FontSizeSmall}" MinHeight="26" Padding="10,2" Command="{Binding BeautifyCommand}"
                           IsVisible="{Binding IsBodyRaw}" ToolTip.Tip="Beautify" />
                 </StackPanel>
               </c:CollapsibleSection.HeaderActions>
-              <Grid RowDefinitions="Auto,Auto" Margin="0,0,0,12">
-                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing14}" Margin="0,0,0,8">
-                  <RadioButton GroupName="BodyMode" Content="none" IsChecked="{Binding IsBodyNone, Mode=OneWay}"
-                               Command="{Binding SetBodyModeCommand}" CommandParameter="{x:Static core:BodyMode.None}" />
-                  <RadioButton GroupName="BodyMode" Content="form-data" IsChecked="{Binding IsBodyFormData, Mode=OneWay}"
-                               Command="{Binding SetBodyModeCommand}" CommandParameter="{x:Static core:BodyMode.FormData}" />
-                  <RadioButton GroupName="BodyMode" Content="x-www-form-urlencoded" IsChecked="{Binding IsBodyUrlEncoded, Mode=OneWay}"
-                               Command="{Binding SetBodyModeCommand}" CommandParameter="{x:Static core:BodyMode.UrlEncoded}" />
-                  <RadioButton GroupName="BodyMode" Content="raw" IsChecked="{Binding IsBodyRaw, Mode=OneWay}"
-                               Command="{Binding SetBodyModeCommand}" CommandParameter="{x:Static core:BodyMode.Raw}" />
-                  <RadioButton GroupName="BodyMode" Content="binary" IsChecked="{Binding IsBodyBinary, Mode=OneWay}"
-                               Command="{Binding SetBodyModeCommand}" CommandParameter="{x:Static core:BodyMode.Binary}" />
-                </StackPanel>
-
-                <Panel Grid.Row="1">
-                  <StackPanel IsVisible="{Binding IsBodyNone}" Spacing="{StaticResource Spacing6}" Margin="0,4">
-                    <TextBlock Classes="tertiary" Text="This request does not have a body." />
-                    <TextBlock Classes="tertiary" FontSize="{StaticResource FontSizeSmall}" IsVisible="{Binding HasUnsupportedBody}" TextWrapping="Wrap"
-                               Text="The imported body uses a mode Hermes doesn't support (e.g. GraphQL); it is kept for export." />
-                  </StackPanel>
-                  <v:KeyValueTable DataContext="{Binding FormData}" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).IsBodyFormData}" />
-                  <v:KeyValueTable DataContext="{Binding UrlEncoded}" IsVisible="{Binding $parent[v:RequestTabView].((vm:RequestTabViewModel)DataContext).IsBodyUrlEncoded}" />
-                  <Border Classes="table" IsVisible="{Binding IsBodyRaw}" Background="{DynamicResource BgCodeBrush}" Height="260">
-                    <c:CodeEditor Text="{Binding RawBody}" Language="{Binding RawEditorLanguage}" />
-                  </Border>
-                  <StackPanel IsVisible="{Binding IsBodyBinary}" Orientation="Horizontal" Spacing="{StaticResource Spacing10}" VerticalAlignment="Top">
-                    <Button Classes="outline" Content="Select File" Command="{Binding SelectBinaryFileCommand}" />
-                    <TextBlock Text="{Binding BinaryFileLabel}" VerticalAlignment="Center" Classes="secondary" />
-                  </StackPanel>
-                </Panel>
-              </Grid>
+              <v:RequestBodyView DataContext="{Binding Body}" />
             </c:CollapsibleSection>
           </Border>
 
