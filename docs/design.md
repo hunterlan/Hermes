@@ -164,6 +164,15 @@ Regions that scroll when their content grows, so they can't push the rest of a d
 | `ResponseBarHeight` | 40 | The response pane collapsed to a bar in stacked layout; dragging the splitter this close to the bottom collapses it |
 | `ResponseStripWidth` | 44 | The response pane collapsed to a vertical strip in side-by-side layout; dragging the splitter this close to the right edge collapses it |
 | `SizeStatusDot` | 10 | The status dot (or the no-response icon) on the collapsed strip |
+| `WidthSentWithMinimum` | 64 | The least the response header's "sent with" environment is squeezed to; below that the header drops it (see below) |
+
+### Narrow response header
+
+The response header never lets its items draw over each other. As the pane narrows it drops items in this order
+(`DropPriorityPanel`): the "sent with" environment (trimmed first), the label of the Saved button (it becomes a
+history icon with the label as its tooltip), the size, the time, the "Response" label. The chevron, the status,
+the "Earlier response" tag and the layout buttons stay; below that the header is cut off at the right. The left
+items and the ones at the right edge always keep `Spacing8` between them (`GroupSpacing`); an item drops instead.
 
 ## The token rule
 

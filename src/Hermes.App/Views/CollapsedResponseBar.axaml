@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hermes.App.ViewModels"
              xmlns:v="using:Hermes.App.Views"
+             xmlns:c="using:Hermes.App.Controls"
              x:Class="Hermes.App.Views.CollapsedResponseBar"
              x:DataType="vm:ResponseViewModel"
              IsVisible="{Binding Pane.ShowsCollapsedBar}">
@@ -10,26 +11,33 @@
   <Border Name="Bar" Height="{StaticResource ResponseBarHeight}" Background="{DynamicResource BgPrimaryBrush}"
           BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Cursor="Hand"
           PointerPressed="OnBarPointerPressed" PointerReleased="OnBarPointerReleased">
-    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
-        <Button Name="ExpandResponseButton" Classes="icon" Command="{Binding Pane.ToggleCollapsedCommand}"
-                ToolTip.Tip="Expand response (Ctrl+J)" AutomationProperties.Name="Expand response">
-          <PathIcon Data="{StaticResource IconChevronUp}" />
-        </Button>
-        <TextBlock Text="Response" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
-        <TextBlock Name="NotSentYetText" Classes="secondary" Text="· not sent yet" FontSize="{StaticResource FontSizeSmall}"
-                   VerticalAlignment="Center" IsVisible="{Binding IsEmpty}" />
-        <TextBlock Classes="secondary" Text="· sending…" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center"
-                   IsVisible="{Binding IsLoading}" />
-        <v:ResponseStatusTag Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}" />
-        <TextBlock Name="TimeAndSizeText" Classes="mono secondary" FontSize="{StaticResource FontSizeCaption}" VerticalAlignment="Center"
-                   IsVisible="{Binding HasResponse}" Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}">
-          <Run Text="{Binding TimeText}" /><Run Text=" · " /><Run Text="{Binding SizeText}" />
-        </TextBlock>
-      </StackPanel>
-      <Border Grid.Column="1" Classes="kbd" ToolTip.Tip="Expand or collapse the response">
+    <!-- As the bar narrows the panel drops the same items as the pane's header, in the same order, with the keyboard
+         hint first: the hint, the size, the time, the "not sent yet" / "sending…" text, the "Response" label. The
+         chevron and the status stay. The gaps are margins, so a dropped item takes its gap with it. -->
+    <c:DropPriorityPanel Name="BarItems" GroupSpacing="{StaticResource Spacing8}" VerticalAlignment="Center">
+      <Button Name="ExpandResponseButton" Classes="icon" Command="{Binding Pane.ToggleCollapsedCommand}"
+              ToolTip.Tip="Expand response (Ctrl+J)" AutomationProperties.Name="Expand response">
+        <PathIcon Data="{StaticResource IconChevronUp}" />
+      </Button>
+      <TextBlock Name="ResponseLabel" c:DropPriorityPanel.HiddenFromStep="4" Text="Response" FontWeight="SemiBold"
+                 FontSize="{StaticResource FontSizeSmall}" Margin="8,0,0,0" VerticalAlignment="Center" />
+      <TextBlock Name="NotSentYetText" c:DropPriorityPanel.HiddenFromStep="3" Classes="secondary" Text="· not sent yet"
+                 FontSize="{StaticResource FontSizeSmall}" Margin="8,0,0,0" VerticalAlignment="Center" IsVisible="{Binding IsEmpty}" />
+      <TextBlock Name="SendingText" c:DropPriorityPanel.HiddenFromStep="3" Classes="secondary" Text="· sending…"
+                 FontSize="{StaticResource FontSizeSmall}" Margin="8,0,0,0" VerticalAlignment="Center" IsVisible="{Binding IsLoading}" />
+      <v:ResponseStatusTag Margin="8,0,0,0" Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}" />
+      <TextBlock Name="TimeText" c:DropPriorityPanel.HiddenFromStep="3" Classes="mono secondary" Text="{Binding TimeText}"
+                 FontSize="{StaticResource FontSizeCaption}" Margin="8,0,0,0" VerticalAlignment="Center"
+                 IsVisible="{Binding HasResponse}" Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}" />
+      <TextBlock Name="SizeText" c:DropPriorityPanel.HiddenFromStep="2" Classes="mono secondary" FontSize="{StaticResource FontSizeCaption}"
+                 VerticalAlignment="Center" IsVisible="{Binding HasResponse}"
+                 Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}">
+        <Run Text=" · " /><Run Text="{Binding SizeText}" />
+      </TextBlock>
+      <Border Name="ShortcutHint" c:DropPriorityPanel.IsEndAligned="True" c:DropPriorityPanel.HiddenFromStep="1" Classes="kbd"
+              ToolTip.Tip="Expand or collapse the response">
         <TextBlock Text="Ctrl J" />
       </Border>
-    </Grid>
+    </c:DropPriorityPanel>
   </Border>
 </UserControl>
