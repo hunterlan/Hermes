@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hermes.App.ViewModels"
+             x:Class="Hermes.App.Views.CollapsedResponseStrip"
+             x:DataType="vm:ResponseViewModel"
+             IsVisible="{Binding Pane.ShowsCollapsedStrip}">
+  <!-- The response pane folded to a vertical strip at the right edge of the tab. It still says how the last send went,
+       and a click anywhere on it opens the pane again. The text is rotated to read from top to bottom. -->
+  <Border Name="Strip" Width="{StaticResource ResponseStripWidth}" Background="{DynamicResource BgPrimaryBrush}"
+          BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0" Cursor="Hand"
+          PointerPressed="OnStripPointerPressed" PointerReleased="OnStripPointerReleased">
+    <StackPanel Spacing="{StaticResource Spacing12}" Margin="0,10,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
+      <Button Name="ExpandResponseButton" Classes="icon" Command="{Binding Pane.ToggleCollapsedCommand}"
+              ToolTip.Tip="Expand response (Ctrl+J)" AutomationProperties.Name="Expand response">
+        <PathIcon Data="{StaticResource IconChevronLeft}" />
+      </Button>
+
+      <!-- the status dot: the status colour with the full status as its tooltip; no dot before the first send -->
+      <Panel Name="StatusDot" HorizontalAlignment="Center" IsVisible="{Binding HasResponse}"
+             ToolTip.Tip="{Binding StatusText}" AutomationProperties.Name="{Binding StatusText}"
+             Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}">
+        <Ellipse Classes="success" Width="{StaticResource SizeStatusDot}" Height="{StaticResource SizeStatusDot}" IsVisible="{Binding IsSuccess}" />
+        <Ellipse Classes="redirect" Width="{StaticResource SizeStatusDot}" Height="{StaticResource SizeStatusDot}" IsVisible="{Binding IsRedirect}" />
+        <Ellipse Classes="warning" Width="{StaticResource SizeStatusDot}" Height="{StaticResource SizeStatusDot}" IsVisible="{Binding IsClientError}" />
+        <Ellipse Classes="error" Width="{StaticResource SizeStatusDot}" Height="{StaticResource SizeStatusDot}" IsVisible="{Binding IsServerError}" />
+      </Panel>
+      <PathIcon Name="NoResponseIcon" Data="{StaticResource IconCancel}" Width="{StaticResource SizeStatusDot}" Height="{StaticResource SizeStatusDot}"
+                Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center"
+                IsVisible="{Binding Failure, Converter={x:Static ObjectConverters.IsNotNull}}"
+                ToolTip.Tip="No response" AutomationProperties.Name="No response" />
+
+      <LayoutTransformControl HorizontalAlignment="Center">
+        <LayoutTransformControl.LayoutTransform>
+          <RotateTransform Angle="90" />
+        </LayoutTransformControl.LayoutTransform>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing4}">
+          <TextBlock Text="Response" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
+          <TextBlock Name="NotSentYetText" Classes="secondary" Text="· not sent yet" FontSize="{StaticResource FontSizeSmall}"
+                     VerticalAlignment="Center" IsVisible="{Binding IsEmpty}" />
+          <TextBlock Classes="secondary" Text="· sending…" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center"
+                     IsVisible="{Binding IsLoading}" />
+          <TextBlock Name="NoResponseText" Classes="secondary" Text="· No response" FontSize="{StaticResource FontSizeSmall}"
+                     VerticalAlignment="Center" IsVisible="{Binding Failure, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing4}" IsVisible="{Binding HasResponse}"
+                      Opacity="{Binding IsLoading, Converter={x:Static vm:UiConverters.LoadingOpacity}}">
+            <TextBlock Text="·" Classes="secondary" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
+            <TextBlock Name="StatusCodeText" Text="{Binding StatusCodeText}" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}"
+                       VerticalAlignment="Center" Classes.success="{Binding IsSuccess}" Classes.redirect="{Binding IsRedirect}"
+                       Classes.warning="{Binding IsClientError}" Classes.error="{Binding IsServerError}" />
+            <TextBlock Text="·" Classes="secondary" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
+            <TextBlock Name="TimeText" Classes="mono secondary" Text="{Binding TimeText}" FontSize="{StaticResource FontSizeCaption}"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+        </StackPanel>
+      </LayoutTransformControl>
+    </StackPanel>
+  </Border>
+</UserControl>

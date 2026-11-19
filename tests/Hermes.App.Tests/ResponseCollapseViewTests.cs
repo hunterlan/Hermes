@@ -13,10 +13,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Hermes.App.Tests;
 
-/// <summary>The response pane collapsed to its bar in stacked layout (issue #45), in a shown window.</summary>
+/// <summary>The response pane collapsed to its bar (stacked, issue #45) or strip (side by side, issue #46), in a shown window.</summary>
 public class ResponseCollapseViewTests
 {
     private const double BarHeight = 40;
+    private const double StripWidth = 44;
 
     private static SettingsService Settings => App.Services.GetRequiredService<SettingsService>();
 
@@ -250,35 +251,294 @@ public class ResponseCollapseViewTests
         }
     }
 
+    private static CollapsedResponseStrip Strip(RequestTabView view) => view.FindControl<CollapsedResponseStrip>("ResponseStrip")!;
+
+    /// <summary>The texts a person can see on the strip.</summary>
+    private static List<string> VisibleStripTexts(RequestTabView view) => Strip(view).GetVisualDescendants()
+        .OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text ?? "").ToList();
+
+    /// <summary>The response pane's share of the width, from the grid's column lengths.</summary>
+    private static double ResponseWidthShare(RequestTabView view)
+    {
+        var columns = SplitGrid(view).ColumnDefinitions;
+        return columns[2].Width.Value / (columns[0].Width.Value + columns[2].Width.Value);
+    }
+
+    private static void ShowSideBySide(Shown shown)
+    {
+        shown.Tab.Response.Pane.SetLayoutCommand.Execute(ResponseLayout.Horizontal);
+        UiTestHelpers.Pump();
+    }
+
+    private static void ShowStacked(Shown shown)
+    {
+        shown.Tab.Response.Pane.SetLayoutCommand.Execute(ResponseLayout.Vertical);
+        UiTestHelpers.Pump();
+    }
+
     [AvaloniaFact]
-    public void Side_by_side_shows_the_pane_and_ignores_the_collapse()
+    public void Side_by_side_collapsed_the_response_column_is_the_strip_showing_the_status()
+    {
+        var shown = Show();
+        try
+        {
+            ShowSideBySide(shown);
+            shown.Tab.Response.SetResponse(Created());
+
+            shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
+            UiTestHelpers.Pump();
+
+            var responseColumn = SplitGrid(shown.View).ColumnDefinitions[2];
+            Assert.Equal(new GridLength(StripWidth, GridUnitType.Pixel), responseColumn.Width);
+            Assert.Equal(StripWidth, responseColumn.ActualWidth);
+            Assert.True(Strip(shown.View).IsEffectivelyVisible);
+            Assert.False(Bar(shown.View).IsEffectivelyVisible);
+            Assert.False(shown.View.FindControl<ResponseView>("ResponsePane")!.IsEffectivelyVisible);
+            Assert.False(shown.View.FindControl<GridSplitter>("Splitter")!.IsEffectivelyVisible);
+            Assert.Contains("201", VisibleStripTexts(shown.View));
+            Assert.Contains("412 ms", VisibleStripTexts(shown.View));
+            Assert.Contains("Response", VisibleStripTexts(shown.View));
+            var dot = Strip(shown.View).FindControl<Panel>("StatusDot")!;
+            Assert.True(dot.IsEffectivelyVisible);
+            Assert.Equal("201 Created", ToolTip.GetTip(dot));
+            Assert.Equal("Expand response", Strip(shown.View).FindControl<Button>("ExpandResponseButton")!.GetValue(Avalonia.Automation.AutomationProperties.NameProperty));
+            UiTestHelpers.Screenshot(shown.Window, "46-collapsed-response-strip");
+        }
+        finally
+        {
+            ShowStacked(shown);
+            Close(shown);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Side_by_side_expanding_restores_the_previous_width_share()
+    {
+        var shown = Show();
+        try
+        {
+            ShowSideBySide(shown);
+            shown.Tab.Response.Pane.SideBySideResponseSplitRatio = 0.35;
+            UiTestHelpers.Pump();
+            Assert.Equal(0.35, ResponseWidthShare(shown.View), 3);
+
+            shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
+            UiTestHelpers.Pump();
+            shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
+            UiTestHelpers.Pump();
+
+            Assert.Equal(0.35, ResponseWidthShare(shown.View), 3);
+            Assert.True(shown.View.FindControl<GridSplitter>("Splitter")!.IsEffectivelyVisible);
+            Assert.False(Strip(shown.View).IsEffectivelyVisible);
+        }
+        finally
+        {
+            ShowStacked(shown);
+            Close(shown);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Side_by_side_before_the_first_send_the_strip_says_not_sent_yet_without_a_dot()
+    {
+        var shown = Show();
+        try
+        {
+            ShowSideBySide(shown);
+
+            shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
+            UiTestHelpers.Pump();
+
+            Assert.Contains("· not sent yet", VisibleStripTexts(shown.View));
+            Assert.False(Strip(shown.View).FindControl<Panel>("StatusDot")!.IsEffectivelyVisible);
+            Assert.False(Strip(shown.View).FindControl<PathIcon>("NoResponseIcon")!.IsEffectivelyVisible);
+            Assert.DoesNotContain("· No response", VisibleStripTexts(shown.View));
+        }
+        finally
+        {
+            ShowStacked(shown);
+            Close(shown);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Side_by_side_after_a_failure_the_strip_says_no_response()
+    {
+        var shown = Show();
+        try
+        {
+            ShowSideBySide(shown);
+            shown.Tab.Response.SetResponse(Created());
+            shown.Tab.Response.SetFailure(RequestFailure.FromMessage("Connection refused"));
+
+            shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
+            UiTestHelpers.Pump();
+
+            Assert.Contains("· No response", VisibleStripTexts(shown.View));
+            Assert.True(Strip(shown.View).FindControl<PathIcon>("NoResponseIcon")!.IsEffectivelyVisible);
+            Assert.False(Strip(shown.View).FindControl<Panel>("StatusDot")!.IsEffectivelyVisible);
+            Assert.DoesNotContain("201", VisibleStripTexts(shown.View));
+        }
+        finally
+        {
+            ShowStacked(shown);
+            Close(shown);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Switching_layout_while_collapsed_keeps_the_pane_collapsed_in_both_directions()
     {
         var shown = Show();
         try
         {
             shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
-            shown.Tab.Response.Pane.SetLayoutCommand.Execute(ResponseLayout.Horizontal);
-            UiTestHelpers.Pump();
-
-            Assert.True(shown.View.FindControl<ResponseView>("ResponsePane")!.IsEffectivelyVisible);
-            Assert.False(Bar(shown.View).IsEffectivelyVisible);
-            Assert.True(shown.View.FindControl<GridSplitter>("Splitter")!.IsEffectivelyVisible);
-            Assert.Empty(SplitGrid(shown.View).RowDefinitions);
-            Assert.False(shown.View.FindControl<ResponseView>("ResponsePane")!.FindControl<Button>("CollapseResponseButton")!.IsVisible);
-
-            shown.Window.KeyPressQwerty(PhysicalKey.J, RawInputModifiers.Control);
-            UiTestHelpers.Pump();
-            Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
-            Assert.False(Bar(shown.View).IsEffectivelyVisible);
-
-            shown.Tab.Response.Pane.SetLayoutCommand.Execute(ResponseLayout.Vertical);
             UiTestHelpers.Pump();
             Assert.True(Bar(shown.View).IsEffectivelyVisible);
+            Assert.Equal(BarHeight, SplitGrid(shown.View).RowDefinitions[2].ActualHeight);
+
+            ShowSideBySide(shown);
+            Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
+            Assert.True(Strip(shown.View).IsEffectivelyVisible);
+            Assert.False(Bar(shown.View).IsEffectivelyVisible);
+            Assert.Empty(SplitGrid(shown.View).RowDefinitions);
+            Assert.Equal(StripWidth, SplitGrid(shown.View).ColumnDefinitions[2].ActualWidth);
+
+            ShowStacked(shown);
+            Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
+            Assert.True(Bar(shown.View).IsEffectivelyVisible);
+            Assert.False(Strip(shown.View).IsEffectivelyVisible);
+            Assert.Empty(SplitGrid(shown.View).ColumnDefinitions);
             Assert.Equal(BarHeight, SplitGrid(shown.View).RowDefinitions[2].ActualHeight);
         }
         finally
         {
-            shown.Tab.Response.Pane.SetLayoutCommand.Execute(ResponseLayout.Vertical);
+            ShowStacked(shown);
+            Close(shown);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Side_by_side_Ctrl_J_and_the_header_chevron_toggle_the_pane()
+    {
+        var shown = Show();
+        try
+        {
+            ShowSideBySide(shown);
+            var chevron = shown.View.FindControl<ResponseView>("ResponsePane")!.FindControl<Button>("CollapseResponseButton")!;
+            Assert.True(chevron.IsEffectivelyVisible);
+            Assert.True(shown.View.FindControl<ResponseView>("ResponsePane")!.FindControl<PathIcon>("CollapseRightIcon")!.IsEffectivelyVisible);
+            Assert.False(shown.View.FindControl<ResponseView>("ResponsePane")!.FindControl<PathIcon>("CollapseDownIcon")!.IsEffectivelyVisible);
+
+            shown.Window.KeyPressQwerty(PhysicalKey.J, RawInputModifiers.Control);
+            UiTestHelpers.Pump();
+            Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
+            Assert.Equal(StripWidth, SplitGrid(shown.View).ColumnDefinitions[2].ActualWidth);
+
+            shown.Window.KeyPressQwerty(PhysicalKey.J, RawInputModifiers.Control);
+            UiTestHelpers.Pump();
+            Assert.False(shown.Tab.Response.Pane.IsResponseCollapsed);
+
+            chevron.Command!.Execute(null);
+            UiTestHelpers.Pump();
+            Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
+        }
+        finally
+        {
+            ShowStacked(shown);
+            Close(shown);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Side_by_side_a_click_anywhere_on_the_strip_expands_the_pane()
+    {
+        var shown = Show();
+        try
+        {
+            ShowSideBySide(shown);
+            shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
+            UiTestHelpers.Pump();
+
+            // Low on the strip, away from the chevron and the text.
+            var strip = Strip(shown.View);
+            var point = strip.TranslatePoint(new Point(strip.Bounds.Width / 2, strip.Bounds.Height - 20), shown.Window)!.Value;
+            shown.Window.MouseDown(point, MouseButton.Left);
+            shown.Window.MouseUp(point, MouseButton.Left);
+            UiTestHelpers.Pump();
+
+            Assert.False(shown.Tab.Response.Pane.IsResponseCollapsed);
+        }
+        finally
+        {
+            ShowStacked(shown);
+            Close(shown);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Side_by_side_a_double_click_on_the_splitter_collapses_the_pane()
+    {
+        var shown = Show();
+        try
+        {
+            ShowSideBySide(shown);
+            var splitter = shown.View.FindControl<GridSplitter>("Splitter")!;
+            var point = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, splitter.Bounds.Height / 2), shown.Window)!.Value;
+
+            shown.Window.MouseDown(point, MouseButton.Left);
+            shown.Window.MouseUp(point, MouseButton.Left);
+            shown.Window.MouseDown(point, MouseButton.Left);
+            shown.Window.MouseUp(point, MouseButton.Left);
+            UiTestHelpers.Pump();
+
+            Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
+        }
+        finally
+        {
+            ShowStacked(shown);
+            Close(shown);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Side_by_side_dragging_keeps_the_width_and_near_the_right_edge_collapses()
+    {
+        var shown = Show();
+        try
+        {
+            ShowSideBySide(shown);
+            var splitter = shown.View.FindControl<GridSplitter>("Splitter")!;
+            var start = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, splitter.Bounds.Height / 2), shown.Window)!.Value;
+
+            // Left by 100 px: the response grows.
+            shown.Window.MouseDown(start, MouseButton.Left);
+            shown.Window.MouseMove(start + new Point(-50, 0));
+            shown.Window.MouseMove(start + new Point(-100, 0));
+            shown.Window.MouseUp(start + new Point(-100, 0), MouseButton.Left);
+            UiTestHelpers.Pump();
+            var draggedShare = shown.Tab.Response.Pane.SideBySideResponseSplitRatio;
+            Assert.True(draggedShare > 0.55, $"The response's share is {draggedShare}.");
+            Assert.Equal(SessionTab.DefaultResponseSplitRatio, shown.Tab.Response.Pane.ResponseSplitRatio);
+
+            // To the right edge: the pane collapses and keeps the share it had before this drag.
+            start = splitter.TranslatePoint(new Point(splitter.Bounds.Width / 2, splitter.Bounds.Height / 2), shown.Window)!.Value;
+            var right = SplitGrid(shown.View).TranslatePoint(new Point(SplitGrid(shown.View).Bounds.Width - 10, 0), shown.Window)!.Value;
+            shown.Window.MouseDown(start, MouseButton.Left);
+            shown.Window.MouseMove(new Point((start.X + right.X) / 2, start.Y));
+            shown.Window.MouseMove(new Point(right.X, start.Y));
+            shown.Window.MouseUp(new Point(right.X, start.Y), MouseButton.Left);
+            UiTestHelpers.Pump();
+            Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
+            Assert.Equal(draggedShare, shown.Tab.Response.Pane.SideBySideResponseSplitRatio);
+
+            shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
+            UiTestHelpers.Pump();
+            Assert.Equal(draggedShare, ResponseWidthShare(shown.View), 3);
+        }
+        finally
+        {
+            ShowStacked(shown);
             Close(shown);
         }
     }

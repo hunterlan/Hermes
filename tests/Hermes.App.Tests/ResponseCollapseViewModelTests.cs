@@ -73,14 +73,41 @@ public class ResponseCollapseViewModelTests
         using var temp = new TempWorkspace();
         using var response = new ResponseViewModel(new DialogService(), temp.Settings);
 
-        response.Pane.RestorePane(isCollapsed: true, savedRatio);
+        response.Pane.RestorePane(isCollapsed: true, savedRatio, savedRatio);
 
         Assert.True(response.Pane.IsResponseCollapsed);
         Assert.Equal(SessionTab.DefaultResponseSplitRatio, response.Pane.ResponseSplitRatio);
+        Assert.Equal(SessionTab.DefaultResponseSplitRatio, response.Pane.SideBySideResponseSplitRatio);
     }
 
     [AvaloniaFact]
-    public void Side_by_side_shows_the_pane_and_keeps_the_collapse_for_stacked()
+    public void A_response_expands_the_pane_collapsed_to_a_strip_and_the_width_share_stays()
+    {
+        using var temp = new TempWorkspace();
+        using var response = new ResponseViewModel(new DialogService(), temp.Settings);
+        try
+        {
+            response.Pane.SetLayoutCommand.Execute(ResponseLayout.Horizontal);
+            response.Pane.SideBySideResponseSplitRatio = 0.3;
+            response.Pane.ToggleCollapsedCommand.Execute(null);
+            Assert.True(response.Pane.ShowsCollapsedStrip);
+
+            response.SetResponse(Ok());
+
+            Assert.False(response.Pane.IsResponseCollapsed);
+            Assert.False(response.Pane.ShowsCollapsedStrip);
+            Assert.Equal(0.3, response.Pane.SideBySideResponseSplitRatio);
+            Assert.Equal(SessionTab.DefaultResponseSplitRatio, response.Pane.ResponseSplitRatio);
+        }
+        finally
+        {
+            temp.Settings.Current.Layout = ResponseLayout.Vertical;
+            temp.Settings.SaveCurrent();
+        }
+    }
+
+    [AvaloniaFact]
+    public void The_collapse_is_a_bar_when_stacked_and_a_strip_when_side_by_side()
     {
         using var temp = new TempWorkspace();
         using var response = new ResponseViewModel(new DialogService(), temp.Settings);
@@ -90,12 +117,14 @@ public class ResponseCollapseViewModelTests
             response.Pane.SetLayoutCommand.Execute(ResponseLayout.Horizontal);
 
             Assert.False(response.Pane.ShowsCollapsedBar);
-            Assert.False(response.Pane.ToggleCollapsedCommand.CanExecute(null));
+            Assert.True(response.Pane.ShowsCollapsedStrip);
+            Assert.True(response.Pane.ToggleCollapsedCommand.CanExecute(null));
             Assert.True(response.Pane.IsResponseCollapsed);
 
             response.Pane.SetLayoutCommand.Execute(ResponseLayout.Vertical);
 
             Assert.True(response.Pane.ShowsCollapsedBar);
+            Assert.False(response.Pane.ShowsCollapsedStrip);
             Assert.True(response.Pane.ToggleCollapsedCommand.CanExecute(null));
         }
         finally

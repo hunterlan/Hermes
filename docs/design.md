@@ -162,6 +162,8 @@ Regions that scroll when their content grows, so they can't push the rest of a d
 | `ImportErrorsMaxHeight` | 60 | The error lines of the Import dialog (about 3 lines of body text) |
 | `ImportPasteMinHeight` | 80 | The least the Import dialog's paste box (label and box) can shrink to |
 | `ResponseBarHeight` | 40 | The response pane collapsed to a bar in stacked layout; dragging the splitter this close to the bottom collapses it |
+| `ResponseStripWidth` | 44 | The response pane collapsed to a vertical strip in side-by-side layout; dragging the splitter this close to the right edge collapses it |
+| `SizeStatusDot` | 10 | The status dot (or the no-response icon) on the collapsed strip |
 
 ## The token rule
 

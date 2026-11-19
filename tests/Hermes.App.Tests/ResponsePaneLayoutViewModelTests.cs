@@ -8,7 +8,7 @@ namespace Hermes.App.Tests;
 public class ResponsePaneLayoutViewModelTests
 {
     [AvaloniaFact]
-    public void Side_by_side_cannot_be_toggled()
+    public void Side_by_side_can_be_toggled_and_shows_the_strip()
     {
         using var temp = new TempWorkspace();
         using var pane = new ResponsePaneLayoutViewModel(temp.Settings);
@@ -18,8 +18,12 @@ public class ResponsePaneLayoutViewModelTests
             temp.Settings.SaveCurrent();
 
             Assert.True(pane.IsSideBySide);
-            Assert.False(pane.CanToggleCollapsed);
-            Assert.False(pane.ToggleCollapsedCommand.CanExecute(null));
+            Assert.True(pane.ToggleCollapsedCommand.CanExecute(null));
+
+            pane.ToggleCollapsedCommand.Execute(null);
+
+            Assert.True(pane.ShowsCollapsedStrip);
+            Assert.False(pane.ShowsCollapsedBar);
         }
         finally
         {
@@ -58,9 +62,10 @@ public class ResponsePaneLayoutViewModelTests
         using var temp = new TempWorkspace();
         using var pane = new ResponsePaneLayoutViewModel(temp.Settings);
 
-        pane.RestorePane(isCollapsed: false, splitRatio: 0.3);
+        pane.RestorePane(isCollapsed: false, splitRatio: 0.3, sideBySideSplitRatio: 0.7);
 
         Assert.Equal(0.3, pane.ResponseSplitRatio);
+        Assert.Equal(0.7, pane.SideBySideResponseSplitRatio);
     }
 
     [AvaloniaFact]

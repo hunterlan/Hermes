@@ -8,8 +8,25 @@
   <Style Selector="TextBlock.redirect">
     <Setter Property="Foreground" Value="{DynamicResource RedirectBrush}" />
   </Style>
+  <Style Selector="TextBlock.warning">
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
   <Style Selector="TextBlock.error">
     <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+  </Style>
+
+  <!-- The same colours on a status dot -->
+  <Style Selector="Ellipse.success">
+    <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
+  </Style>
+  <Style Selector="Ellipse.redirect">
+    <Setter Property="Fill" Value="{DynamicResource RedirectBrush}" />
+  </Style>
+  <Style Selector="Ellipse.warning">
+    <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
+  </Style>
+  <Style Selector="Ellipse.error">
+    <Setter Property="Fill" Value="{DynamicResource ErrorBrush}" />
   </Style>
 
   <!-- Response status block: larger than a plain tag; must stay after Tags.axaml so it wins over Border.tag -->

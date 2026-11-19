@@ -6,15 +6,19 @@
              xmlns:core="using:Hermes.Core.Models"
              x:Class="Hermes.App.Views.ResponseView"
              x:DataType="vm:ResponseViewModel"
-             IsVisible="{Binding !Pane.ShowsCollapsedBar}">
-  <!-- collapsed, the request tab shows CollapsedResponseBar instead -->
+             IsVisible="{Binding !Pane.ShowsCollapsedPane}">
+  <!-- collapsed, the request tab shows CollapsedResponseBar (stacked) or CollapsedResponseStrip (side by side) instead -->
   <Grid RowDefinitions="Auto,*">
     <!-- header: the collapse chevron, how the last send went, and the layout switch -->
     <Grid Name="ResponseHeader" ColumnDefinitions="Auto,*,Auto" Margin="0,2,0,4">
       <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing8}">
-        <Button Name="CollapseResponseButton" Classes="icon" Command="{Binding Pane.ToggleCollapsedCommand}" IsVisible="{Binding Pane.CanToggleCollapsed}"
+        <Button Name="CollapseResponseButton" Classes="icon" Command="{Binding Pane.ToggleCollapsedCommand}"
                 ToolTip.Tip="Collapse response (Ctrl+J)" AutomationProperties.Name="Collapse response">
-          <PathIcon Data="{StaticResource IconChevronDown}" />
+          <!-- points where the pane folds to: down when stacked, right when side by side -->
+          <Panel>
+            <PathIcon Name="CollapseDownIcon" Data="{StaticResource IconChevronDown}" IsVisible="{Binding !Pane.IsSideBySide}" />
+            <PathIcon Name="CollapseRightIcon" Data="{StaticResource IconChevronRight}" IsVisible="{Binding Pane.IsSideBySide}" />
+          </Panel>
         </Button>
         <TextBlock Text="Response" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSmall}" VerticalAlignment="Center" />
       </StackPanel>
