@@ -206,6 +206,7 @@ public class RequestTabRoundTripTests
         var services = RequestTabTestServices.Create(temp);
         using var original = new RequestTabViewModel(services, HttpRequestModel.CreateNew());
         original.Response.Pane.ResponseSplitRatio = 0.3;
+        original.Response.Pane.SideBySideResponseSplitRatio = 0.65;
         original.Response.Pane.ToggleCollapsedCommand.Execute(null);
 
         var saved = original.ToSession();
@@ -214,6 +215,25 @@ public class RequestTabRoundTripTests
 
         Assert.True(restored.Response.Pane.IsResponseCollapsed);
         Assert.Equal(0.3, restored.Response.Pane.ResponseSplitRatio);
+        Assert.Equal(0.65, restored.Response.Pane.SideBySideResponseSplitRatio);
+    }
+
+    [AvaloniaFact]
+    public void A_side_by_side_split_that_cannot_be_one_comes_back_as_half()
+    {
+        using var temp = new TempWorkspace();
+        var services = RequestTabTestServices.Create(temp);
+        var saved = new SessionTab
+        {
+            Kind = SessionTabKind.Request,
+            RequestDraft = HttpRequestModel.CreateNew(),
+            SideBySideResponseSplitRatio = 1.5,
+        };
+
+        using var restored = new RequestTabViewModel(services, saved.RequestDraft);
+        restored.RestoreSession(saved);
+
+        Assert.Equal(SessionTab.DefaultResponseSplitRatio, restored.Response.Pane.SideBySideResponseSplitRatio);
     }
 
     [AvaloniaFact]
@@ -229,5 +249,6 @@ public class RequestTabRoundTripTests
 
         Assert.False(restored.Response.Pane.IsResponseCollapsed);
         Assert.Equal(SessionTab.DefaultResponseSplitRatio, restored.Response.Pane.ResponseSplitRatio);
+        Assert.Equal(SessionTab.DefaultResponseSplitRatio, restored.Response.Pane.SideBySideResponseSplitRatio);
     }
 }

@@ -15,9 +15,12 @@ public sealed class SessionTab
 
     public bool IsPinned { get; set; }
 
-    /// <summary>A request tab's response pane is collapsed to its bar.</summary>
+    /// <summary>A request tab's response pane is collapsed to its bar (stacked) or strip (side by side).</summary>
     public bool IsResponseCollapsed { get; set; }
 
-    /// <summary>The response pane's share of a request tab's split while expanded, between 0 and 1.</summary>
+    /// <summary>The response pane's share of a request tab's height in stacked layout while expanded, between 0 and 1.</summary>
     public double ResponseSplitRatio { get; set; } = DefaultResponseSplitRatio;
+
+    /// <summary>The response pane's share of a request tab's width in side-by-side layout while expanded, between 0 and 1.</summary>
+    public double SideBySideResponseSplitRatio { get; set; } = DefaultResponseSplitRatio;
 }

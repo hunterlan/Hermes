@@ -7,11 +7,15 @@ The response body can be shown prettified (highlighted) or as raw text. Response
 
 ## Collapsing the response
 
-With the response below the request, the chevron at the start of the response header collapses it to a bar at the
-bottom of the tab, so the request editor gets the room. The bar still shows the status, time and size of the last
-response. Click the bar, press `Ctrl+J` or double-click the line between request and response to expand it again;
-dragging that line to the bottom also collapses it. The response expands by itself when a new one arrives or a send
-fails. Each tab remembers whether its response is collapsed and where the line was, also after a restart.
+The chevron at the start of the response header collapses the response, so the request editor gets the room. With
+the response below the request it becomes a bar at the bottom of the tab, which still shows the status, time and size
+of the last response. With the response beside the request it becomes a narrow strip at the right edge, which shows a
+status dot (hover it for the full status) and the status code and time written downwards.
+
+Click the bar or strip, press `Ctrl+J` or double-click the line between request and response to expand it again;
+dragging that line to the bottom (or to the right edge) also collapses it. Switching layout keeps the response
+collapsed. The response expands by itself when a new one arrives or a send fails. Each tab remembers whether its
+response is collapsed and where the line was in each layout, also after a restart.
 
 ## The exact sent request
 

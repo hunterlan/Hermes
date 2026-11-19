@@ -44,6 +44,9 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial ResponseViewMode ViewMode { get; set; } = ResponseViewMode.Pretty;
 
     [ObservableProperty] public partial string StatusText { get; set; } = "";
+
+    /// <summary>The status code alone, for the collapsed strip, which has no room for the reason.</summary>
+    [ObservableProperty] public partial string StatusCodeText { get; set; } = "";
     [ObservableProperty] public partial string TimeText { get; set; } = "";
     [ObservableProperty] public partial string SizeText { get; set; } = "";
     [ObservableProperty] public partial string TimingDetails { get; set; } = "";
@@ -177,6 +180,7 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
         SentWithEnvironmentColor = sentWith?.Color ?? EnvironmentColor.None;
 
         StatusText = $"{response.StatusCode} {response.ReasonPhrase}";
+        StatusCodeText = response.StatusCode.ToString();
         IsSuccess = response.StatusCode is >= 200 and < 300;
         IsRedirect = response.StatusCode is >= 300 and < 400;
         IsClientOrServerError = response.StatusCode >= 400;

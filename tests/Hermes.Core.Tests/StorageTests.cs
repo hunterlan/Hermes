@@ -250,6 +250,7 @@ public class StorageTests : IDisposable
         Assert.True(tab.IsPinned);
         Assert.False(tab.IsResponseCollapsed);
         Assert.Equal(SessionTab.DefaultResponseSplitRatio, tab.ResponseSplitRatio);
+        Assert.Equal(0.5, tab.SideBySideResponseSplitRatio);
     }
 
     [Fact]
@@ -258,13 +259,14 @@ public class StorageTests : IDisposable
         var repo = new WorkspaceRepository(_dir);
         repo.SaveSession(new SessionState
         {
-            Tabs = [new SessionTab { Kind = SessionTabKind.Request, IsResponseCollapsed = true, ResponseSplitRatio = 0.3 }],
+            Tabs = [new SessionTab { Kind = SessionTabKind.Request, IsResponseCollapsed = true, ResponseSplitRatio = 0.3, SideBySideResponseSplitRatio = 0.65 }],
         });
 
         var tab = Assert.Single(new WorkspaceRepository(_dir).LoadSession().Tabs);
 
         Assert.True(tab.IsResponseCollapsed);
         Assert.Equal(0.3, tab.ResponseSplitRatio);
+        Assert.Equal(0.65, tab.SideBySideResponseSplitRatio);
     }
 
     [Fact]

@@ -290,10 +290,12 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable, 
         IsPinned = IsPinned,
         IsResponseCollapsed = Response.Pane.IsResponseCollapsed,
         ResponseSplitRatio = Response.Pane.ResponseSplitRatio,
+        SideBySideResponseSplitRatio = Response.Pane.SideBySideResponseSplitRatio,
     };
 
     /// <summary>Puts back what <see cref="ToSession"/> kept besides the request and the pin: the response pane.</summary>
-    public void RestoreSession(SessionTab saved) => Response.Pane.RestorePane(saved.IsResponseCollapsed, saved.ResponseSplitRatio);
+    public void RestoreSession(SessionTab saved) => Response.Pane.RestorePane(
+        saved.IsResponseCollapsed, saved.ResponseSplitRatio, saved.SideBySideResponseSplitRatio);
 
     public override string? CollectionName => Services.Workspace.Find(RequestId)?.Collection.Name;
 }

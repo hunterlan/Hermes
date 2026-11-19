@@ -120,7 +120,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
         foreach (var option in EnvironmentOptions)
             yield return new PaletteItem($"Use environment: {option.Name}", null, null, null, () => SelectedEnvironment = option);
         yield return new PaletteItem("Toggle sidebar", null, null, "Ctrl \\", () => IsSidebarVisible = !IsSidebarVisible);
-        yield return new PaletteItem("Collapse / expand response", "Stacked layout", null, "Ctrl J", () => ToggleActiveResponseCommand.Execute(null));
+        yield return new PaletteItem("Collapse / expand response", null, null, "Ctrl J", () => ToggleActiveResponseCommand.Execute(null));
         yield return new PaletteItem("Show collections", null, null, null, () => ShowPane(SidebarPane.Collections));
         yield return new PaletteItem("Show environments", null, null, null, () => ShowPane(SidebarPane.Environments));
         yield return new PaletteItem("Show history", null, null, null, () => ShowPane(SidebarPane.History));
@@ -612,12 +612,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
     [RelayCommand]
     private void SendActive() => (ActiveTab as RequestTabViewModel)?.Sending.SendOrCancel();
 
-    /// <summary>Collapses or expands the active request's response pane; nothing where it can't collapse (side by side).</summary>
+    /// <summary>Collapses or expands the active request's response pane, in either layout.</summary>
     [RelayCommand]
     private void ToggleActiveResponse()
     {
-        if (ActiveTab is RequestTabViewModel { Response.Pane.ToggleCollapsedCommand: var toggle } && toggle.CanExecute(null))
-            toggle.Execute(null);
+        if (ActiveTab is RequestTabViewModel tab)
+            tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
     }
 
     [RelayCommand]
