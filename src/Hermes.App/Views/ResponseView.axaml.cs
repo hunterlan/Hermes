@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Hermes.App.ViewModels;
 
 namespace Hermes.App.Views;
@@ -24,6 +25,13 @@ public partial class ResponseView : UserControl
     {
         if (e.PropertyName is nameof(ResponseViewModel.WaitMs) or nameof(ResponseViewModel.DownloadMs))
             UpdateTimingBar();
+    }
+
+    /// <summary>The compact Saved button (a narrow header) opens the same flyout as the full one, below itself.</summary>
+    private void OnCompactSavedButtonClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control compactButton)
+            SavedButton.Flyout?.ShowAt(compactButton);
     }
 
     /// <summary>Grid column widths can't be bound, so the bar's proportions are set here.</summary>

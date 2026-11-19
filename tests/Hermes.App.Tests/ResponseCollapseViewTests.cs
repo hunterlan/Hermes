@@ -81,7 +81,8 @@ public class ResponseCollapseViewTests
         var tag = Bar(shown.View).GetVisualDescendants().OfType<IconTag>().Single(t => t.IsEffectivelyVisible);
         Assert.Equal("201 Created", tag.Text);
         Assert.Equal(IconTagKind.Ok, tag.Kind);
-        Assert.Contains("412 ms · 2 B", VisibleBarTexts(shown.View));
+        Assert.Contains("412 ms", VisibleBarTexts(shown.View));
+        Assert.Contains(" · 2 B", VisibleBarTexts(shown.View));
         Assert.Contains("Ctrl J", VisibleBarTexts(shown.View));
         UiTestHelpers.Screenshot(shown.Window, "45-collapsed-response");
         Close(shown);
