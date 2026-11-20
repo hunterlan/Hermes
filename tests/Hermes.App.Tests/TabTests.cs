@@ -79,7 +79,7 @@ public class TabTests
         var settings = App.Services.GetRequiredService<SettingsService>();
         var changed = new List<string?>();
         tab.Settings.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
-        settings.Update(settings.Current);
+        await settings.UpdateAsync(settings.Current);
         Assert.Contains(nameof(RequestSettingsViewModel.VerifySsl), changed);
         window.Close();
     }
@@ -284,7 +284,7 @@ public class TabTests
         var (window, vm) = ShowEmptyWindow();
         try
         {
-            Settings.Update(CopyWithShowTabs(original, showTabs));
+            await Settings.UpdateAsync(CopyWithShowTabs(original, showTabs));
             await test(window, vm);
         }
         finally
@@ -292,7 +292,7 @@ public class TabTests
             // Leave no drafts in the shared session for other tests.
             foreach (var tab in vm.Tabs.ToList())
                 vm.RemoveTab(tab);
-            Settings.Update(original);
+            await Settings.UpdateAsync(original);
             window.Close();
         }
     }
@@ -415,12 +415,12 @@ public class TabTests
 
         Assert.Equal([true, true], Visibility());
 
-        Settings.Update(CopyWithShowTabs(Settings.Current, false));
+        await Settings.UpdateAsync(CopyWithShowTabs(Settings.Current, false));
         Assert.Equal([false, false], Visibility());
         Assert.False(MenuItemNamed(Views.Sidebar.CollectionsPaneView.CreateMenu(vm.Collections, requestNode), "Open in tab").IsVisible);
         Assert.False(MenuItemNamed(Views.Sidebar.HistoryPaneView.CreateMenu(vm.History, historyItem), "Open in new tab").IsVisible);
 
-        Settings.Update(CopyWithShowTabs(Settings.Current, true));
+        await Settings.UpdateAsync(CopyWithShowTabs(Settings.Current, true));
         Assert.Equal([true, true], Visibility());
     });
 
@@ -450,7 +450,8 @@ public class TabTests
         saving = dialog.SaveCommand.ExecuteAsync(null);
         Answer(window, "confirm");
 
-        Assert.True(saving.IsCompleted);
+        // The setting is written off the UI thread; the dialog finishes once it is on disk.
+        await saving;
         Assert.False(Settings.Current.ShowTabs);
         Assert.True(dialogClosed);
         Assert.Same(active, Assert.Single(vm.Tabs));
@@ -470,7 +471,8 @@ public class TabTests
         Assert.Contains("1 tab will be closed", MessageOf(window));
         Answer(window, "confirm");
 
-        Assert.True(saving.IsCompleted);
+        // The setting is written off the UI thread; the dialog finishes once it is on disk.
+        await saving;
         Assert.Same(active, Assert.Single(vm.Tabs));
     });
 
@@ -532,7 +534,7 @@ public class TabTests
         Answer(window, "confirm");
 
         Assert.Empty(window.OwnedWindows);
-        Assert.True(saving.IsCompleted);
+        await saving;
         Assert.False(Settings.Current.ShowTabs);
         Assert.Same(active, Assert.Single(vm.Tabs));
         Assert.True(active.IsDirty);
@@ -545,10 +547,12 @@ public class TabTests
         FinishesAtOnce(vm.OpenRequestAsync(first));
         var only = EditActiveRequest(vm);
 
-        FinishesAtOnce(SettingsTurningTabsOff(vm).SaveCommand.ExecuteAsync(null));
+        var saving = SettingsTurningTabsOff(vm).SaveCommand.ExecuteAsync(null);
         UiTestHelpers.Pump();
 
+        // Nothing asked; the setting is written off the UI thread.
         Assert.Empty(window.OwnedWindows);
+        await saving;
         Assert.False(Settings.Current.ShowTabs);
         Assert.Same(only, Assert.Single(vm.Tabs));
     });

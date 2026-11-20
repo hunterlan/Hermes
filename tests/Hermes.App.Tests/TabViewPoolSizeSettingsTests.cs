@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Hermes.App.Tests;
 
-public class TabViewPoolSizeSettingsTests : IDisposable
+public class TabViewPoolSizeSettingsTests : IAsyncDisposable
 {
     // Resolved inside the test, once the headless app is running.
     private SettingsService _settings = null!;
@@ -40,26 +40,26 @@ public class TabViewPoolSizeSettingsTests : IDisposable
     [InlineData("1", 1)]
     [InlineData(" 5 ", 5)]
     [InlineData("10", 10)]
-    public void Valid_pool_size_is_saved(string text, int expected)
+    public async Task Valid_pool_size_is_saved(string text, int expected)
     {
         var dialog = CreateDialog();
 
         dialog.TabViewPoolSizeText = text;
 
         Assert.Null(dialog.TabViewPoolSizeError);
-        dialog.SaveCommand.Execute(null);
+        await dialog.SaveCommand.ExecuteAsync(null);
         Assert.Equal(expected, _settings.Current.TabViewPoolSize);
     }
 
     [AvaloniaFact]
-    public void Saved_pool_size_applies_to_the_open_window()
+    public async Task Saved_pool_size_applies_to_the_open_window()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var host = window.FindControl<TabViewHost>("TabViews")!;
         var dialog = CreateDialog();
 
         dialog.TabViewPoolSizeText = "7";
-        dialog.SaveCommand.Execute(null);
+        await dialog.SaveCommand.ExecuteAsync(null);
         UiTestHelpers.Pump();
 
         Assert.Equal(7, vm.TabViewPoolSize);
@@ -70,14 +70,14 @@ public class TabViewPoolSizeSettingsTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void A_hand_edited_pool_size_is_kept_in_range()
+    public async Task A_hand_edited_pool_size_is_kept_in_range()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         CreateDialog();
 
-        _settings.Update(new AppSettings { TabViewPoolSize = 500 });
+        await _settings.UpdateAsync(new AppSettings { TabViewPoolSize = 500 });
         Assert.Equal(SettingsDialogViewModel.MaxTabViewPoolSize, vm.TabViewPoolSize);
-        _settings.Update(new AppSettings { TabViewPoolSize = -3 });
+        await _settings.UpdateAsync(new AppSettings { TabViewPoolSize = -3 });
         Assert.Equal(1, vm.TabViewPoolSize);
 
         foreach (var tab in vm.Tabs.ToList())
@@ -85,10 +85,11 @@ public class TabViewPoolSizeSettingsTests : IDisposable
         window.Close();
     }
 
-    public void Dispose()
+    // Settings are shared, so the test puts them back, waiting until they are written and current again.
+    public async ValueTask DisposeAsync()
     {
         if (_originalSettings is not null)
-            _settings.Update(_originalSettings);
+            await _settings.UpdateAsync(_originalSettings);
     }
 
     private SettingsDialogViewModel CreateDialog()

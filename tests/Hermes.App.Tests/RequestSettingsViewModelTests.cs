@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Hermes.App.Tests;
 
-public class RequestSettingsViewModelTests : IDisposable
+public class RequestSettingsViewModelTests : IAsyncDisposable
 {
     // Resolved inside each test, once the headless app is running.
     private SettingsService _appSettings = null!;
@@ -30,10 +30,14 @@ public class RequestSettingsViewModelTests : IDisposable
         _appSettings.SaveCurrent();
     }
 
-    public void Dispose()
+    // The app settings are shared, so they are put back, waiting until that is written.
+    public async ValueTask DisposeAsync()
     {
-        if (_appSettings is not null)
-            SetAppSettings(_originalFollowRedirects, _originalVerifySsl);
+        if (_appSettings is null)
+            return;
+        _appSettings.Current.FollowRedirects = _originalFollowRedirects;
+        _appSettings.Current.VerifySsl = _originalVerifySsl;
+        await _appSettings.SaveCurrentAsync();
     }
 
     private static string Serialized(RequestSettings settings) =>

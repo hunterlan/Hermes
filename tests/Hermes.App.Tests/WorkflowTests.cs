@@ -117,7 +117,7 @@ public class WorkflowTests
     }
 
     [AvaloniaFact]
-    public void Settings_change_layout_and_defaults()
+    public async Task Settings_change_layout_and_defaults()
     {
         var settings = App.Services.GetRequiredService<SettingsService>();
         var original = settings.Current;
@@ -129,7 +129,7 @@ public class WorkflowTests
             dialog.SelectedLayout = dialog.Layouts.Single(l => l.Value == ResponseLayout.Horizontal);
             dialog.SelectedTheme = dialog.Themes.Single(t => t.Value == ThemePreference.Light);
             dialog.TimeoutText = "1500";
-            dialog.SaveCommand.Execute(null);
+            await dialog.SaveCommand.ExecuteAsync(null);
 
             Assert.Equal(ResponseLayout.Horizontal, settings.Current.Layout);
             Assert.Equal(1500, settings.Current.RequestTimeoutMs);
@@ -144,7 +144,7 @@ public class WorkflowTests
         finally
         {
             // Update() replaced Current with a new object, so the original is untouched.
-            settings.Update(original);
+            await settings.UpdateAsync(original);
             window.Close();
         }
     }

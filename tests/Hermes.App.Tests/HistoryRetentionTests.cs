@@ -8,7 +8,7 @@ using Microsoft.Extensions.Time.Testing;
 
 namespace Hermes.App.Tests;
 
-public class HistoryRetentionTests : IDisposable
+public class HistoryRetentionTests : IAsyncDisposable
 {
     private static readonly DateOnly Today = new(2026, 6, 15);
 
@@ -25,10 +25,10 @@ public class HistoryRetentionTests : IDisposable
     [AvaloniaFact]
     public async Task Lowering_retention_in_settings_removes_expired_entries_at_once()
     {
-        using var workspace = CreateWorkspace(retentionDays: 30, daysOld: [0, 1, 5, 20]);
+        using var workspace = await CreateWorkspaceAsync(retentionDays: 30, daysOld: [0, 1, 5, 20]);
         Assert.Equal(4, workspace.History.Count);
 
-        SaveRetention(7);
+        await SaveRetentionAsync(7);
         await workspace.FlushHistoryAsync();
 
         Assert.Equal([0, 1, 5], DaysOld(workspace));
@@ -38,10 +38,10 @@ public class HistoryRetentionTests : IDisposable
     [AvaloniaFact]
     public async Task Raising_retention_or_keeping_forever_removes_nothing()
     {
-        using var workspace = CreateWorkspace(retentionDays: 30, daysOld: [0, 1, 5, 20]);
+        using var workspace = await CreateWorkspaceAsync(retentionDays: 30, daysOld: [0, 1, 5, 20]);
 
-        SaveRetention(90);
-        SaveRetention(HistoryRetention.KeepForever);
+        await SaveRetentionAsync(90);
+        await SaveRetentionAsync(HistoryRetention.KeepForever);
         await workspace.FlushHistoryAsync();
 
         Assert.Equal([0, 1, 5, 20], DaysOld(workspace));
@@ -51,7 +51,7 @@ public class HistoryRetentionTests : IDisposable
     [AvaloniaFact]
     public async Task Entries_beyond_the_retention_are_dropped_on_startup()
     {
-        using var workspace = CreateWorkspace(retentionDays: 2, daysOld: [0, 1, 2, 3]);
+        using var workspace = await CreateWorkspaceAsync(retentionDays: 2, daysOld: [0, 1, 2, 3]);
         await workspace.FlushHistoryAsync();
 
         Assert.Equal([0, 1], DaysOld(workspace));
@@ -61,7 +61,7 @@ public class HistoryRetentionTests : IDisposable
     [AvaloniaFact]
     public async Task Entries_expire_when_the_day_changes_while_the_app_is_open()
     {
-        using var workspace = CreateWorkspace(retentionDays: 2, daysOld: [0, 1]);
+        using var workspace = await CreateWorkspaceAsync(retentionDays: 2, daysOld: [0, 1]);
         Assert.Equal(2, workspace.History.Count);
         // Let the prune queued at startup finish on the starting day, so it can't be what removes the files below.
         await workspace.FlushHistoryAsync();
@@ -86,40 +86,41 @@ public class HistoryRetentionTests : IDisposable
     [AvaloniaFact]
     public async Task A_disposed_workspace_no_longer_prunes()
     {
-        var workspace = CreateWorkspace(retentionDays: 1, daysOld: [0]);
+        var workspace = await CreateWorkspaceAsync(retentionDays: 1, daysOld: [0]);
         workspace.Dispose();
         // The prune queued at startup works out "today" when it runs, so let it finish before time moves on.
         await workspace.FlushHistoryAsync();
 
         _clock.Advance(TimeSpan.FromDays(2));
         Dispatcher.UIThread.RunJobs();
-        SaveRetention(1);
+        await SaveRetentionAsync(1);
         await workspace.FlushHistoryAsync();
 
         Assert.Single(workspace.History);
         Assert.Single(Directory.GetFiles(HistoryDirectory));
     }
 
-    public void Dispose()
+    // The settings file is shared, so it is put back, waiting until that is written.
+    public async ValueTask DisposeAsync()
     {
-        _settings.Update(_originalSettings);
+        await _settings.UpdateAsync(_originalSettings);
         if (Directory.Exists(_dir))
             Directory.Delete(_dir, true);
     }
 
     private string HistoryDirectory => Path.Combine(_dir, "history");
 
-    private WorkspaceService CreateWorkspace(int retentionDays, int[] daysOld)
+    private async Task<WorkspaceService> CreateWorkspaceAsync(int retentionDays, int[] daysOld)
     {
         var repository = new WorkspaceRepository(_dir, timeProvider: _clock);
         foreach (var days in daysOld)
             repository.AppendHistory(new HistoryEntry { Timestamp = TestClock.NoonLocal(Today.AddDays(-days)) });
-        SaveRetention(retentionDays);
+        await SaveRetentionAsync(retentionDays);
         return new WorkspaceService(repository, _settings, _clock);
     }
 
-    private void SaveRetention(int retentionDays) =>
-        _settings.Update(new AppSettings { HistoryRetentionDays = retentionDays });
+    private Task<StorageError?> SaveRetentionAsync(int retentionDays) =>
+        _settings.UpdateAsync(new AppSettings { HistoryRetentionDays = retentionDays });
 
     private int[] DaysOld(WorkspaceService workspace) =>
         workspace.History.Select(entry => Today.DayNumber - DateOnly.FromDateTime(entry.Timestamp.LocalDateTime).DayNumber).ToArray();

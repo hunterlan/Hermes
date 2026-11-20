@@ -50,6 +50,8 @@ internal sealed class TempWorkspace : IDisposable
         foreach (var folder in _locked)
             folder.Dispose();
         Workspace.Dispose();
+        // Its settings write to the shared settings file; nothing of this test may land there after it ended.
+        Settings.Dispose();
         if (!historyFlushed)
             throw new TimeoutException($"History was still being written after {HistoryFlushTimeout.TotalSeconds:0} s, so {Root} was left in place.");
         if (Directory.Exists(Root))

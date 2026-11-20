@@ -132,6 +132,12 @@ public static class JsonFileStore
     private static Lock WriteLockFor(string path) =>
         WriteLocks[(int)((uint)StringComparer.OrdinalIgnoreCase.GetHashCode(Path.GetFullPath(path)) % (uint)WriteLocks.Length)];
 
+    /// <summary>
+    /// Renames <paramref name="temp"/> over <paramref name="path"/>, retrying while another process holds the target.
+    /// The retries sleep, so this (and every write through this class) must run off the UI thread: the app writes its
+    /// files from a <see cref="BackgroundWriter"/> queue. It sleeps rather than awaiting a delay because it runs under
+    /// the path's write lock, which an await can't be held across, and a queue thread has nothing else to do meanwhile.
+    /// </summary>
     private static void ReplaceWith(string temp, string path)
     {
         for (var attempt = 1; ; attempt++)
