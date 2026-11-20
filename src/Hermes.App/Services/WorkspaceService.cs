@@ -211,11 +211,18 @@ public sealed class WorkspaceService : IDisposable
 
     // ---- saved responses ----
 
-    /// <summary>Saved responses for a request, newest first. Files that can't be read are reported and skipped.</summary>
-    public IReadOnlyList<SavedResponse> LoadResponses(Guid requestId) => _responses.Load(requestId);
+    /// <summary>
+    /// Saved responses for a request, newest first, read off the UI thread on the write queue (so a response saved
+    /// before is in it). Files that can't be read are reported and skipped.
+    /// </summary>
+    public Task<IReadOnlyList<SavedResponse>> LoadResponsesAsync(Guid requestId) => _responses.LoadAsync(requestId);
 
-    /// <summary>Saves a response with its request; returns what was stored, or null (after reporting it) if it couldn't be written.</summary>
-    public SavedResponse? SaveResponse(Guid requestId, SavedResponse saved) => _responses.Save(requestId, saved);
+    /// <summary>
+    /// Saves a response with its request, off the UI thread; returns what was stored, or null (after reporting it)
+    /// if it couldn't be written. <paramref name="saved"/> must not be changed afterwards.
+    /// </summary>
+    public Task<SavedResponse?> SaveResponseAsync(Guid requestId, SavedResponse saved) =>
+        _responses.SaveAsync(requestId, saved);
 
     // ---- session ----
 

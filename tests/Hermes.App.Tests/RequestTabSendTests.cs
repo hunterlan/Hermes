@@ -64,9 +64,9 @@ public class RequestTabSendTests
         await sending;
 
         Assert.True(tab.Response.HasResponse);
-        Assert.Single(temp.Workspace.LoadResponses(tab.RequestId));
+        Assert.Single(await temp.Workspace.LoadResponsesAsync(tab.RequestId));
         Assert.Single(tab.Response.Saved.Items);
-        Assert.Empty(temp.Workspace.LoadResponses(original.Id));
+        Assert.Empty(await temp.Workspace.LoadResponsesAsync(original.Id));
         window.Close();
     }
 
@@ -103,7 +103,7 @@ public class RequestTabSendTests
         Assert.False(tab.Response.HasResponse);
         Assert.False(tab.Response.IsLoading);
         Assert.Empty(temp.Workspace.History);
-        Assert.Empty(temp.Workspace.LoadResponses(request.Id));
+        Assert.Empty(await temp.Workspace.LoadResponsesAsync(request.Id));
         window.Close();
     }
 }

@@ -80,14 +80,15 @@ public sealed partial class RequestSendViewModel(IRequestSource request, TabServ
                 response.SetFailure(result.Failure ?? RequestFailure.FromMessage("Unknown error"));
 
             // The request this tab is now: Save As during the send made it a new one, and the response goes with that.
-            var saved = services.Sender.Record(new CompletedSend
+            var saved = await services.Sender.RecordAsync(new CompletedSend
             {
                 Model = model,
                 MaskedRequest = pair.Masked,
                 Result = result,
                 KeepResponseWith = request.IsPersisted ? request.RequestId : null,
             }, _sendCts.Token);
-            if (saved is not null)
+            // The response is on disk either way; a tab closed while it was written has no list to add it to.
+            if (saved is not null && !_isClosed)
                 response.Saved.AddSaved(saved);
         }
         finally

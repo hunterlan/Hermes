@@ -66,7 +66,7 @@ public class RequestSendServiceTests : IDisposable
         var pair = RequestPreparer.PrepareWithMasked(request, RequestContext.Empty);
         var outcome = await _service.SendAsync(pair.Request, TestContext.Current.CancellationToken);
         Assert.False(outcome.Cancelled);
-        var saved = _service.Record(new CompletedSend
+        var saved = await _service.RecordAsync(new CompletedSend
         {
             Model = request,
             MaskedRequest = pair.Masked,
@@ -82,8 +82,9 @@ public class RequestSendServiceTests : IDisposable
         using var server = OkServer();
         var request = await SavedRequestAsync(server.Url);
         var savedWhenHistoryWasWritten = -1;
+        // Read straight from disk: the handler can't wait for the workspace's queued read.
         _temp.Workspace.History.CollectionChanged += (_, _) =>
-            savedWhenHistoryWasWritten = _temp.Workspace.LoadResponses(request.Id).Count;
+            savedWhenHistoryWasWritten = _temp.Repository.LoadResponses(request.Id).Items.Count;
 
         var sent = await SendAndRecordAsync(request, request.Id);
 
@@ -117,7 +118,7 @@ public class RequestSendServiceTests : IDisposable
 
         Assert.Equal(200, sent.Result.Response!.StatusCode);
         Assert.Null(sent.Saved);
-        Assert.Empty(_temp.Workspace.LoadResponses(request.Id));
+        Assert.Empty(await _temp.Workspace.LoadResponsesAsync(request.Id));
         Assert.Single(_temp.Workspace.History);
     }
 
@@ -131,8 +132,8 @@ public class RequestSendServiceTests : IDisposable
         var sent = await SendAndRecordAsync(sentAs, savedAs.Id);
 
         Assert.NotNull(sent.Saved);
-        Assert.Single(_temp.Workspace.LoadResponses(savedAs.Id));
-        Assert.Empty(_temp.Workspace.LoadResponses(sentAs.Id));
+        Assert.Single(await _temp.Workspace.LoadResponsesAsync(savedAs.Id));
+        Assert.Empty(await _temp.Workspace.LoadResponsesAsync(sentAs.Id));
     }
 
     [AvaloniaFact]
@@ -145,7 +146,7 @@ public class RequestSendServiceTests : IDisposable
         Assert.Null(sent.Result.Response);
         Assert.NotNull(sent.Result.Failure);
         Assert.Null(sent.Saved);
-        Assert.Empty(_temp.Workspace.LoadResponses(request.Id));
+        Assert.Empty(await _temp.Workspace.LoadResponsesAsync(request.Id));
         var entry = Assert.Single(_temp.Workspace.History);
         Assert.Null(entry.StatusCode);
         Assert.Equal(0, entry.DurationMs);
@@ -189,7 +190,7 @@ public class RequestSendServiceTests : IDisposable
         var outcome = await _service.SendAsync(pair.Request, TestContext.Current.CancellationToken);
         Assert.False(outcome.Cancelled);
 
-        var saved = _service.Record(new CompletedSend
+        var saved = await _service.RecordAsync(new CompletedSend
         {
             Model = request,
             MaskedRequest = pair.Masked,
@@ -199,6 +200,6 @@ public class RequestSendServiceTests : IDisposable
 
         Assert.Null(saved);
         Assert.Empty(_temp.Workspace.History);
-        Assert.Empty(_temp.Workspace.LoadResponses(request.Id));
+        Assert.Empty(await _temp.Workspace.LoadResponsesAsync(request.Id));
     }
 }

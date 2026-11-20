@@ -35,6 +35,12 @@ internal sealed class WorkspaceStorage
         }
     }
 
+    /// <summary>
+    /// Runs a read on the same queue, so it sees every write queued before it and none queued after. The read keeps
+    /// its result itself; an exception from it fails the returned task.
+    /// </summary>
+    public Task ReadAsync(Action read) => _writes.EnqueueAsync(read);
+
     /// <summary>Completes when everything queued so far has run (or has failed).</summary>
     public Task FlushAsync() => _writes.FlushAsync();
 

@@ -7,12 +7,17 @@ using Hermes.Core.Models;
 using Hermes.Core.Models.Auth;
 using Hermes.Core.Requests;
 using Hermes.Core.Serialization;
+using Hermes.Core.Storage;
 
 namespace Hermes.App.ViewModels;
 
 public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable, IRequestSource
 {
     private readonly RequestChangeTracker _changes = new();
+
+    // Started the first time the tab is shown; null until then.
+    private Task? _savedResponsesLoad;
+    private bool _isDisposed;
 
     // Preserved, not editable in the UI.
     private string? _description;
@@ -46,8 +51,9 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable, 
         Auth.InheritedAuthProvider = () => CreateContext().ResolveAuth(AuthConfig.Inherit());
         Auth.ChainProvider = () => (AuthInheritance.OuterLevels(CreateContext()), "Request", Name);
 
+        // Saved responses are read once the tab is shown (LoadSavedResponsesAsync), not here: a tab made only for its
+        // snapshot, or restored behind another, never touches the disk.
         Response = new ResponseViewModel(services.Dialogs, services.Settings);
-        Response.Saved.SetSaved(services.Workspace.LoadResponses(model.Id), show: true);
         Sending = new RequestSendViewModel(this, services, Response);
 
         FailureActions = new RequestFailureActionRouter(UrlEditor, Body, Settings, Sections, Auth, services.Dialogs,
@@ -200,15 +206,43 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable, 
     /// <summary>Cancels the send and the token request in flight and frees the preview image.</summary>
     public override void Dispose()
     {
+        _isDisposed = true;
         Sending.Dispose();
         Auth.Dispose();
         Response.Dispose();
     }
 
+    /// <summary>
+    /// Reads the responses saved with this request into <see cref="ResponseViewModel.Saved"/>, off the UI thread, and
+    /// shows the latest unless the pane already shows something (a send started meanwhile). Runs once; later calls
+    /// return the same task. A tab closed, or saved as another request, before the read finishes ignores its result.
+    /// </summary>
+    public Task LoadSavedResponsesAsync() => _savedResponsesLoad ??= LoadSavedResponsesOnceAsync();
+
+    private async Task LoadSavedResponsesOnceAsync()
+    {
+        var requestId = RequestId;
+        var listedBefore = Response.Saved.Items.Count;
+        var saved = await Services.Workspace.LoadResponsesAsync(requestId);
+        if (_isDisposed || RequestId != requestId)
+            return;
+        // A response sent and saved while the read ran was put in front of the list meanwhile; the read, queued
+        // before its write, doesn't have it, so it stays in front.
+        var savedMeanwhile = Response.Saved.Items.Take(Response.Saved.Items.Count - listedBefore).Select(item => item.Saved);
+        Response.Saved.SetSaved([.. savedMeanwhile.Concat(saved).Take(WorkspaceRepository.MaxSavedResponses)],
+            show: Response.IsEmpty);
+    }
+
+    // Activation can't wait; async void so an unexpected error still reaches the app's handler, as a throw would.
+    private async void StartLoadingSavedResponses() => await LoadSavedResponsesAsync();
+
     protected override void OnActiveChanged(bool isActive)
     {
         if (isActive)
+        {
+            StartLoadingSavedResponses();
             return;
+        }
         HeadersEditor.HideRevealedValues();
         Auth.HideRevealedValues();
         Response.Sent.HideRevealedValues();
