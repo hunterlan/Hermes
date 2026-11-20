@@ -776,7 +776,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
                         : new RequestTabViewModel(_services, ModelCloner.Clone(persisted));
                 }
                 return saved.RequestDraft is { } orphan
-                    ? new RequestTabViewModel(_services, orphan, ModelCloner.Serialize(HttpRequestModel.CreateNew()))
+                    ? new RequestTabViewModel(_services, orphan, BlankSnapshotFor(orphan))
                     : null;
 
             case SessionTabKind.Collection:
@@ -792,6 +792,17 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
             default:
                 return null;
         }
+    }
+
+    /// <summary>
+    /// The snapshot of a blank request that has <paramref name="draft"/>'s Id, so an untouched blank tab comes back
+    /// clean while an edited one stays modified. A blank request with a fresh Id would never match its draft.
+    /// </summary>
+    private string BlankSnapshotFor(HttpRequestModel draft)
+    {
+        var blank = HttpRequestModel.CreateNew();
+        blank.Id = draft.Id;
+        return SnapshotOf(blank);
     }
 
     /// <summary>The snapshot a clean tab would have for <paramref name="model"/> (normalised through the view model).</summary>

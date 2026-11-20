@@ -355,6 +355,41 @@ public class TabTests
         Workspace.DeleteEnvironment(environment);
     });
 
+    private static RequestTabViewModel RestoreNeverSavedTab(Action<RequestTabViewModel> edit)
+    {
+        var previousSession = Workspace.LoadSession();
+        using var original = new RequestTabViewModel(App.Services.GetRequiredService<TabServices>(), HttpRequestModel.CreateNew());
+        edit(original);
+        Workspace.SaveSession(new SessionState { Tabs = [original.ToSession()], ActiveTabIndex = 0 });
+        try
+        {
+            var restored = new MainWindowViewModel(App.Services.GetRequiredService<TabServices>());
+            return Assert.IsType<RequestTabViewModel>(Assert.Single(restored.Tabs));
+        }
+        finally
+        {
+            // Leave no drafts in the shared session for other tests.
+            Workspace.SaveSession(previousSession);
+        }
+    }
+
+    [AvaloniaFact]
+    public void An_untouched_blank_tab_comes_back_from_the_session_unmodified()
+    {
+        var restored = RestoreNeverSavedTab(_ => { });
+
+        Assert.False(restored.IsDirty);
+    }
+
+    [AvaloniaFact]
+    public void An_edited_never_saved_tab_comes_back_from_the_session_modified()
+    {
+        var restored = RestoreNeverSavedTab(tab => tab.UrlEditor.Url = "https://example.com/draft");
+
+        Assert.True(restored.IsDirty);
+        Assert.Equal("https://example.com/draft", restored.UrlEditor.Url);
+    }
+
     private static MenuItem MenuItemNamed(ContextMenu menu, string header) =>
         menu.Items.OfType<MenuItem>().Single(item => (string?)item.Header == header);
 
