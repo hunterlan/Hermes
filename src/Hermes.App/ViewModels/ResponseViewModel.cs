@@ -165,6 +165,7 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
         IsLoading = false;
         HasResponse = false;
         _response = null;
+        Saved.ViewingEarlier = null;
         Failure = new RequestFailureViewModel(failure, _dialogs.CopyTextAsync);
         // A result is never hidden: the pane opens to show why there is none.
         Pane.Expand();
@@ -176,6 +177,8 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
         _response = response;
         IsLoading = false;
         Failure = null;
+        // Showing a saved earlier response sets the tag again after this, in SavedResponsesViewModel.ShowSaved.
+        Saved.ViewingEarlier = null;
         SentWithEnvironmentName = sentWith?.Name;
         SentWithEnvironmentColor = sentWith?.Color ?? EnvironmentColor.None;
 
@@ -229,6 +232,7 @@ public sealed partial class ResponseViewModel : ObservableObject, IDisposable
         HasResponse = false;
         IsLoading = false;
         Failure = null;
+        Saved.ViewingEarlier = null;
         PrettyText = RawText = "";
         var oldPreview = PreviewImage;
         PreviewImage = null;
