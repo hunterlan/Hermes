@@ -73,7 +73,7 @@ public class SensitiveHeadersTests
     /// <summary>A saved request with a Bearer token, a custom-named API key header and a hand-typed Cookie header.</summary>
     private static async Task<RequestTabViewModel> OpenRequestWithCredentialsAsync(MainWindowViewModel vm, AuthConfig auth)
     {
-        var collection = Workspace.CreateCollection("Secrets " + Guid.NewGuid());
+        var collection = await Workspace.CreateCollectionAsync("Secrets " + Guid.NewGuid());
         var request = new HttpRequestModel
         {
             Name = "Secret",
@@ -81,8 +81,8 @@ public class SensitiveHeadersTests
             Headers = [new("Cookie", "session=abc123")],
             Auth = auth,
         };
-        Workspace.AddNode(collection, null, request);
-        Workspace.SaveCollection(collection);
+        await Workspace.AddNodeAsync(collection, null, request);
+        await Workspace.SaveCollectionAsync(collection);
         await vm.OpenRequestAsync(request);
         UiTestHelpers.Pump();
         return Assert.IsType<RequestTabViewModel>(vm.ActiveTab);

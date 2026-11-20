@@ -66,7 +66,7 @@ public class UserFileWriteFailureTests : IDisposable
     [AvaloniaFact]
     public async Task A_collection_export_that_cannot_be_written_is_reported()
     {
-        var collection = _temp.Workspace.CreateCollection("Pets");
+        var collection = await _temp.Workspace.CreateCollectionAsync("Pets");
         var pane = new CollectionsPaneViewModel(_temp.Workspace, _dialogs, new NullTabHost());
         var path = UnwritableFile;
 
@@ -81,7 +81,7 @@ public class UserFileWriteFailureTests : IDisposable
     [AvaloniaFact]
     public async Task An_environment_export_that_cannot_be_written_is_reported()
     {
-        var environment = _temp.Workspace.CreateEnvironment("Staging");
+        var environment = await _temp.Workspace.CreateEnvironmentAsync("Staging");
         var pane = new EnvironmentsPaneViewModel(_temp.Workspace, _dialogs, new NullTabHost());
         var path = UnwritableFile;
 
@@ -95,7 +95,7 @@ public class UserFileWriteFailureTests : IDisposable
     [AvaloniaFact]
     public async Task A_writable_location_is_written_without_a_dialog()
     {
-        var collection = _temp.Workspace.CreateCollection("Pets");
+        var collection = await _temp.Workspace.CreateCollectionAsync("Pets");
         var pane = new CollectionsPaneViewModel(_temp.Workspace, _dialogs, new NullTabHost());
         var path = Path.Combine(_temp.Root, "pets.postman_collection.json");
 

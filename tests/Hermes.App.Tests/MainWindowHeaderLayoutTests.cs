@@ -22,10 +22,10 @@ public class MainWindowHeaderLayoutTests
     [InlineData(1100)]
     [InlineData(1199)]
     [InlineData(1440)]
-    public void Header_items_do_not_overlap_and_side_groups_fit_their_thirds(double windowWidth)
+    public async Task Header_items_do_not_overlap_and_side_groups_fit_their_thirds(double windowWidth)
     {
         var previousEnvironment = Workspace.ActiveEnvironment;
-        var env = CreateConfirmingEnvironment();
+        var env = await CreateConfirmingEnvironmentAsync();
         var vm = new MainWindowViewModel(App.Services.GetRequiredService<TabServices>());
         var window = new MainWindow { DataContext = vm, Width = windowWidth, Height = 600 };
         try
@@ -59,7 +59,7 @@ public class MainWindowHeaderLayoutTests
         finally
         {
             Workspace.ActiveEnvironment = previousEnvironment;
-            Workspace.DeleteEnvironment(env);
+            await Workspace.DeleteEnvironmentAsync(env);
             window.Close();
         }
     }
@@ -85,11 +85,11 @@ public class MainWindowHeaderLayoutTests
         }
     }
 
-    private static EnvironmentModel CreateConfirmingEnvironment()
+    private static async Task<EnvironmentModel> CreateConfirmingEnvironmentAsync()
     {
-        var env = Workspace.CreateEnvironment("Test environment with a very long name " + Guid.NewGuid());
+        var env = await Workspace.CreateEnvironmentAsync("Test environment with a very long name " + Guid.NewGuid());
         env.ConfirmBeforeSend = true;
-        Workspace.SaveEnvironment(env);
+        await Workspace.SaveEnvironmentAsync(env);
         return env;
     }
 

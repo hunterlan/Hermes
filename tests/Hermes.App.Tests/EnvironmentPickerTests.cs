@@ -25,7 +25,7 @@ public class EnvironmentPickerTests
     /// deactivates, deletes and removes them again; an environment left active (one that asks before sending, say) would
     /// change how later tests send requests.
     /// </summary>
-    private sealed class PickerScope : IDisposable
+    private sealed class PickerScope : IAsyncDisposable
     {
         private readonly List<EnvironmentModel> _environments = [];
         private readonly List<Variable> _globals = [];
@@ -35,20 +35,20 @@ public class EnvironmentPickerTests
         public Window Window { get; }
         public MainWindowViewModel ViewModel { get; }
 
-        public EnvironmentModel CreateEnvironment(params Variable[] variables)
+        public async Task<EnvironmentModel> CreateEnvironmentAsync(params Variable[] variables)
         {
-            var env = Workspace.CreateEnvironment("Picker " + Guid.NewGuid());
+            var env = await Workspace.CreateEnvironmentAsync("Picker " + Guid.NewGuid());
             env.Variables.AddRange(variables);
-            Workspace.SaveEnvironment(env);
+            await Workspace.SaveEnvironmentAsync(env);
             _environments.Add(env);
             return env;
         }
 
         /// <summary>Adds globals ahead of the existing ones, so they are among the rows the picker shows.</summary>
-        public void AddGlobals(params Variable[] variables)
+        public async Task AddGlobalsAsync(params Variable[] variables)
         {
             Workspace.Globals.Variables.InsertRange(0, variables);
-            Workspace.SaveEnvironment(Workspace.Globals);
+            await Workspace.SaveEnvironmentAsync(Workspace.Globals);
             _globals.AddRange(variables);
         }
 
@@ -63,28 +63,28 @@ public class EnvironmentPickerTests
             UiTestHelpers.Pump();
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
             EnvironmentButton.Flyout!.Hide();
             Workspace.ActiveEnvironment = null;
             foreach (var env in _environments)
-                Workspace.DeleteEnvironment(env);
+                await Workspace.DeleteEnvironmentAsync(env);
             if (_globals.Count > 0)
             {
                 Workspace.Globals.Variables.RemoveAll(_globals.Contains);
-                Workspace.SaveEnvironment(Workspace.Globals);
+                await Workspace.SaveEnvironmentAsync(Workspace.Globals);
             }
             Window.Close();
         }
     }
 
     [AvaloniaFact]
-    public void Environment_section_shows_five_rows_and_counts_the_rest()
+    public async Task Environment_section_shows_five_rows_and_counts_the_rest()
     {
-        using var scope = new PickerScope();
-        var env = scope.CreateEnvironment(Enumerable.Range(1, 7).Select(i => new Variable("key" + i, "value" + i)).ToArray());
+        await using var scope = new PickerScope();
+        var env = await scope.CreateEnvironmentAsync(Enumerable.Range(1, 7).Select(i => new Variable("key" + i, "value" + i)).ToArray());
         env.Variables.Add(new Variable("disabled", "x") { Enabled = false });
-        Workspace.SaveEnvironment(env);
+        await Workspace.SaveEnvironmentAsync(env);
 
         scope.Activate(env);
 
@@ -98,10 +98,10 @@ public class EnvironmentPickerTests
     }
 
     [AvaloniaFact]
-    public void Globals_section_is_capped_too()
+    public async Task Globals_section_is_capped_too()
     {
-        using var scope = new PickerScope();
-        scope.AddGlobals(Enumerable.Range(1, 7).Select(_ => new Variable("glob" + Guid.NewGuid(), "v")).ToArray());
+        await using var scope = new PickerScope();
+        await scope.AddGlobalsAsync(Enumerable.Range(1, 7).Select(_ => new Variable("glob" + Guid.NewGuid(), "v")).ToArray());
 
         var globals = scope.ViewModel.QuickLookGlobals;
         Assert.Equal(MainWindowViewModel.QuickLookLimit, globals.Rows.Count);
@@ -111,12 +111,12 @@ public class EnvironmentPickerTests
     }
 
     [AvaloniaFact]
-    public void Global_overridden_by_the_active_environment_is_flagged()
+    public async Task Global_overridden_by_the_active_environment_is_flagged()
     {
-        using var scope = new PickerScope();
+        await using var scope = new PickerScope();
         var key = "shared" + Guid.NewGuid();
-        scope.AddGlobals(new Variable(key, "global"));
-        var env = scope.CreateEnvironment(new Variable(key, "env"));
+        await scope.AddGlobalsAsync(new Variable(key, "global"));
+        var env = await scope.CreateEnvironmentAsync(new Variable(key, "env"));
         var vm = scope.ViewModel;
 
         scope.Activate(null);
@@ -130,9 +130,9 @@ public class EnvironmentPickerTests
     }
 
     [AvaloniaFact]
-    public void No_environment_selected()
+    public async Task No_environment_selected()
     {
-        using var scope = new PickerScope();
+        await using var scope = new PickerScope();
         var vm = scope.ViewModel;
 
         scope.Activate(null);
@@ -150,16 +150,16 @@ public class EnvironmentPickerTests
     }
 
     [AvaloniaFact]
-    public void Popover_keeps_its_width_with_long_values()
+    public async Task Popover_keeps_its_width_with_long_values()
     {
-        using var scope = new PickerScope();
-        var env = scope.CreateEnvironment(
+        await using var scope = new PickerScope();
+        var env = await scope.CreateEnvironmentAsync(
             new Variable("baseUrl", "https://api.staging.payments.example"),
             new Variable(new string('k', 120), "https://api.example.com/" + new string('v', 200)),
             new Variable("clientSecret", "s3cr3t") { Type = VariableType.Secret },
             new Variable("customerId", ""));
         env.ConfirmBeforeSend = true;
-        Workspace.SaveEnvironment(env);
+        await Workspace.SaveEnvironmentAsync(env);
         scope.Activate(env);
 
         scope.OpenPicker();
@@ -179,11 +179,11 @@ public class EnvironmentPickerTests
     }
 
     [AvaloniaFact]
-    public void Arrows_move_focus_and_enter_activates_without_closing()
+    public async Task Arrows_move_focus_and_enter_activates_without_closing()
     {
-        using var scope = new PickerScope();
+        await using var scope = new PickerScope();
         var (window, vm) = (scope.Window, scope.ViewModel);
-        var env = scope.CreateEnvironment(new Variable("k", "v"));
+        var env = await scope.CreateEnvironmentAsync(new Variable("k", "v"));
         scope.Activate(null);
 
         window.KeyPressQwerty(PhysicalKey.E, RawInputModifiers.Control);
@@ -212,15 +212,15 @@ public class EnvironmentPickerTests
     }
 
     [AvaloniaFact]
-    public void Rows_show_the_sent_value_masked_and_flag_empty_ones()
+    public async Task Rows_show_the_sent_value_masked_and_flag_empty_ones()
     {
-        using var scope = new PickerScope();
-        var env = scope.CreateEnvironment(
+        await using var scope = new PickerScope();
+        var env = await scope.CreateEnvironmentAsync(
             new Variable("current", "initial") { CurrentValue = "current" },
             new Variable("secret", "hunter2") { Type = VariableType.Secret },
             new Variable("blank", ""));
         env.ConfirmBeforeSend = true;
-        Workspace.SaveEnvironment(env);
+        await Workspace.SaveEnvironmentAsync(env);
 
         scope.Activate(env);
 

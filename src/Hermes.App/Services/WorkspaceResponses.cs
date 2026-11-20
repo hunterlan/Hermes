@@ -31,18 +31,29 @@ internal sealed class WorkspaceResponses(WorkspaceRepository repository, Workspa
     }
 
     /// <summary>
-    /// Deletes the saved responses of the requests in <paramref name="nodes"/> and their folders. The nodes are already
-    /// gone from the collection; saved responses that stay behind are only wasted space, so a failure is just reported.
+    /// Deletes the saved responses of the requests in <paramref name="nodes"/> and their folders, on the write queue.
+    /// The nodes are already gone from the collection; saved responses that stay behind are only wasted space, so a
+    /// failure is just reported.
     /// </summary>
-    public void DeleteFor(IEnumerable<CollectionNode> nodes)
+    public async Task DeleteForAsync(IEnumerable<CollectionNode> nodes)
+    {
+        // The ids are taken now: the nodes belong to the UI thread, and the deletes run after it moved on.
+        foreach (var requestId in RequestsIn(nodes).Select(request => request.Id).ToList())
+        {
+            storage.Report(await storage.AttemptAsync(() => repository.DeleteResponses(requestId),
+                repository.ResponsesFolder(requestId), "Saved responses", StorageOperation.Delete));
+        }
+    }
+
+    private static IEnumerable<HttpRequestModel> RequestsIn(IEnumerable<CollectionNode> nodes)
     {
         foreach (var node in nodes)
         {
             if (node is HttpRequestModel request)
-                storage.Report(WorkspaceStorage.Attempt(() => repository.DeleteResponses(request.Id),
-                    repository.ResponsesFolder(request.Id), "Saved responses", StorageOperation.Delete));
+                yield return request;
             else if (node is FolderModel folder)
-                DeleteFor(folder.Items);
+                foreach (var inner in RequestsIn(folder.Items))
+                    yield return inner;
         }
     }
 }

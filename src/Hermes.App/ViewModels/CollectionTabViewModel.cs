@@ -112,7 +112,7 @@ public sealed partial class CollectionTabViewModel : TabViewModelBase
         _collection.Auth = Auth.ToModel();
         _collection.Variables = Variables.ToModels();
         _collection.Headers = HeadersEditor.Headers.ToModels();
-        if (!await WriteWithRetryAsync(() => Services.Workspace.TrySaveCollection(_collection)))
+        if (!await WriteWithRetryAsync(() => Services.Workspace.TrySaveCollectionAsync(_collection)))
         {
             // Not on disk, so not in the collection either; the edits stay in the tab.
             (_collection.Name, _collection.Description, _collection.Auth, _collection.Variables, _collection.Headers) = previous;

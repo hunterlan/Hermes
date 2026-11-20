@@ -19,7 +19,7 @@ public class ContainerTabHeaderTests
     public async Task Renaming_a_collection_in_its_header_updates_the_tab()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var collection = Workspace.CreateCollection("Header " + Guid.NewGuid());
+        var collection = await Workspace.CreateCollectionAsync("Header " + Guid.NewGuid());
         try
         {
             await vm.OpenCollectionAsync(collection);
@@ -39,7 +39,7 @@ public class ContainerTabHeaderTests
         }
         finally
         {
-            Workspace.DeleteCollection(collection);
+            await Workspace.DeleteCollectionAsync(collection);
             window.Close();
         }
     }
@@ -48,9 +48,9 @@ public class ContainerTabHeaderTests
     public async Task Folder_tab_uses_the_shared_header()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var collection = Workspace.CreateCollection("Header " + Guid.NewGuid());
+        var collection = await Workspace.CreateCollectionAsync("Header " + Guid.NewGuid());
         var folder = new FolderModel { Name = "Users" };
-        Workspace.AddNode(collection, null, folder);
+        await Workspace.AddNodeAsync(collection, null, folder);
         try
         {
             await vm.OpenFolderAsync(folder);
@@ -64,7 +64,7 @@ public class ContainerTabHeaderTests
         }
         finally
         {
-            Workspace.DeleteCollection(collection);
+            await Workspace.DeleteCollectionAsync(collection);
             window.Close();
         }
     }
@@ -73,9 +73,9 @@ public class ContainerTabHeaderTests
     public async Task Authorization_section_names_the_container_kind()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var collection = Workspace.CreateCollection("Header " + Guid.NewGuid());
+        var collection = await Workspace.CreateCollectionAsync("Header " + Guid.NewGuid());
         var folder = new FolderModel { Name = "Users" };
-        Workspace.AddNode(collection, null, folder);
+        await Workspace.AddNodeAsync(collection, null, folder);
         try
         {
             await vm.OpenCollectionAsync(collection);
@@ -90,7 +90,7 @@ public class ContainerTabHeaderTests
         }
         finally
         {
-            Workspace.DeleteCollection(collection);
+            await Workspace.DeleteCollectionAsync(collection);
             window.Close();
         }
     }
@@ -104,7 +104,7 @@ public class ContainerTabHeaderTests
     public async Task Environment_header_puts_Set_active_before_Save()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var environment = Workspace.CreateEnvironment("Header " + Guid.NewGuid());
+        var environment = await Workspace.CreateEnvironmentAsync("Header " + Guid.NewGuid());
         try
         {
             await vm.OpenEnvironmentAsync(environment);
@@ -123,7 +123,7 @@ public class ContainerTabHeaderTests
         }
         finally
         {
-            Workspace.DeleteEnvironment(environment);
+            await Workspace.DeleteEnvironmentAsync(environment);
             window.Close();
         }
     }

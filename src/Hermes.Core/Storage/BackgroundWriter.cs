@@ -19,6 +19,24 @@ public sealed class BackgroundWriter
                 TaskContinuationOptions.None, TaskScheduler.Default);
     }
 
+    /// <summary>
+    /// Queues <paramref name="write"/> like <see cref="Enqueue"/>, for a caller that waits for its result: the task
+    /// completes once it has run, and fails with its exception instead of raising <see cref="Failed"/>. The writes
+    /// after it still run.
+    /// </summary>
+    public Task EnqueueAsync(Action write)
+    {
+        lock (_gate)
+        {
+            var written = _tail.ContinueWith(_ => write(), CancellationToken.None,
+                TaskContinuationOptions.None, TaskScheduler.Default);
+            // The queue goes on after a failed write; its failure belongs to the caller awaiting it.
+            _tail = written.ContinueWith(static _ => { }, CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            return written;
+        }
+    }
+
     /// <summary>Completes when everything queued so far has been written (or has failed).</summary>
     public Task FlushAsync()
     {

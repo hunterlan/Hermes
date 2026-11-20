@@ -42,10 +42,11 @@ public partial class MainWindow : Window
         NewTabButton.SizeChanged += (_, _) => UpdateTabScrollerMaxWidth();
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
-        _sessionTimer.Tick += (_, _) =>
+        // Async void like any event handler: an unexpected error still reaches the UI thread's handler.
+        _sessionTimer.Tick += async (_, _) =>
         {
-            if (!IsQuittingAfterBug)
-                _viewModel?.SaveSession();
+            if (!IsQuittingAfterBug && _viewModel is { } viewModel)
+                await viewModel.SaveSessionAsync();
         };
         Closed += (_, _) => _viewModel?.OnWindowClosed();
         Opened += OnOpened;

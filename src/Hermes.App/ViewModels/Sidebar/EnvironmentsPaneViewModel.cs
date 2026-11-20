@@ -36,9 +36,9 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
     {
         var selected = SelectedItem?.Model.Id;
         Items.Clear();
-        Items.Add(new EnvironmentItemViewModel(_workspace.Globals, isGlobals: true, isActive: false, CommitRename));
+        Items.Add(new EnvironmentItemViewModel(_workspace.Globals, isGlobals: true, isActive: false, CommitRenameFromItem));
         foreach (var env in _workspace.Environments)
-            Items.Add(new EnvironmentItemViewModel(env, isGlobals: false, isActive: env == _workspace.ActiveEnvironment, CommitRename));
+            Items.Add(new EnvironmentItemViewModel(env, isGlobals: false, isActive: env == _workspace.ActiveEnvironment, CommitRenameFromItem));
         ApplyFilter();
         SelectedItem = Items.FirstOrDefault(i => i.Model.Id == selected);
     }
@@ -60,10 +60,10 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
     private Task OpenMatrix() => _host.OpenEnvironmentMatrixAsync();
 
     [RelayCommand]
-    private void NewEnvironment()
+    private async Task NewEnvironment()
     {
         var env = new EnvironmentModel { Name = "New Environment" };
-        if (_workspace.AddEnvironment(env) && Items.FirstOrDefault(i => i.Model == env) is { } item)
+        if (await _workspace.AddEnvironmentAsync(env) && Items.FirstOrDefault(i => i.Model == env) is { } item)
         {
             SelectedItem = item;
             item.IsRenaming = true;
@@ -77,7 +77,13 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
             item.IsRenaming = true;
     }
 
-    public void CommitRename(EnvironmentItemViewModel item, string? name)
+    // The rename box can't wait for the save. Async void, like an event handler, so an unexpected error still
+    // reaches the UI thread's handler.
+    private async void CommitRenameFromItem(EnvironmentItemViewModel item, string? name) =>
+        await CommitRenameAsync(item, name);
+
+    /// <summary>Ends an inline rename: saves the new name, or puts the old one back when that fails.</summary>
+    public async Task CommitRenameAsync(EnvironmentItemViewModel item, string? name)
     {
         item.IsRenaming = false;
         name = name?.Trim();
@@ -85,21 +91,21 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
             return;
         var previousName = item.Model.Name;
         item.Model.Name = name;
-        if (_workspace.SaveEnvironment(item.Model))
+        if (await _workspace.SaveEnvironmentAsync(item.Model))
             return;
         // Not on disk, so the old name stays everywhere.
         item.Model.Name = previousName;
     }
 
     [RelayCommand]
-    private void Duplicate(EnvironmentItemViewModel? item)
+    private async Task Duplicate(EnvironmentItemViewModel? item)
     {
         if (item is null)
             return;
         var copy = ModelCloner.Clone(item.Model);
         copy.Id = Guid.NewGuid();
         copy.Name = item.Model.Name + " Copy";
-        _workspace.AddEnvironment(copy);
+        await _workspace.AddEnvironmentAsync(copy);
     }
 
     [RelayCommand]
@@ -109,7 +115,7 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
             return;
         if (!await _dialogs.ConfirmAsync($"Delete \"{item.Name}\"?", "This environment and its variables will be permanently deleted."))
             return;
-        if (_workspace.DeleteEnvironment(item.Model))
+        if (await _workspace.DeleteEnvironmentAsync(item.Model))
             _host.CloseTabsFor([item.Model.Id]);
     }
 

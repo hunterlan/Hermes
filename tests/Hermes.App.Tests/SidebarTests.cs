@@ -16,23 +16,23 @@ public class SidebarTests
 {
     private static WorkspaceService Workspace => App.Services.GetRequiredService<WorkspaceService>();
 
-    private static CollectionNodeViewModel CreateCollection(MainWindowViewModel vm, string name)
+    private static async Task<CollectionNodeViewModel> CreateCollectionAsync(MainWindowViewModel vm, string name)
     {
-        var collection = Workspace.CreateCollection(name);
+        var collection = await Workspace.CreateCollectionAsync(name);
         return Assert.IsType<CollectionNodeViewModel>(vm.Collections.Find(collection.Id));
     }
 
     [AvaloniaFact]
-    public void Add_request_to_collection_opens_it_and_saves_changes()
+    public async Task Add_request_to_collection_opens_it_and_saves_changes()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var collection = CreateCollection(vm, "Save test " + Guid.NewGuid());
+        var collection = await CreateCollectionAsync(vm, "Save test " + Guid.NewGuid());
 
-        vm.Collections.AddFolderCommand.Execute(collection);
+        await vm.Collections.AddFolderCommand.ExecuteAsync(collection);
         var folder = Assert.IsType<FolderNodeViewModel>(vm.Collections.Find(collection.Id)!.Children.Single());
-        vm.Collections.CommitRename(folder, "Users");
+        await vm.Collections.CommitRenameAsync(folder, "Users");
 
-        vm.Collections.AddRequestCommand.Execute(vm.Collections.Find(folder.Id));
+        await vm.Collections.AddRequestCommand.ExecuteAsync(vm.Collections.Find(folder.Id));
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         Assert.True(tab.IsPersisted);
         Assert.False(tab.IsDirty);
@@ -41,7 +41,7 @@ public class SidebarTests
         tab.UrlEditor.Url = "https://api.example.com/users";
         tab.SelectedMethod = "POST";
         Assert.True(tab.IsDirty);
-        Assert.True(tab.SaveAsync().Result);
+        Assert.True(await tab.SaveAsync());
         Assert.False(tab.IsDirty);
 
         var saved = Assert.IsType<HttpRequestModel>(Workspace.Find(tab.RequestId)!.Node);
@@ -57,11 +57,11 @@ public class SidebarTests
     public async Task Activating_a_tab_reveals_its_request_in_the_tree()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var collection = Workspace.CreateCollection("Reveal test " + Guid.NewGuid());
+        var collection = await Workspace.CreateCollectionAsync("Reveal test " + Guid.NewGuid());
         var folder = new FolderModel { Name = "Nested" };
         var request = new HttpRequestModel { Name = "Deep" };
         folder.Items.Add(request);
-        Workspace.AddNode(collection, null, folder);
+        await Workspace.AddNodeAsync(collection, null, folder);
 
         await vm.OpenRequestAsync(request);
 
@@ -72,15 +72,15 @@ public class SidebarTests
     }
 
     [AvaloniaFact]
-    public void Renaming_request_in_sidebar_updates_clean_tab()
+    public async Task Renaming_request_in_sidebar_updates_clean_tab()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var collection = CreateCollection(vm, "Rename test " + Guid.NewGuid());
-        vm.Collections.AddRequestCommand.Execute(collection);
+        var collection = await CreateCollectionAsync(vm, "Rename test " + Guid.NewGuid());
+        await vm.Collections.AddRequestCommand.ExecuteAsync(collection);
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
 
         var node = vm.Collections.Find(tab.RequestId)!;
-        vm.Collections.CommitRename(node, "Renamed");
+        await vm.Collections.CommitRenameAsync(node, "Renamed");
 
         Assert.Equal("Renamed", tab.Name);
         Assert.False(tab.IsDirty);
@@ -88,16 +88,16 @@ public class SidebarTests
     }
 
     [AvaloniaFact]
-    public void Deleting_a_collection_closes_its_tabs()
+    public async Task Deleting_a_collection_closes_its_tabs()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var collection = CreateCollection(vm, "Delete test " + Guid.NewGuid());
-        vm.Collections.AddRequestCommand.Execute(collection);
+        var collection = await CreateCollectionAsync(vm, "Delete test " + Guid.NewGuid());
+        await vm.Collections.AddRequestCommand.ExecuteAsync(collection);
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
 
         // Same steps as the Delete command, minus the confirmation dialog. The tree was rebuilt, so look the node up again.
         var ids = vm.Collections.Find(collection.Id)!.SelfAndDescendants().Select(n => n.Id).ToList();
-        Workspace.DeleteCollection(collection.Model);
+        await Workspace.DeleteCollectionAsync(collection.Model);
         vm.CloseTabsFor(ids);
 
         Assert.DoesNotContain(tab, vm.Tabs);
@@ -106,12 +106,12 @@ public class SidebarTests
     }
 
     [AvaloniaFact]
-    public void Drag_and_drop_moves_request_into_folder()
+    public async Task Drag_and_drop_moves_request_into_folder()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var collection = CreateCollection(vm, "Move test " + Guid.NewGuid());
-        vm.Collections.AddFolderCommand.Execute(collection);
-        vm.Collections.AddRequestCommand.Execute(vm.Collections.Find(collection.Id));
+        var collection = await CreateCollectionAsync(vm, "Move test " + Guid.NewGuid());
+        await vm.Collections.AddFolderCommand.ExecuteAsync(collection);
+        await vm.Collections.AddRequestCommand.ExecuteAsync(vm.Collections.Find(collection.Id));
 
         var root = vm.Collections.Find(collection.Id)!;
         var folder = root.Children.OfType<FolderNodeViewModel>().Single();
@@ -119,7 +119,7 @@ public class SidebarTests
 
         Assert.False(vm.Collections.CanDrop(folder, folder, DropPosition.Inside));
         Assert.True(vm.Collections.CanDrop(request, folder, DropPosition.Inside));
-        vm.Collections.Drop(request, folder, DropPosition.Inside);
+        await vm.Collections.DropAsync(request, folder, DropPosition.Inside);
 
         var model = Workspace.FindCollection(collection.Id)!;
         Assert.Single(model.Items);
@@ -134,9 +134,9 @@ public class SidebarTests
         using var server = new JsonServer();
         var (window, vm) = UiTestHelpers.ShowMainWindow();
 
-        var env = Workspace.CreateEnvironment("Env " + Guid.NewGuid());
+        var env = await Workspace.CreateEnvironmentAsync("Env " + Guid.NewGuid());
         env.Variables.Add(new Variable("baseUrl", server.Url.TrimEnd('/')));
-        Workspace.SaveEnvironment(env);
+        await Workspace.SaveEnvironmentAsync(env);
         vm.SelectedEnvironment = vm.EnvironmentOptions.Single(o => o.Model == env);
         Assert.Same(env, Workspace.ActiveEnvironment);
         Assert.Contains(vm.QuickLookEnvironment.Rows, r => r.Key == "baseUrl");
@@ -172,7 +172,7 @@ public class SidebarTests
     public async Task Collection_tab_edits_auth_and_variables_used_by_requests()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var collection = CreateCollection(vm, "Auth test " + Guid.NewGuid());
+        var collection = await CreateCollectionAsync(vm, "Auth test " + Guid.NewGuid());
         await vm.OpenCollectionAsync(collection.Model);
         var collectionTab = Assert.IsType<CollectionTabViewModel>(vm.ActiveTab);
 
@@ -182,10 +182,10 @@ public class SidebarTests
         row.Key = "token";
         row.InitialValue = "secret-123";
         Assert.True(collectionTab.IsDirty);
-        collectionTab.SaveAsync().Wait();
+        await collectionTab.SaveAsync();
         Assert.False(collectionTab.IsDirty);
 
-        vm.Collections.AddRequestCommand.Execute(vm.Collections.Find(collection.Id));
+        await vm.Collections.AddRequestCommand.ExecuteAsync(vm.Collections.Find(collection.Id));
         var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         Assert.Contains(tab.HeadersEditor.AutomaticRows, h => h.Key == "Authorization" && h.Value == "Bearer secret-123");
         Assert.Contains("Bearer Token", tab.Auth.InheritedDescription);

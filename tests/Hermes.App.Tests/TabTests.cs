@@ -28,13 +28,13 @@ public class TabTests
         return (window, vm);
     }
 
-    private static (CollectionModel Collection, HttpRequestModel First, HttpRequestModel Second) CreateRequests(string name, string requestName = "")
+    private static async Task<(CollectionModel Collection, HttpRequestModel First, HttpRequestModel Second)> CreateRequestsAsync(string name, string requestName = "")
     {
-        var collection = Workspace.CreateCollection(name + " " + Guid.NewGuid());
+        var collection = await Workspace.CreateCollectionAsync(name + " " + Guid.NewGuid());
         var first = new HttpRequestModel { Name = requestName.Length > 0 ? requestName : "First " + Guid.NewGuid() };
         var second = new HttpRequestModel { Name = "Second " + Guid.NewGuid() };
-        Workspace.AddNode(collection, null, first);
-        Workspace.AddNode(collection, null, second);
+        await Workspace.AddNodeAsync(collection, null, first);
+        await Workspace.AddNodeAsync(collection, null, second);
         return (collection, first, second);
     }
 
@@ -42,7 +42,7 @@ public class TabTests
     public async Task Saving_a_request_keeps_its_skipped_inherited_headers()
     {
         var (_, vm) = ShowEmptyWindow();
-        var (_, first, _) = CreateRequests("Skipped headers");
+        var (_, first, _) = await CreateRequestsAsync("Skipped headers");
         first.SkippedInheritedHeaders = ["X-Tenant"];
 
         await vm.OpenRequestAsync(first);
@@ -59,7 +59,7 @@ public class TabTests
     public async Task Request_settings_keep_an_override_that_matches_the_app_setting()
     {
         var (window, vm) = ShowEmptyWindow();
-        var (_, first, _) = CreateRequests("Settings");
+        var (_, first, _) = await CreateRequestsAsync("Settings");
         var appVerifies = App.Services.GetRequiredService<SettingsService>().Current.VerifySsl;
         first.Settings.VerifySsl = appVerifies;
 
@@ -96,7 +96,7 @@ public class TabTests
     public async Task Cancel_in_an_unsaved_changes_prompt_stops_close_all()
     {
         var (window, vm) = ShowEmptyWindow();
-        var (_, first, second) = CreateRequests("Cancel");
+        var (_, first, second) = await CreateRequestsAsync("Cancel");
         foreach (var request in new[] { first, second })
         {
             await vm.OpenRequestAsync(request);
@@ -136,13 +136,15 @@ public class TabTests
     }
 
     [AvaloniaFact]
-    public void The_active_tab_is_restored_even_when_an_earlier_tab_is_gone()
+    public async Task The_active_tab_is_restored_even_when_an_earlier_tab_is_gone()
     {
         var (window, _) = ShowEmptyWindow();
         window.Close();
-        var environments = Enumerable.Range(0, 3).Select(i => Workspace.CreateEnvironment($"Restore {i} {Guid.NewGuid()}")).ToList();
+        var environments = new List<EnvironmentModel>();
+        for (var i = 0; i < 3; i++)
+            environments.Add(await Workspace.CreateEnvironmentAsync($"Restore {i} {Guid.NewGuid()}"));
         SessionTab EnvTab(EnvironmentModel env) => new() { Kind = SessionTabKind.Environment, EntityId = env.Id };
-        Workspace.SaveSession(new SessionState
+        await Workspace.SaveSessionAsync(new SessionState
         {
             // The deleted request comes back as nothing, so the saved index 2 must still mean environments[1].
             Tabs = [EnvTab(environments[0]), new SessionTab { Kind = SessionTabKind.Request, EntityId = Guid.NewGuid() },
@@ -154,7 +156,7 @@ public class TabTests
 
         Assert.Equal(environments[1].Id, restored.ActiveTab?.EntityId);
         foreach (var env in environments)
-            Workspace.DeleteEnvironment(env);
+            await Workspace.DeleteEnvironmentAsync(env);
     }
 
     [AvaloniaFact]
@@ -180,7 +182,7 @@ public class TabTests
     public async Task Single_click_replaces_the_preview_tab_until_it_is_edited()
     {
         var (window, vm) = ShowEmptyWindow();
-        var (_, first, second) = CreateRequests("Preview");
+        var (_, first, second) = await CreateRequestsAsync("Preview");
         var before = vm.Tabs.Count;
 
         await vm.PreviewRequestAsync(first);
@@ -203,10 +205,10 @@ public class TabTests
     }
 
     [AvaloniaFact]
-    public void Command_palette_finds_requests_by_method_and_url()
+    public async Task Command_palette_finds_requests_by_method_and_url()
     {
         var (window, vm) = ShowEmptyWindow();
-        var (_, first, _) = CreateRequests("Palette");
+        var (_, first, _) = await CreateRequestsAsync("Palette");
         first.Method = "DELETE";
         first.Url = "https://api.test/palette-" + first.Id;
 
@@ -230,8 +232,8 @@ public class TabTests
     {
         var (window, vm) = ShowEmptyWindow();
         var shared = "Same " + Guid.NewGuid();
-        var (a, firstA, _) = CreateRequests("Alpha", shared);
-        var (b, firstB, _) = CreateRequests("Beta", shared);
+        var (a, firstA, _) = await CreateRequestsAsync("Alpha", shared);
+        var (b, firstB, _) = await CreateRequestsAsync("Beta", shared);
 
         await vm.OpenRequestAsync(firstA);
         var tabA = vm.ActiveTab!;
@@ -250,7 +252,7 @@ public class TabTests
     public async Task Pinned_tabs_survive_close_all_and_move_to_the_start()
     {
         var (window, vm) = ShowEmptyWindow();
-        var (_, first, second) = CreateRequests("Pin");
+        var (_, first, second) = await CreateRequestsAsync("Pin");
 
         await vm.OpenRequestAsync(second);
         await vm.OpenRequestAsync(first);
@@ -276,14 +278,14 @@ public class TabTests
     }
 
     /// <summary>Runs <paramref name="test"/> on an empty window with Tabs set to <paramref name="showTabs"/>; settings are shared, so they're restored after.</summary>
-    private static void WithShowTabs(bool showTabs, Action<Views.MainWindow, MainWindowViewModel> test)
+    private static async Task WithShowTabsAsync(bool showTabs, TabsTest test)
     {
         var original = Settings.Current;
         var (window, vm) = ShowEmptyWindow();
         try
         {
             Settings.Update(CopyWithShowTabs(original, showTabs));
-            test(window, vm);
+            await test(window, vm);
         }
         finally
         {
@@ -295,7 +297,10 @@ public class TabTests
         }
     }
 
-    private static void WithTabsOff(Action<Views.MainWindow, MainWindowViewModel> test) => WithShowTabs(false, test);
+    private static Task WithTabsOffAsync(TabsTest test) => WithShowTabsAsync(false, test);
+
+    /// <summary>The body of a test run by <see cref="WithShowTabsAsync"/>, on its window and view model.</summary>
+    private delegate Task TabsTest(Views.MainWindow window, MainWindowViewModel vm);
 
     /// <summary>
     /// Single-tab tests stay synchronous (settings are shared while they run), so they check that an open which
@@ -325,13 +330,13 @@ public class TabTests
     }
 
     [AvaloniaFact]
-    public void Without_tabs_a_session_restores_only_the_active_tab() => WithTabsOff((_, _) =>
+    public Task Without_tabs_a_session_restores_only_the_active_tab() => WithTabsOffAsync(async (_, _) =>
     {
-        var (_, first, second) = CreateRequests("Restore");
-        var environment = Workspace.CreateEnvironment("Restore " + Guid.NewGuid());
+        var (_, first, second) = await CreateRequestsAsync("Restore");
+        var environment = await Workspace.CreateEnvironmentAsync("Restore " + Guid.NewGuid());
         var draft = ModelCloner.Clone(first);
         draft.Url = "https://example.com/draft";
-        Workspace.SaveSession(new SessionState
+        await Workspace.SaveSessionAsync(new SessionState
         {
             // The deleted request comes back as nothing, so the saved index 2 must still mean the draft.
             Tabs =
@@ -352,15 +357,15 @@ public class TabTests
         Assert.Equal(draft.Url, only.UrlEditor.Url);
         Assert.True(only.IsDirty);
         Assert.False(restored.IsTabStripVisible);
-        Workspace.DeleteEnvironment(environment);
+        await Workspace.DeleteEnvironmentAsync(environment);
     });
 
-    private static RequestTabViewModel RestoreNeverSavedTab(Action<RequestTabViewModel> edit)
+    private static async Task<RequestTabViewModel> RestoreNeverSavedTabAsync(Action<RequestTabViewModel> edit)
     {
         var previousSession = Workspace.LoadSession();
         using var original = new RequestTabViewModel(App.Services.GetRequiredService<TabServices>(), HttpRequestModel.CreateNew());
         edit(original);
-        Workspace.SaveSession(new SessionState { Tabs = [original.ToSession()], ActiveTabIndex = 0 });
+        await Workspace.SaveSessionAsync(new SessionState { Tabs = [original.ToSession()], ActiveTabIndex = 0 });
         try
         {
             var restored = new MainWindowViewModel(App.Services.GetRequiredService<TabServices>());
@@ -369,22 +374,22 @@ public class TabTests
         finally
         {
             // Leave no drafts in the shared session for other tests.
-            Workspace.SaveSession(previousSession);
+            await Workspace.SaveSessionAsync(previousSession);
         }
     }
 
     [AvaloniaFact]
-    public void An_untouched_blank_tab_comes_back_from_the_session_unmodified()
+    public async Task An_untouched_blank_tab_comes_back_from_the_session_unmodified()
     {
-        var restored = RestoreNeverSavedTab(_ => { });
+        var restored = await RestoreNeverSavedTabAsync(_ => { });
 
         Assert.False(restored.IsDirty);
     }
 
     [AvaloniaFact]
-    public void An_edited_never_saved_tab_comes_back_from_the_session_modified()
+    public async Task An_edited_never_saved_tab_comes_back_from_the_session_modified()
     {
-        var restored = RestoreNeverSavedTab(tab => tab.UrlEditor.Url = "https://example.com/draft");
+        var restored = await RestoreNeverSavedTabAsync(tab => tab.UrlEditor.Url = "https://example.com/draft");
 
         Assert.True(restored.IsDirty);
         Assert.Equal("https://example.com/draft", restored.UrlEditor.Url);
@@ -394,9 +399,9 @@ public class TabTests
         menu.Items.OfType<MenuItem>().Single(item => (string?)item.Header == header);
 
     [AvaloniaFact]
-    public void Open_in_tab_menu_items_are_hidden_while_tabs_are_off() => WithShowTabs(true, (_, vm) =>
+    public Task Open_in_tab_menu_items_are_hidden_while_tabs_are_off() => WithShowTabsAsync(true, async (_, vm) =>
     {
-        var (_, first, _) = CreateRequests("Menu");
+        var (_, first, _) = await CreateRequestsAsync("Menu");
         var requestNode = vm.Collections.Find(first.Id)!;
         var historyItem = new HistoryItemViewModel(new HistoryEntry { Request = first });
         // Menus are built when opened; the ones kept here also show that items follow the setting while open.
@@ -420,9 +425,9 @@ public class TabTests
     });
 
     [AvaloniaFact]
-    public void Turning_tabs_off_closes_clean_tabs_only_once_confirmed() => WithShowTabs(true, (window, vm) =>
+    public Task Turning_tabs_off_closes_clean_tabs_only_once_confirmed() => WithShowTabsAsync(true, async (window, vm) =>
     {
-        var (collection, first, second) = CreateRequests("Turn off");
+        var (collection, first, second) = await CreateRequestsAsync("Turn off");
         FinishesAtOnce(vm.OpenRequestAsync(first));
         FinishesAtOnce(vm.OpenCollectionAsync(collection));
         FinishesAtOnce(vm.OpenRequestAsync(second));
@@ -453,9 +458,9 @@ public class TabTests
     });
 
     [AvaloniaFact]
-    public void Turning_tabs_off_closes_pinned_tabs_too() => WithShowTabs(true, (window, vm) =>
+    public Task Turning_tabs_off_closes_pinned_tabs_too() => WithShowTabsAsync(true, async (window, vm) =>
     {
-        var (_, first, second) = CreateRequests("Turn off pinned");
+        var (_, first, second) = await CreateRequestsAsync("Turn off pinned");
         FinishesAtOnce(vm.OpenRequestAsync(first));
         vm.TogglePinCommand.Execute(vm.ActiveTab);
         FinishesAtOnce(vm.OpenRequestAsync(second));
@@ -470,9 +475,9 @@ public class TabTests
     });
 
     [AvaloniaFact]
-    public void Turning_tabs_off_asks_to_save_each_unsaved_tab_and_stops_on_cancel() => WithShowTabs(true, (window, vm) =>
+    public Task Turning_tabs_off_asks_to_save_each_unsaved_tab_and_stops_on_cancel() => WithShowTabsAsync(true, async (window, vm) =>
     {
-        var (collection, first, second) = CreateRequests("Turn off dirty");
+        var (collection, first, second) = await CreateRequestsAsync("Turn off dirty");
         FinishesAtOnce(vm.OpenRequestAsync(first));
         var firstTab = EditActiveRequest(vm);
         FinishesAtOnce(vm.OpenRequestAsync(second));
@@ -506,7 +511,8 @@ public class TabTests
         var savedUrl = secondTab.UrlEditor.Url;
         Answer(window, "save");
 
-        Assert.True(saving.IsCompleted);
+        // The tab's save is written off the UI thread, so the dialog finishes once it is on disk.
+        await saving;
         Assert.False(Settings.Current.ShowTabs);
         Assert.True(dialogClosed);
         Assert.Same(active, Assert.Single(vm.Tabs));
@@ -515,9 +521,9 @@ public class TabTests
     });
 
     [AvaloniaFact]
-    public void Turning_tabs_off_keeps_the_active_tab_even_when_unsaved() => WithShowTabs(true, (window, vm) =>
+    public Task Turning_tabs_off_keeps_the_active_tab_even_when_unsaved() => WithShowTabsAsync(true, async (window, vm) =>
     {
-        var (_, first, second) = CreateRequests("Turn off active dirty");
+        var (_, first, second) = await CreateRequestsAsync("Turn off active dirty");
         FinishesAtOnce(vm.OpenRequestAsync(first));
         FinishesAtOnce(vm.OpenRequestAsync(second));
         var active = EditActiveRequest(vm);
@@ -533,9 +539,9 @@ public class TabTests
     });
 
     [AvaloniaFact]
-    public void Turning_tabs_off_with_one_tab_does_not_ask() => WithShowTabs(true, (window, vm) =>
+    public Task Turning_tabs_off_with_one_tab_does_not_ask() => WithShowTabsAsync(true, async (window, vm) =>
     {
-        var (_, first, _) = CreateRequests("Turn off single");
+        var (_, first, _) = await CreateRequestsAsync("Turn off single");
         FinishesAtOnce(vm.OpenRequestAsync(first));
         var only = EditActiveRequest(vm);
 
@@ -548,12 +554,12 @@ public class TabTests
     });
 
     [AvaloniaFact]
-    public void Without_tabs_opening_an_item_replaces_a_clean_tab_and_the_strip_stays_hidden() => WithTabsOff((_, vm) =>
+    public Task Without_tabs_opening_an_item_replaces_a_clean_tab_and_the_strip_stays_hidden() => WithTabsOffAsync(async (_, vm) =>
     {
-        var (collection, first, _) = CreateRequests("Single");
+        var (collection, first, _) = await CreateRequestsAsync("Single");
         var folder = new FolderModel { Name = "Folder " + Guid.NewGuid() };
-        Workspace.AddNode(collection, null, folder);
-        var environment = Workspace.CreateEnvironment("Single " + Guid.NewGuid());
+        await Workspace.AddNodeAsync(collection, null, folder);
+        var environment = await Workspace.CreateEnvironmentAsync("Single " + Guid.NewGuid());
 
         Func<Task>[] opens =
         [
@@ -566,13 +572,13 @@ public class TabTests
             Assert.Single(vm.Tabs);
             Assert.False(vm.IsTabStripVisible);
         }
-        Workspace.DeleteEnvironment(environment);
+        await Workspace.DeleteEnvironmentAsync(environment);
     });
 
     [AvaloniaFact]
-    public void Without_tabs_a_pinned_tab_is_replaced_like_any_other() => WithTabsOff((_, vm) =>
+    public Task Without_tabs_a_pinned_tab_is_replaced_like_any_other() => WithTabsOffAsync(async (_, vm) =>
     {
-        var (_, first, second) = CreateRequests("Pinned");
+        var (_, first, second) = await CreateRequestsAsync("Pinned");
 
         FinishesAtOnce(vm.OpenRequestAsync(first));
         vm.TogglePinCommand.Execute(vm.ActiveTab);
@@ -584,9 +590,9 @@ public class TabTests
     private static string StoredUrl(Guid requestId) => ((HttpRequestModel)Workspace.Find(requestId)!.Node).Url;
 
     [AvaloniaFact]
-    public void Without_tabs_opening_while_the_tab_is_unsaved_asks_to_save_it_first() => WithTabsOff((window, vm) =>
+    public Task Without_tabs_opening_while_the_tab_is_unsaved_asks_to_save_it_first() => WithTabsOffAsync(async (window, vm) =>
     {
-        var (_, first, second) = CreateRequests("Prompt");
+        var (_, first, second) = await CreateRequestsAsync("Prompt");
         FinishesAtOnce(vm.OpenRequestAsync(first));
         var firstTab = EditActiveRequest(vm);
 
@@ -609,16 +615,17 @@ public class TabTests
         var editedUrl = EditActiveRequest(vm).UrlEditor.Url;
         opening = vm.History.OpenCommand.ExecuteAsync(new HistoryItemViewModel(new HistoryEntry { Request = first }));
         Answer(window, "save");
-        Assert.True(opening.IsCompleted);
+        // The save is written off the UI thread; the item opens once it is on disk.
+        await opening;
         Assert.Equal(editedUrl, StoredUrl(second.Id));
         Assert.False(Assert.IsType<RequestTabViewModel>(Assert.Single(vm.Tabs)).IsPersisted);
         Assert.False(vm.IsTabStripVisible);
     });
 
     [AvaloniaFact]
-    public void Without_tabs_a_save_that_does_not_happen_keeps_the_tab() => WithTabsOff((window, vm) =>
+    public Task Without_tabs_a_save_that_does_not_happen_keeps_the_tab() => WithTabsOffAsync(async (window, vm) =>
     {
-        var (_, first, _) = CreateRequests("Failed save");
+        var (_, first, _) = await CreateRequestsAsync("Failed save");
         FinishesAtOnce(vm.NewRequestCommand.ExecuteAsync(null));
         var neverSaved = EditActiveRequest(vm);
 
@@ -637,7 +644,7 @@ public class TabTests
         new(new HistoryEntry { Request = new HttpRequestModel { Url = url } });
 
     [AvaloniaFact]
-    public void Without_tabs_browsing_history_asks_only_once_a_draft_is_edited() => WithTabsOff((window, vm) =>
+    public Task Without_tabs_browsing_history_asks_only_once_a_draft_is_edited() => WithTabsOffAsync((window, vm) =>
     {
         var historyA = HistoryItem("https://example.com/history-a");
         var historyB = HistoryItem("https://example.com/history-b");
@@ -655,10 +662,11 @@ public class TabTests
         Answer(window, "cancel");
         Assert.True(opening.IsCompleted);
         Assert.Same(edited, Assert.Single(vm.Tabs));
+        return Task.CompletedTask;
     });
 
     [AvaloniaFact]
-    public void Without_tabs_an_imported_curl_draft_still_asks() => WithTabsOff((window, vm) =>
+    public Task Without_tabs_an_imported_curl_draft_still_asks() => WithTabsOffAsync((window, vm) =>
     {
         var import = new ImportResult();
         ImportService.ImportText("curl https://example.com/imported", import);
@@ -670,12 +678,13 @@ public class TabTests
 
         Assert.True(opening.IsCompleted);
         Assert.Same(draft, Assert.Single(vm.Tabs));
+        return Task.CompletedTask;
     });
 
     [AvaloniaFact]
-    public void Without_tabs_opening_the_current_item_does_not_ask() => WithTabsOff((window, vm) =>
+    public Task Without_tabs_opening_the_current_item_does_not_ask() => WithTabsOffAsync(async (window, vm) =>
     {
-        var (_, first, _) = CreateRequests("Current");
+        var (_, first, _) = await CreateRequestsAsync("Current");
         FinishesAtOnce(vm.OpenRequestAsync(first));
         var tab = EditActiveRequest(vm);
 
@@ -687,9 +696,9 @@ public class TabTests
     });
 
     [AvaloniaFact]
-    public void With_tabs_an_item_opens_beside_an_unsaved_tab_without_asking() => WithShowTabs(true, (window, vm) =>
+    public Task With_tabs_an_item_opens_beside_an_unsaved_tab_without_asking() => WithShowTabsAsync(true, async (window, vm) =>
     {
-        var (_, first, second) = CreateRequests("Tabs on");
+        var (_, first, second) = await CreateRequestsAsync("Tabs on");
         FinishesAtOnce(vm.OpenRequestAsync(first));
         var dirty = EditActiveRequest(vm);
 

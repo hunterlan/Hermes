@@ -51,7 +51,7 @@ public class TabSaveFailureTests
     public async Task A_collection_tab_stays_dirty_when_the_save_is_given_up()
     {
         using var temp = new TempWorkspace();
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var (services, window) = CreateServices(temp);
         var tab = new CollectionTabViewModel(services, collection);
         using var locked = temp.Lock("collections");
@@ -79,7 +79,7 @@ public class TabSaveFailureTests
     public async Task Retry_saves_once_the_folder_is_writable_again()
     {
         using var temp = new TempWorkspace();
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var (services, window) = CreateServices(temp);
         var tab = new CollectionTabViewModel(services, collection);
         using var locked = temp.Lock("collections");
@@ -104,7 +104,7 @@ public class TabSaveFailureTests
     public async Task Retry_that_fails_again_shows_the_problem_again()
     {
         using var temp = new TempWorkspace();
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var (services, window) = CreateServices(temp);
         var tab = new CollectionTabViewModel(services, collection);
         using var locked = temp.Lock("collections");
@@ -128,7 +128,7 @@ public class TabSaveFailureTests
     public async Task An_environment_tab_stays_dirty_and_the_environment_keeps_its_old_name()
     {
         using var temp = new TempWorkspace();
-        var environment = temp.Workspace.CreateEnvironment("Staging");
+        var environment = await temp.Workspace.CreateEnvironmentAsync("Staging");
         var (services, window) = CreateServices(temp);
         var tab = new EnvironmentTabViewModel(services, environment);
         using var locked = temp.Lock("environments");
@@ -149,9 +149,9 @@ public class TabSaveFailureTests
     public async Task A_request_tab_stays_dirty_and_the_collection_keeps_the_saved_request()
     {
         using var temp = new TempWorkspace();
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var request = new HttpRequestModel { Name = "List", Url = "https://old.example.com" };
-        temp.Workspace.AddNode(collection, null, request);
+        await temp.Workspace.AddNodeAsync(collection, null, request);
         var (services, window) = CreateServices(temp);
         var tab = new RequestTabViewModel(services, request);
         using var locked = temp.Lock("collections");
@@ -174,9 +174,9 @@ public class TabSaveFailureTests
     public async Task The_environment_matrix_restores_the_variables_it_could_not_write()
     {
         using var temp = new TempWorkspace();
-        var environment = temp.Workspace.CreateEnvironment("Staging");
+        var environment = await temp.Workspace.CreateEnvironmentAsync("Staging");
         environment.Variables.Add(new Variable("host", "old.example.com"));
-        temp.Workspace.SaveEnvironment(environment);
+        await temp.Workspace.SaveEnvironmentAsync(environment);
         var (services, window) = CreateServices(temp);
         var tab = new EnvironmentMatrixTabViewModel(services);
         using var locked = temp.Lock("environments");

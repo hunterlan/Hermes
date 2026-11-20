@@ -166,9 +166,9 @@ public class RequestTabRoundTripTests
     public async Task A_saved_request_reopens_with_the_same_model_and_is_clean(string caseName)
     {
         using var temp = new TempWorkspace();
-        var collection = temp.Workspace.CreateCollection("Saved");
+        var collection = await temp.Workspace.CreateCollectionAsync("Saved");
         var model = Cases()[caseName];
-        temp.Workspace.AddNode(collection, null, ModelCloner.Clone(model));
+        await temp.Workspace.AddNodeAsync(collection, null, ModelCloner.Clone(model));
         var services = RequestTabTestServices.Create(temp);
 
         using var first = new RequestTabViewModel(services, ModelCloner.Clone(model));

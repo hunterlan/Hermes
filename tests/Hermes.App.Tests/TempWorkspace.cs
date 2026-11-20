@@ -1,4 +1,5 @@
 using Hermes.App.Services;
+using Hermes.Core.Secrets;
 using Hermes.Core.Storage;
 using Hermes.TestSupport;
 
@@ -24,10 +25,11 @@ internal sealed class TempWorkspace : IDisposable
     /// <summary>What <see cref="WorkspaceService.StorageProblem"/> reported, in order.</summary>
     public List<StorageError> Problems { get; } = [];
 
-    public TempWorkspace()
+    /// <param name="secrets">Where secrets go; an unprotected store, as before, when left out.</param>
+    public TempWorkspace(SecretStore? secrets = null)
     {
         Directory.CreateDirectory(Root);
-        Repository = new WorkspaceRepository(Root);
+        Repository = new WorkspaceRepository(Root, secrets);
         Settings = new SettingsService();
         Workspace = new WorkspaceService(Repository, Settings, TimeProvider.System);
         Workspace.StorageProblem += Problems.Add;

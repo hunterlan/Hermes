@@ -32,7 +32,7 @@ public class RequestSendViewModelTests
 
     private sealed record SendFixture(Window Window, SavedRequest Request, ResponseViewModel Response, RequestSendViewModel Sending);
 
-    private static SendFixture Open(TempWorkspace temp, string url)
+    private static async Task<SendFixture> OpenAsync(TempWorkspace temp, string url)
     {
         var window = new Window { Width = 800, Height = 600 };
         window.Show();
@@ -42,17 +42,17 @@ public class RequestSendViewModelTests
             new RequestSaveService(temp.Workspace, dialogs), App.Services.GetRequiredService<OAuth2Service>(), dialogs,
             temp.Settings, App.Services.GetRequiredService<HttpClientProvider>(), App.Services.GetRequiredService<ManualService>(),
             TimeProvider.System);
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var model = new HttpRequestModel { Name = "List", Url = url };
-        temp.Workspace.AddNode(collection, null, model);
+        await temp.Workspace.AddNodeAsync(collection, null, model);
         var request = new SavedRequest(temp.Workspace, model);
         var response = new ResponseViewModel(dialogs, temp.Settings);
         return new SendFixture(window, request, response, new RequestSendViewModel(request, services, response));
     }
 
-    private static EnvironmentModel ActivateEnvironmentAskingBeforeSending(TempWorkspace temp)
+    private static async Task<EnvironmentModel> ActivateEnvironmentAskingBeforeSendingAsync(TempWorkspace temp)
     {
-        var environment = temp.Workspace.CreateEnvironment("Production");
+        var environment = await temp.Workspace.CreateEnvironmentAsync("Production");
         environment.ConfirmBeforeSend = true;
         temp.Workspace.ActiveEnvironment = environment;
         return environment;
@@ -77,8 +77,8 @@ public class RequestSendViewModelTests
     {
         using var temp = new TempWorkspace();
         using var server = new JsonServer();
-        var (window, request, response, sending) = Open(temp, server.Url + "?q={{missing}}");
-        var environment = ActivateEnvironmentAskingBeforeSending(temp);
+        var (window, request, response, sending) = await OpenAsync(temp, server.Url + "?q={{missing}}");
+        var environment = await ActivateEnvironmentAskingBeforeSendingAsync(temp);
 
         var send = sending.SendCommand.ExecuteAsync(null);
         var unresolved = await NextDialog(window);
@@ -104,8 +104,8 @@ public class RequestSendViewModelTests
     {
         using var temp = new TempWorkspace();
         using var server = new JsonServer();
-        var (window, _, response, sending) = Open(temp, server.Url + "?q={{missing}}");
-        ActivateEnvironmentAskingBeforeSending(temp);
+        var (window, _, response, sending) = await OpenAsync(temp, server.Url + "?q={{missing}}");
+        await ActivateEnvironmentAskingBeforeSendingAsync(temp);
 
         var send = sending.SendCommand.ExecuteAsync(null);
         await Answer(window, await NextDialog(window), "cancel");
@@ -124,8 +124,8 @@ public class RequestSendViewModelTests
     {
         using var temp = new TempWorkspace();
         using var server = new JsonServer();
-        var (window, _, response, sending) = Open(temp, server.Url);
-        ActivateEnvironmentAskingBeforeSending(temp);
+        var (window, _, response, sending) = await OpenAsync(temp, server.Url);
+        await ActivateEnvironmentAskingBeforeSendingAsync(temp);
 
         var send = sending.SendCommand.ExecuteAsync(null);
         var askBeforeSending = await NextDialog(window);
@@ -152,10 +152,10 @@ public class RequestSendViewModelTests
             await ctx.Response.OutputStream.WriteAsync("{\"ok\":true}"u8.ToArray(), stop);
             ctx.Response.Close();
         });
-        var (window, request, response, sending) = Open(temp, server.Url);
+        var (window, request, response, sending) = await OpenAsync(temp, server.Url);
         var originalId = request.RequestId;
         var savedAs = new HttpRequestModel { Name = "List copy", Url = server.Url };
-        temp.Workspace.AddNode(temp.Workspace.CreateCollection("Copies"), null, savedAs);
+        await temp.Workspace.AddNodeAsync(await temp.Workspace.CreateCollectionAsync("Copies"), null, savedAs);
 
         var send = sending.SendCommand.ExecuteAsync(null);
         await UiTestHelpers.WaitUntil(() => sending.IsSending);

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Hermes.App.Services;
 using Hermes.Core.Models;
 using Hermes.Core.Storage;
 
@@ -86,11 +87,11 @@ public abstract partial class TabViewModelBase(TabServices services) : Observabl
 
     /// <summary>
     /// Runs <paramref name="write"/> until it works or the user gives up: each failure is shown with its reason and a
-    /// Retry button. True when it worked. <paramref name="write"/> returns the error, or null when it worked.
+    /// Retry button. True when it worked. <paramref name="write"/> completes with the error, or null when it worked.
     /// </summary>
-    protected async Task<bool> WriteWithRetryAsync(Func<StorageError?> write)
+    protected async Task<bool> WriteWithRetryAsync(StorageWriteAttempt write)
     {
-        while (write() is { } error)
+        while (await write() is { } error)
         {
             if (!await Services.Dialogs.ShowSaveFailedAsync(error))
                 return false;

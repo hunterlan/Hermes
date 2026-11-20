@@ -42,9 +42,9 @@ public class RequestSaveServiceTests
     {
         using var temp = new TempWorkspace();
         var (service, window) = Create(temp);
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var original = new HttpRequestModel { Name = "List", Url = "https://old.example.com" };
-        temp.Workspace.AddNode(collection, null, original);
+        await temp.Workspace.AddNodeAsync(collection, null, original);
         var edited = new HttpRequestModel { Id = original.Id, Name = "List", Url = "https://new.example.com" };
 
         Assert.True(await service.SaveExistingAsync(temp.Workspace.Find(original.Id)!, edited));
@@ -59,9 +59,9 @@ public class RequestSaveServiceTests
     {
         using var temp = new TempWorkspace();
         var (service, window) = Create(temp);
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var folder = new FolderModel { Name = "Cats" };
-        temp.Workspace.AddNode(collection, null, folder);
+        await temp.Workspace.AddNodeAsync(collection, null, folder);
         var model = new HttpRequestModel { Name = "List", Url = "https://cats.example.com" };
 
         Assert.True(await service.SaveNewAsync(new SaveRequestTarget("List", collection, folder, false), model));
@@ -92,9 +92,9 @@ public class RequestSaveServiceTests
     {
         using var temp = new TempWorkspace();
         var (service, window) = Create(temp);
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var original = new HttpRequestModel { Name = "List", Url = "https://old.example.com" };
-        temp.Workspace.AddNode(collection, null, original);
+        await temp.Workspace.AddNodeAsync(collection, null, original);
         var edited = new HttpRequestModel { Id = original.Id, Name = "List", Url = "https://new.example.com" };
         using var locked = temp.Lock("collections");
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);

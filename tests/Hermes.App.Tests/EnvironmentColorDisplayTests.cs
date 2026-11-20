@@ -22,8 +22,8 @@ public class EnvironmentColorDisplayTests
     public async Task The_dot_shows_in_the_header_picker_sidebar_and_matrix()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var env = CreateEnvironment(EnvironmentColor.Red, confirmBeforeSend: true);
-        var plain = CreateEnvironment(EnvironmentColor.None, confirmBeforeSend: false);
+        var env = await CreateEnvironmentAsync(EnvironmentColor.Red, confirmBeforeSend: true);
+        var plain = await CreateEnvironmentAsync(EnvironmentColor.None, confirmBeforeSend: false);
         var button = window.FindControl<Button>("EnvironmentButton")!;
         try
         {
@@ -77,8 +77,8 @@ public class EnvironmentColorDisplayTests
         {
             button.Flyout!.Hide();
             Workspace.ActiveEnvironment = null;
-            Workspace.DeleteEnvironment(env);
-            Workspace.DeleteEnvironment(plain);
+            await Workspace.DeleteEnvironmentAsync(env);
+            await Workspace.DeleteEnvironmentAsync(plain);
             window.Close();
         }
     }
@@ -88,7 +88,7 @@ public class EnvironmentColorDisplayTests
     {
         using var server = new JsonServer();
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var env = CreateEnvironment(EnvironmentColor.Teal, confirmBeforeSend: false);
+        var env = await CreateEnvironmentAsync(EnvironmentColor.Teal, confirmBeforeSend: false);
         try
         {
             var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
@@ -114,17 +114,17 @@ public class EnvironmentColorDisplayTests
         finally
         {
             Workspace.ActiveEnvironment = null;
-            Workspace.DeleteEnvironment(env);
+            await Workspace.DeleteEnvironmentAsync(env);
             window.Close();
         }
     }
 
-    private static EnvironmentModel CreateEnvironment(EnvironmentColor color, bool confirmBeforeSend)
+    private static async Task<EnvironmentModel> CreateEnvironmentAsync(EnvironmentColor color, bool confirmBeforeSend)
     {
-        var env = Workspace.CreateEnvironment("Dot " + Guid.NewGuid());
+        var env = await Workspace.CreateEnvironmentAsync("Dot " + Guid.NewGuid());
         env.Color = color;
         env.ConfirmBeforeSend = confirmBeforeSend;
-        Workspace.SaveEnvironment(env);
+        await Workspace.SaveEnvironmentAsync(env);
         return env;
     }
 

@@ -22,7 +22,10 @@ internal static class UiTestHelpers
     /// </summary>
     public static ShownMainWindow ShowMainWindow()
     {
-        App.Services.GetRequiredService<Services.WorkspaceService>().SaveSession(new Core.Models.SessionState());
+        // Waited for, like the session save on quit, so the view model below can't restore the old one. The write
+        // never needs this thread, so waiting can't deadlock.
+        App.Services.GetRequiredService<Services.WorkspaceService>()
+            .TrySaveSessionAsync(new Core.Models.SessionState()).GetAwaiter().GetResult();
         var vm = new MainWindowViewModel(App.Services.GetRequiredService<TabServices>());
         vm.NewRequestCommand.Execute(null);
         var window = new MainWindow { DataContext = vm, Width = 1400, Height = 860 };

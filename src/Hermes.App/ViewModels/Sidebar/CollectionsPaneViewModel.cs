@@ -52,7 +52,7 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         Collections.Clear();
         foreach (var collection in _workspace.Collections)
         {
-            var node = new CollectionNodeViewModel(collection) { RenameCommitter = CommitRename };
+            var node = new CollectionNodeViewModel(collection) { RenameCommitter = CommitRenameFromTree };
             foreach (var n in node.SelfAndDescendants())
                 n.IsExpanded = expanded.Contains(n.Id);
             Collections.Add(node);
@@ -129,10 +129,10 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     // ---- create ----
 
     [RelayCommand]
-    private void NewCollection()
+    private async Task NewCollection()
     {
         var collection = new CollectionModel { Name = "New Collection" };
-        if (_workspace.AddCollection(collection))
+        if (await _workspace.AddCollectionAsync(collection))
             BeginRename(collection.Id);
     }
 
@@ -142,7 +142,7 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         if (ContainerOf(node) is not { } container)
             return;
         var request = new HttpRequestModel { Name = "New Request" };
-        if (!_workspace.AddNode(container.Collection, container.Folder, request))
+        if (!await _workspace.AddNodeAsync(container.Collection, container.Folder, request))
             return;
         ExpandTo(request.Id);
         if (Find(request.Id) is { } created)
@@ -154,12 +154,12 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void AddFolder(TreeNodeViewModel? node)
+    private async Task AddFolder(TreeNodeViewModel? node)
     {
         if (ContainerOf(node) is not { } container)
             return;
         var newFolder = new FolderModel { Name = "New Folder" };
-        if (!_workspace.AddNode(container.Collection, container.Folder, newFolder))
+        if (!await _workspace.AddNodeAsync(container.Collection, container.Folder, newFolder))
             return;
         if (Find(newFolder.Id)?.Parent is { } parent)
             parent.IsExpanded = true;
@@ -189,7 +189,13 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
             node.IsRenaming = true;
     }
 
-    public void CommitRename(TreeNodeViewModel node, string? newName)
+    // The rename box can't wait for the save. Async void, like an event handler, so an unexpected error still
+    // reaches the UI thread's handler.
+    private async void CommitRenameFromTree(TreeNodeViewModel node, string? newName) =>
+        await CommitRenameAsync(node, newName);
+
+    /// <summary>Ends an inline rename: saves the new name, or puts the old one back everywhere when that fails.</summary>
+    public async Task CommitRenameAsync(TreeNodeViewModel node, string? newName)
     {
         node.IsRenaming = false;
         newName = newName?.Trim();
@@ -202,11 +208,11 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         var previousName = NameOf(node);
         var saved = node switch
         {
-            CollectionNodeViewModel c => Rename(c.Model.Name, name => c.Model.Name = name, newName, c.Model,
+            CollectionNodeViewModel c => await RenameAsync(c.Model.Name, name => c.Model.Name = name, newName, c.Model,
                 StorageSubjects.Collection(c.Model)),
-            FolderNodeViewModel f => Rename(f.Model.Name, name => f.Model.Name = name, newName, f.Root.Model,
+            FolderNodeViewModel f => await RenameAsync(f.Model.Name, name => f.Model.Name = name, newName, f.Root.Model,
                 StorageSubjects.Folder(f.Model, f.Root.Model)),
-            RequestNodeViewModel r => Rename(r.Model.Name, name => r.Model.Name = name, newName, r.Root.Model,
+            RequestNodeViewModel r => await RenameAsync(r.Model.Name, name => r.Model.Name = name, newName, r.Root.Model,
                 StorageSubjects.Request(r.Model, r.Root.Model)),
             _ => true,
         };
@@ -224,10 +230,10 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     /// Sets a new name and saves the collection; puts the old name back when that fails, and reports the failure as
     /// <paramref name="subject"/>, named by its old name, that couldn't be renamed.
     /// </summary>
-    private bool Rename(string previousName, Action<string> setName, string newName, CollectionModel collection, string subject)
+    private async Task<bool> RenameAsync(string previousName, Action<string> setName, string newName, CollectionModel collection, string subject)
     {
         setName(newName);
-        if (_workspace.SaveCollection(collection, new SaveFailureWording(subject, $"couldn't be renamed to \"{newName}\"")))
+        if (await _workspace.SaveCollectionAsync(collection, new SaveFailureWording(subject, $"couldn't be renamed to \"{newName}\"")))
             return true;
         setName(previousName);
         return false;
@@ -244,7 +250,7 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
     // ---- duplicate / delete / export ----
 
     [RelayCommand]
-    private void Duplicate(TreeNodeViewModel? node)
+    private async Task Duplicate(TreeNodeViewModel? node)
     {
         switch (node)
         {
@@ -254,14 +260,14 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
                 copy.PostmanId = null;
                 copy.Name += " Copy";
                 copy.Items = copy.Items.Select(ModelCloner.Duplicate).ToList();
-                _workspace.AddCollection(copy);
+                await _workspace.AddCollectionAsync(copy);
                 break;
             case FolderNodeViewModel or RequestNodeViewModel:
                 if (_workspace.Find(node.Id) is not { } location)
                     return;
                 var duplicate = ModelCloner.Duplicate(location.Node);
                 duplicate.Name += " Copy";
-                _workspace.AddNode(location.Collection, location.Parent, duplicate, location.Container.IndexOf(location.Node) + 1);
+                await _workspace.AddNodeAsync(location.Collection, location.Parent, duplicate, location.Container.IndexOf(location.Node) + 1);
                 break;
         }
     }
@@ -279,7 +285,9 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
             return;
 
         var ids = node.SelfAndDescendants().Select(n => n.Id).ToList();
-        var deleted = node is CollectionNodeViewModel c ? _workspace.DeleteCollection(c.Model) : _workspace.DeleteNode(node.Id);
+        var deleted = node is CollectionNodeViewModel c
+            ? await _workspace.DeleteCollectionAsync(c.Model)
+            : await _workspace.DeleteNodeAsync(node.Id);
         if (deleted)
             _host.CloseTabsFor(ids);
     }
@@ -323,7 +331,8 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         return true;
     }
 
-    public void Drop(TreeNodeViewModel dragged, TreeNodeViewModel target, DropPosition position)
+    /// <summary>Moves <paramref name="dragged"/> to where it was dropped and saves; it goes back when that fails.</summary>
+    public async Task DropAsync(TreeNodeViewModel dragged, TreeNodeViewModel target, DropPosition position)
     {
         if (!CanDrop(dragged, target, position))
             return;
@@ -347,6 +356,6 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
             folder = location.Parent;
             index = location.Container.IndexOf(location.Node) + (position == DropPosition.After ? 1 : 0);
         }
-        _workspace.MoveNode(dragged.Id, collection, folder, index);
+        await _workspace.MoveNodeAsync(dragged.Id, collection, folder, index);
     }
 }

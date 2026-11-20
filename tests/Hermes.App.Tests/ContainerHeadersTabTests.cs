@@ -23,17 +23,17 @@ public class ContainerHeadersTabTests
         row.Enabled = enabled;
     }
 
-    private static (CollectionModel Collection, FolderModel Outer, FolderModel Inner, HttpRequestModel Request) CreateTree()
+    private static async Task<(CollectionModel Collection, FolderModel Outer, FolderModel Inner, HttpRequestModel Request)> CreateTreeAsync()
     {
-        var collection = Workspace.CreateCollection("Headers " + Guid.NewGuid());
+        var collection = await Workspace.CreateCollectionAsync("Headers " + Guid.NewGuid());
         collection.Headers = [new KeyValueItem("X-Api-Version", "1"), new KeyValueItem("Accept", "*/*")];
         var outer = new FolderModel { Name = "Users" };
         var inner = new FolderModel { Name = "Admin" };
         var request = new HttpRequestModel { Name = "List", Url = "http://localhost/users" };
-        Workspace.AddNode(collection, null, outer);
-        Workspace.AddNode(collection, outer, inner);
-        Workspace.AddNode(collection, inner, request);
-        Workspace.SaveCollection(collection);
+        await Workspace.AddNodeAsync(collection, null, outer);
+        await Workspace.AddNodeAsync(collection, outer, inner);
+        await Workspace.AddNodeAsync(collection, inner, request);
+        await Workspace.SaveCollectionAsync(collection);
         return (collection, outer, inner, request);
     }
 
@@ -41,7 +41,7 @@ public class ContainerHeadersTabTests
     public async Task Folder_headers_are_saved_counted_and_sent_by_requests_inside()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var (collection, outer, _, request) = CreateTree();
+        var (collection, outer, _, request) = await CreateTreeAsync();
         try
         {
             await vm.OpenFolderAsync(outer);
@@ -62,7 +62,7 @@ public class ContainerHeadersTabTests
         }
         finally
         {
-            Workspace.DeleteCollection(collection);
+            await Workspace.DeleteCollectionAsync(collection);
             window.Close();
         }
     }
@@ -71,7 +71,7 @@ public class ContainerHeadersTabTests
     public async Task Rows_are_tagged_when_they_override_or_are_off()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var (collection, outer, _, _) = CreateTree();
+        var (collection, outer, _, _) = await CreateTreeAsync();
         try
         {
             await vm.OpenFolderAsync(outer);
@@ -91,7 +91,7 @@ public class ContainerHeadersTabTests
         }
         finally
         {
-            Workspace.DeleteCollection(collection);
+            await Workspace.DeleteCollectionAsync(collection);
             window.Close();
         }
     }
@@ -100,11 +100,11 @@ public class ContainerHeadersTabTests
     public async Task Usage_line_and_chain_describe_the_reach_and_the_sources()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var (collection, outer, inner, request) = CreateTree();
+        var (collection, outer, inner, request) = await CreateTreeAsync();
         outer.Headers = [new KeyValueItem("X-Outer", "1")];
         inner.Headers = [new KeyValueItem("X-Team", "inner")];
         request.Headers = [new KeyValueItem("x-team", "mine")];
-        Workspace.SaveCollection(collection);
+        await Workspace.SaveCollectionAsync(collection);
         try
         {
             await vm.OpenFolderAsync(inner);
@@ -127,7 +127,7 @@ public class ContainerHeadersTabTests
         }
         finally
         {
-            Workspace.DeleteCollection(collection);
+            await Workspace.DeleteCollectionAsync(collection);
             window.Close();
         }
     }
@@ -136,7 +136,7 @@ public class ContainerHeadersTabTests
     public async Task Chain_and_usage_follow_unsaved_edits_without_touching_the_model()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var (collection, outer, _, request) = CreateTree();
+        var (collection, outer, _, request) = await CreateTreeAsync();
         try
         {
             await vm.OpenFolderAsync(outer);
@@ -154,7 +154,7 @@ public class ContainerHeadersTabTests
         }
         finally
         {
-            Workspace.DeleteCollection(collection);
+            await Workspace.DeleteCollectionAsync(collection);
             window.Close();
         }
     }
@@ -163,9 +163,9 @@ public class ContainerHeadersTabTests
     public async Task Chain_strikes_through_outer_headers_the_folder_overrides()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var (collection, outer, _, _) = CreateTree();
+        var (collection, outer, _, _) = await CreateTreeAsync();
         outer.Headers = [new KeyValueItem("accept", "text/plain")];
-        Workspace.SaveCollection(collection);
+        await Workspace.SaveCollectionAsync(collection);
         try
         {
             await vm.OpenFolderAsync(outer);
@@ -177,7 +177,7 @@ public class ContainerHeadersTabTests
         }
         finally
         {
-            Workspace.DeleteCollection(collection);
+            await Workspace.DeleteCollectionAsync(collection);
             window.Close();
         }
     }
@@ -186,7 +186,7 @@ public class ContainerHeadersTabTests
     public async Task Inherited_rows_refresh_when_an_outer_level_changes()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var (collection, outer, _, _) = CreateTree();
+        var (collection, outer, _, _) = await CreateTreeAsync();
         try
         {
             await vm.OpenFolderAsync(outer);
@@ -200,7 +200,7 @@ public class ContainerHeadersTabTests
         }
         finally
         {
-            Workspace.DeleteCollection(collection);
+            await Workspace.DeleteCollectionAsync(collection);
             window.Close();
         }
     }
@@ -209,7 +209,7 @@ public class ContainerHeadersTabTests
     public async Task Collection_headers_are_saved_and_reach_requests()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var (collection, _, _, request) = CreateTree();
+        var (collection, _, _, request) = await CreateTreeAsync();
         try
         {
             await vm.OpenCollectionAsync(collection);
@@ -227,7 +227,7 @@ public class ContainerHeadersTabTests
         }
         finally
         {
-            Workspace.DeleteCollection(collection);
+            await Workspace.DeleteCollectionAsync(collection);
             window.Close();
         }
     }
@@ -239,10 +239,10 @@ public class ContainerHeadersTabTests
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         window.RequestedThemeVariant = themeName == "Light" ? ThemeVariant.Light : ThemeVariant.Dark;
-        var (collection, outer, inner, request) = CreateTree();
+        var (collection, outer, inner, request) = await CreateTreeAsync();
         inner.Headers = [new KeyValueItem("accept", "text/plain"), new KeyValueItem("X-Off", "1") { Enabled = false }];
         request.Headers = [new KeyValueItem("Accept", "application/json")];
-        Workspace.SaveCollection(collection);
+        await Workspace.SaveCollectionAsync(collection);
         try
         {
             await vm.OpenFolderAsync(inner);
@@ -256,7 +256,7 @@ public class ContainerHeadersTabTests
         }
         finally
         {
-            Workspace.DeleteCollection(collection);
+            await Workspace.DeleteCollectionAsync(collection);
             window.Close();
         }
     }
@@ -272,15 +272,15 @@ public class ContainerHeadersTabTests
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         window.Width = windowWidth;
         window.RequestedThemeVariant = themeName == "Light" ? ThemeVariant.Light : ThemeVariant.Dark;
-        var collection = Workspace.CreateCollection("A very long collection name " + new string('x', 80));
+        var collection = await Workspace.CreateCollectionAsync("A very long collection name " + new string('x', 80));
         collection.Headers = [new KeyValueItem("Accept", "*/*")];
         var folder = new FolderModel { Name = "Users" };
         var request = new HttpRequestModel { Name = "List", Url = "http://localhost/users" };
         request.Headers = [new KeyValueItem("accept", "text/plain"), new KeyValueItem("X-Short", "1")];
-        Workspace.AddNode(collection, null, folder);
-        Workspace.AddNode(collection, folder, request);
+        await Workspace.AddNodeAsync(collection, null, folder);
+        await Workspace.AddNodeAsync(collection, folder, request);
         folder.Headers = [new KeyValueItem("accept", "x"), new KeyValueItem("X-Short", "1")];
-        Workspace.SaveCollection(collection);
+        await Workspace.SaveCollectionAsync(collection);
         try
         {
             await vm.OpenFolderAsync(folder);
@@ -295,7 +295,7 @@ public class ContainerHeadersTabTests
         }
         finally
         {
-            Workspace.DeleteCollection(collection);
+            await Workspace.DeleteCollectionAsync(collection);
             window.Close();
         }
     }

@@ -16,7 +16,7 @@ public class RequestTabSendTests
 {
     private sealed record TabFixture(RequestTabViewModel Tab, HttpRequestModel Request, Window Window);
 
-    private static TabFixture OpenSavedRequest(TempWorkspace temp, string url)
+    private static async Task<TabFixture> OpenSavedRequestAsync(TempWorkspace temp, string url)
     {
         var window = new Window { Width = 800, Height = 600 };
         window.Show();
@@ -26,9 +26,9 @@ public class RequestTabSendTests
             App.Services.GetRequiredService<OAuth2Service>(), dialogs, temp.Settings,
             App.Services.GetRequiredService<HttpClientProvider>(), App.Services.GetRequiredService<ManualService>(),
             TimeProvider.System);
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var request = new HttpRequestModel { Name = "List", Url = url };
-        temp.Workspace.AddNode(collection, null, request);
+        await temp.Workspace.AddNodeAsync(collection, null, request);
         return new TabFixture(new RequestTabViewModel(services, request), request, window);
     }
 
@@ -46,7 +46,7 @@ public class RequestTabSendTests
         using var temp = new TempWorkspace();
         var answer = new TaskCompletionSource();
         using var server = ServerAnsweringWhen(answer.Task);
-        var (tab, original, window) = OpenSavedRequest(temp, server.Url);
+        var (tab, original, window) = await OpenSavedRequestAsync(temp, server.Url);
 
         var sending = tab.Sending.SendCommand.ExecuteAsync(null);
         await UiTestHelpers.WaitUntil(() => tab.Sending.IsSending);
@@ -75,7 +75,7 @@ public class RequestTabSendTests
     {
         using var temp = new TempWorkspace();
         using var server = ServerAnsweringWhen(Task.CompletedTask);
-        var (tab, _, window) = OpenSavedRequest(temp, server.Url);
+        var (tab, _, window) = await OpenSavedRequestAsync(temp, server.Url);
         temp.Workspace.History.CollectionChanged += (_, _) => throw new InvalidOperationException("History is broken");
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => tab.Sending.SendCommand.ExecuteAsync(null));
@@ -92,7 +92,7 @@ public class RequestTabSendTests
         using var temp = new TempWorkspace();
         var answer = new TaskCompletionSource();
         using var server = ServerAnsweringWhen(answer.Task);
-        var (tab, request, window) = OpenSavedRequest(temp, server.Url);
+        var (tab, request, window) = await OpenSavedRequestAsync(temp, server.Url);
 
         var sending = tab.Sending.SendCommand.ExecuteAsync(null);
         await UiTestHelpers.WaitUntil(() => tab.Sending.IsSending);

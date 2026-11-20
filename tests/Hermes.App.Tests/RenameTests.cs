@@ -98,12 +98,12 @@ public class RenameTests
     }
 
     [AvaloniaFact]
-    public void Collection_rename_commits_on_Enter_and_cancels_on_Escape()
+    public async Task Collection_rename_commits_on_Enter_and_cancels_on_Escape()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         vm.SelectedPane = SidebarPane.Collections;
         var originalName = "Rename " + Guid.NewGuid();
-        var collection = Workspace.CreateCollection(originalName);
+        var collection = await Workspace.CreateCollectionAsync(originalName);
         var node = vm.Collections.Find(collection.Id)!;
 
         vm.Collections.RenameCommand.Execute(node);
@@ -126,12 +126,12 @@ public class RenameTests
     }
 
     [AvaloniaFact]
-    public void Environment_rename_commits_on_Enter_and_cancels_on_Escape()
+    public async Task Environment_rename_commits_on_Enter_and_cancels_on_Escape()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         vm.SelectedPane = SidebarPane.Environments;
         var originalName = "Rename " + Guid.NewGuid();
-        var environment = Workspace.CreateEnvironment(originalName);
+        var environment = await Workspace.CreateEnvironmentAsync(originalName);
         var item = vm.Environments.Items.Single(candidate => candidate.Model == environment);
 
         vm.Environments.RenameCommand.Execute(item);

@@ -63,9 +63,9 @@ public class WorkflowTests
     public async Task Session_restores_tabs_and_unsaved_drafts()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var collection = Workspace.CreateCollection("Session " + Guid.NewGuid());
+        var collection = await Workspace.CreateCollectionAsync("Session " + Guid.NewGuid());
         var request = new HttpRequestModel { Name = "Persisted", Url = "https://example.com/a" };
-        Workspace.AddNode(collection, null, request);
+        await Workspace.AddNodeAsync(collection, null, request);
 
         await vm.OpenRequestAsync(request);
         var persistedTab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
@@ -75,7 +75,7 @@ public class WorkflowTests
         draftTab.UrlEditor.Url = "https://example.com/draft";
         await vm.OpenCollectionAsync(collection);
 
-        vm.SaveSession();
+        await vm.SaveSessionAsync();
         window.Close();
 
         // A fresh view model (as on next launch) restores from session.json.
@@ -94,7 +94,7 @@ public class WorkflowTests
     }
 
     [AvaloniaFact]
-    public void Session_restores_each_tabs_response_pane()
+    public async Task Session_restores_each_tabs_response_pane()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         var collapsedTab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
@@ -104,7 +104,7 @@ public class WorkflowTests
         var splitTab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
         splitTab.Response.Pane.ResponseSplitRatio = 0.7;
 
-        vm.SaveSession();
+        await vm.SaveSessionAsync();
         window.Close();
 
         var restored = new MainWindowViewModel(TabServices);

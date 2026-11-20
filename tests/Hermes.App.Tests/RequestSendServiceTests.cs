@@ -51,12 +51,12 @@ public class RequestSendServiceTests : IDisposable
         ctx.Response.Close();
     });
 
-    private HttpRequestModel SavedRequest(string url, Action<HttpRequestModel>? configure = null)
+    private async Task<HttpRequestModel> SavedRequestAsync(string url, Action<HttpRequestModel>? configure = null)
     {
-        var collection = _temp.Workspace.CreateCollection("Pets");
+        var collection = await _temp.Workspace.CreateCollectionAsync("Pets");
         var request = new HttpRequestModel { Name = "List", Url = url };
         configure?.Invoke(request);
-        _temp.Workspace.AddNode(collection, null, request);
+        await _temp.Workspace.AddNodeAsync(collection, null, request);
         return request;
     }
 
@@ -80,7 +80,7 @@ public class RequestSendServiceTests : IDisposable
     public async Task A_response_is_saved_before_the_history_entry_is_written()
     {
         using var server = OkServer();
-        var request = SavedRequest(server.Url);
+        var request = await SavedRequestAsync(server.Url);
         var savedWhenHistoryWasWritten = -1;
         _temp.Workspace.History.CollectionChanged += (_, _) =>
             savedWhenHistoryWasWritten = _temp.Workspace.LoadResponses(request.Id).Count;
@@ -99,7 +99,7 @@ public class RequestSendServiceTests : IDisposable
     public async Task The_saved_copy_of_the_sent_request_has_credentials_masked()
     {
         using var server = OkServer();
-        var request = SavedRequest(server.Url, r => r.Headers = [new("Authorization", "Bearer hunter2-token")]);
+        var request = await SavedRequestAsync(server.Url, r => r.Headers = [new("Authorization", "Bearer hunter2-token")]);
 
         var sent = await SendAndRecordAsync(request, request.Id);
 
@@ -125,8 +125,8 @@ public class RequestSendServiceTests : IDisposable
     public async Task The_response_is_kept_with_the_request_given_when_recording_not_the_one_sent()
     {
         using var server = OkServer();
-        var sentAs = SavedRequest(server.Url);
-        var savedAs = SavedRequest(server.Url);
+        var sentAs = await SavedRequestAsync(server.Url);
+        var savedAs = await SavedRequestAsync(server.Url);
 
         var sent = await SendAndRecordAsync(sentAs, savedAs.Id);
 
@@ -138,7 +138,7 @@ public class RequestSendServiceTests : IDisposable
     [AvaloniaFact]
     public async Task A_failure_is_returned_and_recorded_in_history_without_a_saved_response()
     {
-        var request = SavedRequest($"http://127.0.0.1:{ClosedPort.Find()}/");
+        var request = await SavedRequestAsync($"http://127.0.0.1:{ClosedPort.Find()}/");
 
         var sent = await SendAndRecordAsync(request, request.Id);
 
@@ -155,7 +155,7 @@ public class RequestSendServiceTests : IDisposable
     public async Task A_send_cancelled_in_flight_comes_back_cancelled()
     {
         using var server = NeverAnsweringServer();
-        var request = SavedRequest(server.Url);
+        var request = await SavedRequestAsync(server.Url);
         using var cts = new CancellationTokenSource();
 
         var sending = _service.SendAsync(RequestPreparer.Prepare(request, RequestContext.Empty), cts.Token);
@@ -170,7 +170,7 @@ public class RequestSendServiceTests : IDisposable
     public async Task A_token_cancelled_after_the_response_arrived_makes_the_send_cancelled()
     {
         using var server = OkServer();
-        var request = SavedRequest(server.Url);
+        var request = await SavedRequestAsync(server.Url);
         using var cts = new CancellationTokenSource();
         var service = new RequestSendService(_temp.Workspace, new CancelAfterResponseExecutor(new RequestExecutor(_clients), cts));
 
@@ -184,7 +184,7 @@ public class RequestSendServiceTests : IDisposable
     public async Task Recording_with_a_cancelled_token_writes_no_history_and_no_response()
     {
         using var server = OkServer();
-        var request = SavedRequest(server.Url);
+        var request = await SavedRequestAsync(server.Url);
         var pair = RequestPreparer.PrepareWithMasked(request, RequestContext.Empty);
         var outcome = await _service.SendAsync(pair.Request, TestContext.Current.CancellationToken);
         Assert.False(outcome.Cancelled);

@@ -22,7 +22,7 @@ public class EnvironmentColorEditorTests
     public async Task Choosing_a_colour_marks_the_tab_dirty_and_saves_it()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var env = Workspace.CreateEnvironment("Color " + Guid.NewGuid());
+        var env = await Workspace.CreateEnvironmentAsync("Color " + Guid.NewGuid());
         try
         {
             await vm.OpenEnvironmentAsync(env);
@@ -49,7 +49,7 @@ public class EnvironmentColorEditorTests
         }
         finally
         {
-            Workspace.DeleteEnvironment(env);
+            await Workspace.DeleteEnvironmentAsync(env);
             window.Close();
         }
     }
@@ -79,7 +79,7 @@ public class EnvironmentColorEditorTests
     public async Task Swatches_are_one_named_radio_group_driven_by_the_keyboard()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var env = Workspace.CreateEnvironment("Color " + Guid.NewGuid());
+        var env = await Workspace.CreateEnvironmentAsync("Color " + Guid.NewGuid());
         try
         {
             await vm.OpenEnvironmentAsync(env);
@@ -114,7 +114,7 @@ public class EnvironmentColorEditorTests
         }
         finally
         {
-            Workspace.DeleteEnvironment(env);
+            await Workspace.DeleteEnvironmentAsync(env);
             window.Close();
         }
     }

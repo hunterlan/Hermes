@@ -127,72 +127,76 @@ public sealed class WorkspaceService : IDisposable
     }
 
     // ---- collections ----
+    //
+    // Every write below runs off the UI thread, in order, from a copy of the model taken when it is called; the
+    // returned task completes back on the caller's thread once the write is done. Call them from the UI thread,
+    // which owns the models and the lists.
 
     /// <summary>
     /// Creates a collection and saves it. When it can't be written the failure is reported and the collection is not
-    /// in <see cref="Collections"/>; use <see cref="AddCollection"/> when the caller must know.
+    /// in <see cref="Collections"/>; use <see cref="AddCollectionAsync"/> when the caller must know.
     /// </summary>
-    public CollectionModel CreateCollection(string name) => _collections.Create(name);
+    public Task<CollectionModel> CreateCollectionAsync(string name) => _collections.CreateAsync(name);
 
     /// <summary>Saves <paramref name="collection"/> and adds it to the list. False, after reporting it, when it couldn't be written.</summary>
-    public bool AddCollection(CollectionModel collection) => _collections.Add(collection);
+    public Task<bool> AddCollectionAsync(CollectionModel collection) => _collections.AddAsync(collection);
 
-    /// <summary>Like <see cref="AddCollection"/>, but returns the error instead of reporting it. Null when it worked.</summary>
-    public StorageError? TryAddCollection(CollectionModel collection) => _collections.TryAdd(collection);
+    /// <summary>Like <see cref="AddCollectionAsync"/>, but returns the error instead of reporting it. Null when it worked.</summary>
+    public Task<StorageError?> TryAddCollectionAsync(CollectionModel collection) => _collections.TryAddAsync(collection);
 
     /// <summary>Writes <paramref name="collection"/>. False, after reporting it, when it couldn't be written.</summary>
     /// <param name="failure">How to word a failure when the save is part of something else, such as a rename; null for the plain wording.</param>
-    public bool SaveCollection(CollectionModel collection, SaveFailureWording? failure = null) =>
-        _collections.Save(collection, failure);
+    public Task<bool> SaveCollectionAsync(CollectionModel collection, SaveFailureWording? failure = null) =>
+        _collections.SaveAsync(collection, failure);
 
-    /// <summary>Like <see cref="SaveCollection"/>, but returns the error instead of reporting it. Null when it worked.</summary>
-    public StorageError? TrySaveCollection(CollectionModel collection, SaveFailureWording? failure = null) =>
-        _collections.TrySave(collection, failure);
+    /// <summary>Like <see cref="SaveCollectionAsync"/>, but returns the error instead of reporting it. Null when it worked.</summary>
+    public Task<StorageError?> TrySaveCollectionAsync(CollectionModel collection, SaveFailureWording? failure = null) =>
+        _collections.TrySaveAsync(collection, failure);
 
     /// <summary>Deletes a collection. False, after reporting it, when its file couldn't be deleted; it stays in the list.</summary>
-    public bool DeleteCollection(CollectionModel collection) => _collections.Delete(collection);
+    public Task<bool> DeleteCollectionAsync(CollectionModel collection) => _collections.DeleteAsync(collection);
 
     /// <summary>Adds <paramref name="node"/> to a collection root or a folder. False, after reporting it, when it couldn't be saved.</summary>
-    public bool AddNode(CollectionModel collection, FolderModel? folder, CollectionNode node, int index = -1) =>
-        _collections.AddNode(collection, folder, node, index);
+    public Task<bool> AddNodeAsync(CollectionModel collection, FolderModel? folder, CollectionNode node, int index = -1) =>
+        _collections.AddNodeAsync(collection, folder, node, index);
 
-    /// <summary>Like <see cref="AddNode"/>, but returns the error instead of reporting it. Null when it worked.</summary>
-    public StorageError? TryAddNode(CollectionModel collection, FolderModel? folder, CollectionNode node, int index = -1) =>
-        _collections.TryAddNode(collection, folder, node, index);
+    /// <summary>Like <see cref="AddNodeAsync"/>, but returns the error instead of reporting it. Null when it worked.</summary>
+    public Task<StorageError?> TryAddNodeAsync(CollectionModel collection, FolderModel? folder, CollectionNode node, int index = -1) =>
+        _collections.TryAddNodeAsync(collection, folder, node, index);
 
     /// <summary>Deletes a node. False, after reporting it, when the collection couldn't be saved; the node stays.</summary>
-    public bool DeleteNode(Guid nodeId) => _collections.DeleteNode(nodeId);
+    public Task<bool> DeleteNodeAsync(Guid nodeId) => _collections.DeleteNodeAsync(nodeId);
 
     /// <summary>
     /// Moves a node into <paramref name="targetFolder"/> (or the collection root) at <paramref name="index"/>.
     /// Refuses to move a folder into itself or its descendants. False when refused, or when the move couldn't be
     /// saved (reported, and the node is back where it was).
     /// </summary>
-    public bool MoveNode(Guid nodeId, CollectionModel targetCollection, FolderModel? targetFolder, int index) =>
-        _collections.MoveNode(nodeId, targetCollection, targetFolder, index);
+    public Task<bool> MoveNodeAsync(Guid nodeId, CollectionModel targetCollection, FolderModel? targetFolder, int index) =>
+        _collections.MoveNodeAsync(nodeId, targetCollection, targetFolder, index);
 
     // ---- environments ----
 
     /// <summary>
     /// Creates an environment and saves it. When it can't be written the failure is reported and the environment is not
-    /// in <see cref="Environments"/>; use <see cref="AddEnvironment"/> when the caller must know.
+    /// in <see cref="Environments"/>; use <see cref="AddEnvironmentAsync"/> when the caller must know.
     /// </summary>
-    public EnvironmentModel CreateEnvironment(string name) => _environments.Create(name);
+    public Task<EnvironmentModel> CreateEnvironmentAsync(string name) => _environments.CreateAsync(name);
 
     /// <summary>Saves <paramref name="environment"/> and adds it to the list. False, after reporting it, when it couldn't be written.</summary>
-    public bool AddEnvironment(EnvironmentModel environment) => _environments.Add(environment);
+    public Task<bool> AddEnvironmentAsync(EnvironmentModel environment) => _environments.AddAsync(environment);
 
-    /// <summary>Like <see cref="AddEnvironment"/>, but returns the error instead of reporting it. Null when it worked.</summary>
-    public StorageError? TryAddEnvironment(EnvironmentModel environment) => _environments.TryAdd(environment);
+    /// <summary>Like <see cref="AddEnvironmentAsync"/>, but returns the error instead of reporting it. Null when it worked.</summary>
+    public Task<StorageError?> TryAddEnvironmentAsync(EnvironmentModel environment) => _environments.TryAddAsync(environment);
 
     /// <summary>Writes <paramref name="environment"/> (or the globals). False, after reporting it, when it couldn't be written.</summary>
-    public bool SaveEnvironment(EnvironmentModel environment) => _environments.Save(environment);
+    public Task<bool> SaveEnvironmentAsync(EnvironmentModel environment) => _environments.SaveAsync(environment);
 
-    /// <summary>Like <see cref="SaveEnvironment"/>, but returns the error instead of reporting it. Null when it worked.</summary>
-    public StorageError? TrySaveEnvironment(EnvironmentModel environment) => _environments.TrySave(environment);
+    /// <summary>Like <see cref="SaveEnvironmentAsync"/>, but returns the error instead of reporting it. Null when it worked.</summary>
+    public Task<StorageError?> TrySaveEnvironmentAsync(EnvironmentModel environment) => _environments.TrySaveAsync(environment);
 
     /// <summary>Deletes an environment. False, after reporting it, when its file couldn't be deleted; it stays in the list.</summary>
-    public bool DeleteEnvironment(EnvironmentModel environment) => _environments.Delete(environment);
+    public Task<bool> DeleteEnvironmentAsync(EnvironmentModel environment) => _environments.DeleteAsync(environment);
 
     // ---- history ----
 
@@ -218,13 +222,26 @@ public sealed class WorkspaceService : IDisposable
     public SessionState LoadSession() => _session.Load();
 
     /// <summary>
-    /// Saves the session. It runs on a timer, so a failure is reported once and stays quiet until a save has worked
-    /// again; the session is only a convenience and never worth interrupting the user every few seconds.
+    /// Saves the session, off the UI thread like the other writes. It runs on a timer, so a failure is reported once
+    /// and stays quiet until a save has worked again; the session is only a convenience and never worth interrupting
+    /// the user every few seconds.
     /// </summary>
-    public void SaveSession(SessionState session) => _session.Save(session);
+    public Task SaveSessionAsync(SessionState session) => _session.SaveAsync(session);
 
-    /// <summary>Like <see cref="SaveSession"/>, but returns the error instead of reporting it. Null when it worked.</summary>
-    public StorageError? TrySaveSession(SessionState session) => _session.TrySave(session);
+    /// <summary>Like <see cref="SaveSessionAsync"/>, but returns the error instead of reporting it. Null when it worked.</summary>
+    public Task<StorageError?> TrySaveSessionAsync(SessionState session) => _session.TrySaveAsync(session);
 
-    public void Dispose() => _history.Dispose();
+    /// <summary>Completes when the writes queued so far (collections, environments, session) are done.</summary>
+    public Task FlushWritesAsync() => _storage.FlushAsync();
+
+    /// <summary>
+    /// Stops the history timer and waits for the queued writes, so nothing asked for is lost. Blocking is deliberate:
+    /// it runs as the app exits, when the process may end as soon as this returns. The writes never need the UI
+    /// thread, so waiting on it can't deadlock.
+    /// </summary>
+    public void Dispose()
+    {
+        _history.Dispose();
+        _storage.FlushAsync().Wait();
+    }
 }
