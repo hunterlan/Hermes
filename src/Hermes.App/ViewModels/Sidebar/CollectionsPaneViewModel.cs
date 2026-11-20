@@ -203,11 +203,11 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         var saved = node switch
         {
             CollectionNodeViewModel c => Rename(c.Model.Name, name => c.Model.Name = name, newName, c.Model,
-                WorkspaceService.CollectionSubject(c.Model)),
+                StorageSubjects.Collection(c.Model)),
             FolderNodeViewModel f => Rename(f.Model.Name, name => f.Model.Name = name, newName, f.Root.Model,
-                WorkspaceService.FolderSubject(f.Model, f.Root.Model)),
+                StorageSubjects.Folder(f.Model, f.Root.Model)),
             RequestNodeViewModel r => Rename(r.Model.Name, name => r.Model.Name = name, newName, r.Root.Model,
-                WorkspaceService.RequestSubject(r.Model, r.Root.Model)),
+                StorageSubjects.Request(r.Model, r.Root.Model)),
             _ => true,
         };
         if (!saved)
