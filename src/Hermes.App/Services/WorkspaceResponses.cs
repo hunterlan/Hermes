@@ -6,28 +6,23 @@ namespace Hermes.App.Services;
 /// <summary>The responses kept with saved requests.</summary>
 internal sealed class WorkspaceResponses(WorkspaceRepository repository, WorkspaceStorage storage)
 {
-    /// <summary>Saved responses for a request, newest first. Files that can't be read are reported and skipped.</summary>
-    public IReadOnlyList<SavedResponse> Load(Guid requestId)
+    /// <inheritdoc cref="WorkspaceService.LoadResponsesAsync"/>
+    public async Task<IReadOnlyList<SavedResponse>> LoadAsync(Guid requestId)
     {
-        var loaded = repository.LoadResponses(requestId);
-        foreach (var error in loaded.Errors)
+        SavedResponses? loaded = null;
+        await storage.ReadAsync(() => loaded = repository.LoadResponses(requestId));
+        foreach (var error in loaded!.Errors)
             storage.Report(error);
         return loaded.Items;
     }
 
-    /// <summary>Saves a response with its request; returns what was stored, or null (after reporting it) if it couldn't be written.</summary>
-    public SavedResponse? Save(Guid requestId, SavedResponse saved)
+    /// <inheritdoc cref="WorkspaceService.SaveResponseAsync"/>
+    public async Task<SavedResponse?> SaveAsync(Guid requestId, SavedResponse saved)
     {
-        try
-        {
-            return repository.SaveResponse(requestId, saved);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            storage.Report(StorageErrorDescriber.Describe(ex, Path.Combine(repository.Root, "responses", requestId.ToString()),
-                "The response", StorageOperation.Write, target: StorageTarget.Folder));
-            return null;
-        }
+        SavedResponse? stored = null;
+        var error = await storage.AttemptAsync(() => stored = repository.SaveResponse(requestId, saved),
+            repository.ResponsesFolder(requestId), "The response", StorageOperation.Write, target: StorageTarget.Folder);
+        return storage.Report(error) ? null : stored;
     }
 
     /// <summary>

@@ -6,7 +6,7 @@ namespace Hermes.App.Services;
 
 /// <summary>
 /// Sends a request in two steps, so the result is on screen before anything is written: <see cref="SendAsync"/>
-/// executes it, the tab shows the result, then <see cref="Record"/> keeps the masked response with the saved request
+/// executes it, the tab shows the result, then <see cref="RecordAsync"/> keeps the masked response with the saved request
 /// and writes the history entry, in that order.
 /// A cancelled token means the user cancelled or the tab was closed: nothing is recorded, even if a response had
 /// just arrived.
@@ -27,17 +27,17 @@ public sealed class RequestSendService(WorkspaceService workspace, IRequestExecu
     /// UI thread only: the history entry goes into <see cref="WorkspaceService.History"/>, which the UI shows, and a
     /// storage problem is reported to the UI.
     /// </summary>
-    public SavedResponse? Record(CompletedSend send, CancellationToken cancellationToken)
+    public async Task<SavedResponse?> RecordAsync(CompletedSend send, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
             return null;
 
         // Responses are kept with saved requests, so reopening shows the last result and earlier ones.
-        // The saved copy has credentials masked; the one on screen stays exact.
+        // The saved copy has credentials masked; the one on screen stays exact. It is written off the UI thread.
         SavedResponse? saved = null;
         if (send.Result.Response is { } response && send.KeepResponseWith is { } requestId)
         {
-            saved = workspace.SaveResponse(requestId, new SavedResponse
+            saved = await workspace.SaveResponseAsync(requestId, new SavedResponse
             {
                 Response = response,
                 SentRequest = SecretMasker.MaskCredentialHeaders(RawRequestFormatter.Format(send.MaskedRequest)),

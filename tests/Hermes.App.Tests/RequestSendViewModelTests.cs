@@ -95,7 +95,7 @@ public class RequestSendViewModelTests
         await send;
         Assert.True(response.HasResponse);
         Assert.Single(temp.Workspace.History);
-        Assert.Single(temp.Workspace.LoadResponses(request.RequestId));
+        Assert.Single(await temp.Workspace.LoadResponsesAsync(request.RequestId));
         window.Close();
     }
 
@@ -165,8 +165,8 @@ public class RequestSendViewModelTests
         await send;
 
         Assert.True(response.HasResponse);
-        Assert.Single(temp.Workspace.LoadResponses(savedAs.Id));
-        Assert.Empty(temp.Workspace.LoadResponses(originalId));
+        Assert.Single(await temp.Workspace.LoadResponsesAsync(savedAs.Id));
+        Assert.Empty(await temp.Workspace.LoadResponsesAsync(originalId));
         Assert.Single(response.Saved.Items);
         window.Close();
     }
