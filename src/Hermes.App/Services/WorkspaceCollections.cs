@@ -1,4 +1,5 @@
 using Hermes.Core.Models;
+using Hermes.Core.Serialization;
 using Hermes.Core.Storage;
 
 namespace Hermes.App.Services;
@@ -8,6 +9,7 @@ namespace Hermes.App.Services;
 /// A write that can fail either reports through <see cref="WorkspaceStorage"/> (the bool methods) or returns the
 /// error for the caller to present (the Try methods, which tabs use to offer Retry). In-memory state changes only
 /// after the write succeeded, or is put back when it didn't, so the sidebar never shows what isn't on disk.
+/// The file is written off the UI thread from a copy taken when the write is asked for, so later edits can't race it.
 /// </summary>
 internal sealed class WorkspaceCollections
 {
@@ -64,21 +66,21 @@ internal sealed class WorkspaceCollections
 
     // ---- writes ----
 
-    /// <inheritdoc cref="WorkspaceService.CreateCollection"/>
-    public CollectionModel Create(string name)
+    /// <inheritdoc cref="WorkspaceService.CreateCollectionAsync"/>
+    public async Task<CollectionModel> CreateAsync(string name)
     {
         var collection = new CollectionModel { Name = name };
-        Add(collection);
+        await AddAsync(collection);
         return collection;
     }
 
-    /// <inheritdoc cref="WorkspaceService.AddCollection"/>
-    public bool Add(CollectionModel collection) => !_storage.Report(TryAdd(collection));
+    /// <inheritdoc cref="WorkspaceService.AddCollectionAsync"/>
+    public async Task<bool> AddAsync(CollectionModel collection) => !_storage.Report(await TryAddAsync(collection));
 
-    /// <inheritdoc cref="WorkspaceService.TryAddCollection"/>
-    public StorageError? TryAdd(CollectionModel collection)
+    /// <inheritdoc cref="WorkspaceService.TryAddCollectionAsync"/>
+    public async Task<StorageError?> TryAddAsync(CollectionModel collection)
     {
-        if (TrySaveFile(collection) is { } error)
+        if (await TrySaveFileAsync(collection) is { } error)
             return error;
         Items.Add(collection);
         Items.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase));
@@ -86,39 +88,41 @@ internal sealed class WorkspaceCollections
         return null;
     }
 
-    /// <inheritdoc cref="WorkspaceService.SaveCollection"/>
-    public bool Save(CollectionModel collection, SaveFailureWording? failure = null) =>
-        !_storage.Report(TrySave(collection, failure));
+    /// <inheritdoc cref="WorkspaceService.SaveCollectionAsync"/>
+    public async Task<bool> SaveAsync(CollectionModel collection, SaveFailureWording? failure = null) =>
+        !_storage.Report(await TrySaveAsync(collection, failure));
 
-    /// <inheritdoc cref="WorkspaceService.TrySaveCollection"/>
-    public StorageError? TrySave(CollectionModel collection, SaveFailureWording? failure = null)
+    /// <inheritdoc cref="WorkspaceService.TrySaveCollectionAsync"/>
+    public async Task<StorageError?> TrySaveAsync(CollectionModel collection, SaveFailureWording? failure = null)
     {
-        if (TrySaveFile(collection, failure) is { } error)
+        if (await TrySaveFileAsync(collection, failure) is { } error)
             return error;
         CollectionChanged?.Invoke(collection);
         VariablesChanged?.Invoke();
         return null;
     }
 
-    /// <inheritdoc cref="WorkspaceService.DeleteCollection"/>
-    public bool Delete(CollectionModel collection)
+    /// <inheritdoc cref="WorkspaceService.DeleteCollectionAsync"/>
+    public async Task<bool> DeleteAsync(CollectionModel collection)
     {
-        var error = WorkspaceStorage.Attempt(() => _repository.DeleteCollection(collection.Id),
-            _repository.CollectionFile(collection.Id), StorageSubjects.Collection(collection), StorageOperation.Delete);
+        var id = collection.Id;
+        var error = await _storage.AttemptAsync(() => _repository.DeleteCollection(id),
+            _repository.CollectionFile(id), StorageSubjects.Collection(collection), StorageOperation.Delete);
         if (_storage.Report(error))
             return false;
         Items.Remove(collection);
-        _responses.DeleteFor(collection.Items);
+        var deletedResponses = _responses.DeleteForAsync(collection.Items);
         CollectionsListChanged?.Invoke();
+        await deletedResponses;
         return true;
     }
 
-    /// <inheritdoc cref="WorkspaceService.AddNode"/>
-    public bool AddNode(CollectionModel collection, FolderModel? folder, CollectionNode node, int index = -1) =>
-        !_storage.Report(TryAddNode(collection, folder, node, index));
+    /// <inheritdoc cref="WorkspaceService.AddNodeAsync"/>
+    public async Task<bool> AddNodeAsync(CollectionModel collection, FolderModel? folder, CollectionNode node, int index = -1) =>
+        !_storage.Report(await TryAddNodeAsync(collection, folder, node, index));
 
-    /// <inheritdoc cref="WorkspaceService.TryAddNode"/>
-    public StorageError? TryAddNode(CollectionModel collection, FolderModel? folder, CollectionNode node, int index = -1)
+    /// <inheritdoc cref="WorkspaceService.TryAddNodeAsync"/>
+    public async Task<StorageError?> TryAddNodeAsync(CollectionModel collection, FolderModel? folder, CollectionNode node, int index = -1)
     {
         var items = folder?.Items ?? collection.Items;
         var before = items.ToList();
@@ -126,30 +130,30 @@ internal sealed class WorkspaceCollections
             items.Add(node);
         else
             items.Insert(index, node);
-        var error = TrySave(collection);
+        var error = await TrySaveAsync(collection);
         if (error is not null)
             Restore(items, before);
         return error;
     }
 
-    /// <inheritdoc cref="WorkspaceService.DeleteNode"/>
-    public bool DeleteNode(Guid nodeId)
+    /// <inheritdoc cref="WorkspaceService.DeleteNodeAsync"/>
+    public async Task<bool> DeleteNodeAsync(Guid nodeId)
     {
         if (Find(nodeId) is not { } location)
             return true;
         var before = location.Container.ToList();
         location.Container.Remove(location.Node);
-        if (_storage.Report(TrySave(location.Collection)))
+        if (_storage.Report(await TrySaveAsync(location.Collection)))
         {
             Restore(location.Container, before);
             return false;
         }
-        _responses.DeleteFor([location.Node]);
+        await _responses.DeleteForAsync([location.Node]);
         return true;
     }
 
-    /// <inheritdoc cref="WorkspaceService.MoveNode"/>
-    public bool MoveNode(Guid nodeId, CollectionModel targetCollection, FolderModel? targetFolder, int index)
+    /// <inheritdoc cref="WorkspaceService.MoveNodeAsync"/>
+    public async Task<bool> MoveNodeAsync(Guid nodeId, CollectionModel targetCollection, FolderModel? targetFolder, int index)
     {
         if (Find(nodeId) is not { } source)
             return false;
@@ -167,18 +171,18 @@ internal sealed class WorkspaceCollections
         index = Math.Clamp(index, 0, targetItems.Count);
         targetItems.Insert(index, source.Node);
 
-        if (_storage.Report(TrySave(targetCollection)))
+        if (_storage.Report(await TrySaveAsync(targetCollection)))
         {
             Restore(source.Container, sourceBefore);
             Restore(targetItems, targetBefore);
             return false;
         }
-        if (source.Collection != targetCollection && _storage.Report(TrySave(source.Collection)))
+        if (source.Collection != targetCollection && _storage.Report(await TrySaveAsync(source.Collection)))
         {
             Restore(source.Container, sourceBefore);
             Restore(targetItems, targetBefore);
             // The target's file already has the node; write it back without, so it isn't on disk twice.
-            TrySave(targetCollection);
+            await TrySaveAsync(targetCollection);
             return false;
         }
         return true;
@@ -193,7 +197,11 @@ internal sealed class WorkspaceCollections
     private static bool IsDescendant(FolderModel ancestor, FolderModel candidate) =>
         ancestor.Items.OfType<FolderModel>().Any(f => f == candidate || IsDescendant(f, candidate));
 
-    private StorageError? TrySaveFile(CollectionModel collection, SaveFailureWording? failure = null) =>
-        WorkspaceStorage.Attempt(() => _repository.SaveCollection(collection), _repository.CollectionFile(collection.Id),
+    // The copy is taken here, on the UI thread; the queue writes it later.
+    private Task<StorageError?> TrySaveFileAsync(CollectionModel collection, SaveFailureWording? failure = null)
+    {
+        var snapshot = ModelCloner.Clone(collection);
+        return _storage.AttemptAsync(() => _repository.SaveCollection(snapshot), _repository.CollectionFile(collection.Id),
             failure?.Subject ?? StorageSubjects.Collection(collection), StorageOperation.Write, failure?.FailedAction);
+    }
 }

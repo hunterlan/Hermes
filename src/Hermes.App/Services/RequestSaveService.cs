@@ -16,7 +16,7 @@ public sealed class RequestSaveService(WorkspaceService workspace, DialogService
         var index = location.Container.IndexOf(location.Node);
         var previous = location.Container[index];
         location.Container[index] = model;
-        while (workspace.TrySaveCollection(location.Collection) is { } error)
+        while (await workspace.TrySaveCollectionAsync(location.Collection) is { } error)
         {
             if (await dialogs.ShowSaveFailedAsync(error))
                 continue;
@@ -35,7 +35,7 @@ public sealed class RequestSaveService(WorkspaceService workspace, DialogService
     {
         if (!target.IsNewCollection)
         {
-            while (workspace.TryAddNode(target.Collection, target.Folder, model) is { } error)
+            while (await workspace.TryAddNodeAsync(target.Collection, target.Folder, model) is { } error)
             {
                 if (!await dialogs.ShowSaveFailedAsync(error))
                     return false;
@@ -44,7 +44,7 @@ public sealed class RequestSaveService(WorkspaceService workspace, DialogService
         }
 
         target.Collection.Items.Add(model);
-        while (workspace.TryAddCollection(target.Collection) is { } collectionError)
+        while (await workspace.TryAddCollectionAsync(target.Collection) is { } collectionError)
         {
             if (await dialogs.ShowSaveFailedAsync(collectionError))
                 continue;

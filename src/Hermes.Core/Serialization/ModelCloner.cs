@@ -21,6 +21,10 @@ public static class ModelCloner
     public static EnvironmentModel Clone(EnvironmentModel model) =>
         JsonSerializer.Deserialize(Serialize(model), HermesJsonContext.Default.EnvironmentModel)!;
 
+    public static SessionState Clone(SessionState session) =>
+        JsonSerializer.Deserialize(JsonSerializer.Serialize(session, HermesJsonContext.Default.SessionState),
+            HermesJsonContext.Default.SessionState)!;
+
     public static AuthConfig Clone(AuthConfig model) =>
         JsonSerializer.Deserialize(JsonSerializer.Serialize(model, HermesJsonContext.Default.AuthConfig),
             HermesJsonContext.Default.AuthConfig)!;

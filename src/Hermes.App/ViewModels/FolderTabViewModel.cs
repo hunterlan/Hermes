@@ -114,7 +114,7 @@ public sealed partial class FolderTabViewModel : TabViewModelBase
         _folder.Description = string.IsNullOrWhiteSpace(Description) ? null : Description;
         _folder.Auth = Auth.ToModel();
         _folder.Headers = HeadersEditor.Headers.ToModels();
-        if (!await WriteWithRetryAsync(() => Services.Workspace.TrySaveCollection(location.Collection)))
+        if (!await WriteWithRetryAsync(() => Services.Workspace.TrySaveCollectionAsync(location.Collection)))
         {
             // Not on disk, so not in the folder either; the edits stay in the tab.
             (_folder.Name, _folder.Description, _folder.Auth, _folder.Headers) = previous;

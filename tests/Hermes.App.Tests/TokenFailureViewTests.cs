@@ -191,7 +191,7 @@ public class TokenFailureViewTests
             return Task.CompletedTask;
         };
         var workspace = App.Services.GetRequiredService<WorkspaceService>();
-        var collection = workspace.CreateCollection("Auth failure " + Guid.NewGuid());
+        var collection = await workspace.CreateCollectionAsync("Auth failure " + Guid.NewGuid());
         try
         {
             await vm.OpenCollectionAsync(collection);
@@ -205,7 +205,7 @@ public class TokenFailureViewTests
         finally
         {
             services.OpenSettingsAsync = originalOpenSettings;
-            workspace.DeleteCollection(collection);
+            await workspace.DeleteCollectionAsync(collection);
             window.Close();
         }
     }

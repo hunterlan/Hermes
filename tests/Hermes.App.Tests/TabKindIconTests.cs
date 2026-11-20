@@ -23,9 +23,9 @@ public class TabKindIconTests
         var (window, vm) = UiTestHelpers.ShowMainWindow();
         try
         {
-            var collection = Workspace.CreateCollection("Kind icons " + Guid.NewGuid());
+            var collection = await Workspace.CreateCollectionAsync("Kind icons " + Guid.NewGuid());
             var folder = new FolderModel { Name = "Folder " + Guid.NewGuid() };
-            Workspace.AddNode(collection, null, folder);
+            await Workspace.AddNodeAsync(collection, null, folder);
             var environment = new EnvironmentModel { Name = "Env " + Guid.NewGuid() };
             Workspace.Environments.Add(environment);
 
@@ -84,9 +84,9 @@ public class TabKindIconTests
         window.RequestedThemeVariant = themeName == "Light" ? ThemeVariant.Light : ThemeVariant.Dark;
         try
         {
-            var collection = Workspace.CreateCollection("Strip " + Guid.NewGuid());
+            var collection = await Workspace.CreateCollectionAsync("Strip " + Guid.NewGuid());
             var folder = new FolderModel { Name = "Users" };
-            Workspace.AddNode(collection, null, folder);
+            await Workspace.AddNodeAsync(collection, null, folder);
             await vm.OpenCollectionAsync(collection);
             await vm.OpenFolderAsync(folder);
             await vm.OpenEnvironmentAsync(Workspace.Globals);

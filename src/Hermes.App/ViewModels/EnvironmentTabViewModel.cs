@@ -82,7 +82,7 @@ public sealed partial class EnvironmentTabViewModel : TabViewModelBase
         _environment.Variables = Variables.ToModels();
         _environment.ConfirmBeforeSend = ConfirmBeforeSend && !IsGlobals;
         _environment.Color = IsGlobals ? EnvironmentColor.None : Color;
-        if (!await WriteWithRetryAsync(() => Services.Workspace.TrySaveEnvironment(_environment)))
+        if (!await WriteWithRetryAsync(() => Services.Workspace.TrySaveEnvironmentAsync(_environment)))
         {
             // Not on disk, so not in the environment either; the edits stay in the tab.
             (_environment.Name, _environment.Variables, _environment.ConfirmBeforeSend, _environment.Color) = previous;

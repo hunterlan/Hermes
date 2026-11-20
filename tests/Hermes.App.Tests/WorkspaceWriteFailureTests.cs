@@ -12,10 +12,10 @@ namespace Hermes.App.Tests;
 public class WorkspaceWriteFailureTests
 {
     [AvaloniaFact]
-    public void Saving_a_collection_into_a_read_only_folder_reports_it_and_leaves_the_file_alone()
+    public async Task Saving_a_collection_into_a_read_only_folder_reports_it_and_leaves_the_file_alone()
     {
         using var temp = new TempWorkspace();
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var file = temp.Repository.CollectionFile(collection.Id);
         var before = File.ReadAllText(file);
         using var locked = temp.Lock("collections");
@@ -24,7 +24,7 @@ public class WorkspaceWriteFailureTests
         temp.Workspace.CollectionChanged += _ => changes++;
 
         collection.Description = "edited";
-        var saved = temp.Workspace.SaveCollection(collection);
+        var saved = await temp.Workspace.SaveCollectionAsync(collection);
 
         Assert.False(saved);
         var problem = Assert.Single(temp.Problems);
@@ -36,14 +36,14 @@ public class WorkspaceWriteFailureTests
     }
 
     [AvaloniaFact]
-    public void The_try_variant_returns_the_error_without_reporting_it()
+    public async Task The_try_variant_returns_the_error_without_reporting_it()
     {
         using var temp = new TempWorkspace();
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         using var locked = temp.Lock("collections");
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
 
-        var error = temp.Workspace.TrySaveCollection(collection);
+        var error = await temp.Workspace.TrySaveCollectionAsync(collection);
 
         Assert.NotNull(error);
         Assert.Equal(StorageErrorKind.PermissionDenied, error.Kind);
@@ -51,7 +51,7 @@ public class WorkspaceWriteFailureTests
     }
 
     [AvaloniaFact]
-    public void A_collection_that_cannot_be_written_is_not_added()
+    public async Task A_collection_that_cannot_be_written_is_not_added()
     {
         using var temp = new TempWorkspace();
         using var locked = temp.Lock("collections");
@@ -60,7 +60,7 @@ public class WorkspaceWriteFailureTests
         temp.Workspace.CollectionsListChanged += () => listChanges++;
         var collection = new CollectionModel { Name = "Pets" };
 
-        var added = temp.Workspace.AddCollection(collection);
+        var added = await temp.Workspace.AddCollectionAsync(collection);
 
         Assert.False(added);
         Assert.DoesNotContain(collection, temp.Workspace.Collections);
@@ -70,13 +70,13 @@ public class WorkspaceWriteFailureTests
     }
 
     [AvaloniaFact]
-    public void A_collection_cannot_be_created_when_the_data_folder_itself_is_read_only()
+    public async Task A_collection_cannot_be_created_when_the_data_folder_itself_is_read_only()
     {
         using var temp = new TempWorkspace();
         using var locked = temp.Lock();
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
 
-        var added = temp.Workspace.AddCollection(new CollectionModel { Name = "Pets" });
+        var added = await temp.Workspace.AddCollectionAsync(new CollectionModel { Name = "Pets" });
 
         Assert.False(added);
         Assert.Empty(temp.Workspace.Collections);
@@ -85,18 +85,18 @@ public class WorkspaceWriteFailureTests
     }
 
     [AvaloniaFact]
-    public void Saving_and_adding_environments_into_a_read_only_folder_report_and_change_nothing()
+    public async Task Saving_and_adding_environments_into_a_read_only_folder_report_and_change_nothing()
     {
         using var temp = new TempWorkspace();
-        var existing = temp.Workspace.CreateEnvironment("Staging");
+        var existing = await temp.Workspace.CreateEnvironmentAsync("Staging");
         using var locked = temp.Lock("environments");
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
         var changes = 0;
         temp.Workspace.EnvironmentsChanged += () => changes++;
 
         existing.Variables.Add(new Variable("host", "example.com"));
-        var saved = temp.Workspace.SaveEnvironment(existing);
-        var added = temp.Workspace.AddEnvironment(new EnvironmentModel { Name = "Production" });
+        var saved = await temp.Workspace.SaveEnvironmentAsync(existing);
+        var added = await temp.Workspace.AddEnvironmentAsync(new EnvironmentModel { Name = "Production" });
 
         Assert.False(saved);
         Assert.False(added);
@@ -109,29 +109,29 @@ public class WorkspaceWriteFailureTests
     }
 
     [AvaloniaFact]
-    public void Global_variables_that_cannot_be_written_are_reported_by_name()
+    public async Task Global_variables_that_cannot_be_written_are_reported_by_name()
     {
         using var temp = new TempWorkspace();
         using var locked = temp.Lock();
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
 
-        var saved = temp.Workspace.SaveEnvironment(temp.Workspace.Globals);
+        var saved = await temp.Workspace.SaveEnvironmentAsync(temp.Workspace.Globals);
 
         Assert.False(saved);
         Assert.StartsWith("Global variables couldn't be saved", Assert.Single(temp.Problems).Summary);
     }
 
     [AvaloniaFact]
-    public void A_request_that_cannot_be_saved_is_taken_out_of_the_collection_again()
+    public async Task A_request_that_cannot_be_saved_is_taken_out_of_the_collection_again()
     {
         using var temp = new TempWorkspace();
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var first = new HttpRequestModel { Name = "First" };
-        temp.Workspace.AddNode(collection, null, first);
+        await temp.Workspace.AddNodeAsync(collection, null, first);
         using var locked = temp.Lock("collections");
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
 
-        var added = temp.Workspace.AddNode(collection, null, new HttpRequestModel { Name = "Second" });
+        var added = await temp.Workspace.AddNodeAsync(collection, null, new HttpRequestModel { Name = "Second" });
 
         Assert.False(added);
         Assert.Equal([first], collection.Items);
@@ -139,18 +139,18 @@ public class WorkspaceWriteFailureTests
     }
 
     [AvaloniaFact]
-    public void A_node_that_cannot_be_deleted_stays_in_its_place()
+    public async Task A_node_that_cannot_be_deleted_stays_in_its_place()
     {
         using var temp = new TempWorkspace();
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var first = new HttpRequestModel { Name = "First" };
         var second = new HttpRequestModel { Name = "Second" };
-        temp.Workspace.AddNode(collection, null, first);
-        temp.Workspace.AddNode(collection, null, second);
+        await temp.Workspace.AddNodeAsync(collection, null, first);
+        await temp.Workspace.AddNodeAsync(collection, null, second);
         using var locked = temp.Lock("collections");
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
 
-        var deleted = temp.Workspace.DeleteNode(first.Id);
+        var deleted = await temp.Workspace.DeleteNodeAsync(first.Id);
 
         Assert.False(deleted);
         Assert.Equal([first, second], collection.Items);
@@ -159,20 +159,20 @@ public class WorkspaceWriteFailureTests
     }
 
     [AvaloniaFact]
-    public void A_move_that_cannot_be_saved_puts_the_node_back()
+    public async Task A_move_that_cannot_be_saved_puts_the_node_back()
     {
         using var temp = new TempWorkspace();
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var folder = new FolderModel { Name = "Dogs" };
         var first = new HttpRequestModel { Name = "First" };
         var second = new HttpRequestModel { Name = "Second" };
-        temp.Workspace.AddNode(collection, null, folder);
-        temp.Workspace.AddNode(collection, null, first);
-        temp.Workspace.AddNode(collection, null, second);
+        await temp.Workspace.AddNodeAsync(collection, null, folder);
+        await temp.Workspace.AddNodeAsync(collection, null, first);
+        await temp.Workspace.AddNodeAsync(collection, null, second);
         using var locked = temp.Lock("collections");
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
 
-        var moved = temp.Workspace.MoveNode(first.Id, collection, folder, 0);
+        var moved = await temp.Workspace.MoveNodeAsync(first.Id, collection, folder, 0);
 
         Assert.False(moved);
         Assert.Equal([folder, first, second], collection.Items);
@@ -181,15 +181,15 @@ public class WorkspaceWriteFailureTests
     }
 
     [AvaloniaFact]
-    public void A_collection_that_cannot_be_deleted_stays_in_the_list()
+    public async Task A_collection_that_cannot_be_deleted_stays_in_the_list()
     {
         using var temp = new TempWorkspace();
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var file = temp.Repository.CollectionFile(collection.Id);
         using var locked = temp.Lock("collections");
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
 
-        var deleted = temp.Workspace.DeleteCollection(collection);
+        var deleted = await temp.Workspace.DeleteCollectionAsync(collection);
 
         Assert.False(deleted);
         Assert.Contains(collection, temp.Workspace.Collections);
@@ -199,15 +199,15 @@ public class WorkspaceWriteFailureTests
     }
 
     [AvaloniaFact]
-    public void An_environment_that_cannot_be_deleted_stays_in_the_list_and_stays_active()
+    public async Task An_environment_that_cannot_be_deleted_stays_in_the_list_and_stays_active()
     {
         using var temp = new TempWorkspace();
-        var environment = temp.Workspace.CreateEnvironment("Staging");
+        var environment = await temp.Workspace.CreateEnvironmentAsync("Staging");
         temp.Workspace.ActiveEnvironment = environment;
         using var locked = temp.Lock("environments");
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
 
-        var deleted = temp.Workspace.DeleteEnvironment(environment);
+        var deleted = await temp.Workspace.DeleteEnvironmentAsync(environment);
 
         Assert.False(deleted);
         Assert.Contains(environment, temp.Workspace.Environments);
@@ -216,22 +216,22 @@ public class WorkspaceWriteFailureTests
     }
 
     [AvaloniaFact]
-    public void A_rename_that_cannot_be_saved_keeps_the_old_name_in_the_sidebar_and_on_disk()
+    public async Task A_rename_that_cannot_be_saved_keeps_the_old_name_in_the_sidebar_and_on_disk()
     {
         using var temp = new TempWorkspace();
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         var request = new HttpRequestModel { Name = "List" };
-        temp.Workspace.AddNode(collection, null, request);
+        await temp.Workspace.AddNodeAsync(collection, null, request);
         var folder = new FolderModel { Name = "Cats" };
-        temp.Workspace.AddNode(collection, null, folder);
+        await temp.Workspace.AddNodeAsync(collection, null, folder);
         var host = new NullTabHost();
         var pane = new CollectionsPaneViewModel(temp.Workspace, new Hermes.App.Services.DialogService(), host);
         using var locked = temp.Lock("collections");
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
 
-        pane.CommitRename(pane.Find(collection.Id)!, "Animals");
-        pane.CommitRename(pane.Find(request.Id)!, "Fetch");
-        pane.CommitRename(pane.Find(folder.Id)!, "Dogs");
+        await pane.CommitRenameAsync(pane.Find(collection.Id)!, "Animals");
+        await pane.CommitRenameAsync(pane.Find(request.Id)!, "Fetch");
+        await pane.CommitRenameAsync(pane.Find(folder.Id)!, "Dogs");
 
         Assert.Equal("Pets", collection.Name);
         Assert.Equal("List", request.Name);
@@ -247,41 +247,41 @@ public class WorkspaceWriteFailureTests
     }
 
     [AvaloniaFact]
-    public void An_environment_rename_that_cannot_be_saved_keeps_the_old_name()
+    public async Task An_environment_rename_that_cannot_be_saved_keeps_the_old_name()
     {
         using var temp = new TempWorkspace();
-        var environment = temp.Workspace.CreateEnvironment("Staging");
+        var environment = await temp.Workspace.CreateEnvironmentAsync("Staging");
         var pane = new EnvironmentsPaneViewModel(temp.Workspace, new Hermes.App.Services.DialogService(), new NullTabHost());
         using var locked = temp.Lock("environments");
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
 
-        pane.CommitRename(pane.Items.Single(item => item.Model == environment), "Production");
+        await pane.CommitRenameAsync(pane.Items.Single(item => item.Model == environment), "Production");
 
         Assert.Equal("Staging", environment.Name);
         Assert.Single(temp.Problems);
     }
 
     [AvaloniaFact]
-    public void A_session_that_cannot_be_saved_is_reported_once_until_a_save_works_again()
+    public async Task A_session_that_cannot_be_saved_is_reported_once_until_a_save_works_again()
     {
         using var temp = new TempWorkspace();
         using var locked = temp.Lock();
         Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
 
-        temp.Workspace.SaveSession(new SessionState());
-        temp.Workspace.SaveSession(new SessionState());
-        temp.Workspace.SaveSession(new SessionState());
+        await temp.Workspace.SaveSessionAsync(new SessionState());
+        await temp.Workspace.SaveSessionAsync(new SessionState());
+        await temp.Workspace.SaveSessionAsync(new SessionState());
 
         var problem = Assert.Single(temp.Problems);
         Assert.StartsWith("Session (open tabs and drafts) couldn't be saved", problem.Summary);
 
         locked.Allow();
-        temp.Workspace.SaveSession(new SessionState());
+        await temp.Workspace.SaveSessionAsync(new SessionState());
         Assert.Single(temp.Problems);
         Assert.True(File.Exists(Path.Combine(temp.Root, "session.json")));
 
         temp.Lock();
-        temp.Workspace.SaveSession(new SessionState());
+        await temp.Workspace.SaveSessionAsync(new SessionState());
         Assert.Equal(2, temp.Problems.Count);
     }
 }

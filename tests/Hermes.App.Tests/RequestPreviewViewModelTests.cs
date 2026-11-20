@@ -36,14 +36,14 @@ public class RequestPreviewViewModelTests
         RequestHeadersViewModel HeadersEditor, RequestPreviewViewModel Preview);
 
     /// <summary>A request at Pets / Dogs, in a collection whose baseUrl is https://api.example.com.</summary>
-    private static PreviewFixture Open(TempWorkspace temp, string url, DialogService? dialogs = null)
+    private static async Task<PreviewFixture> OpenAsync(TempWorkspace temp, string url, DialogService? dialogs = null)
     {
-        var collection = temp.Workspace.CreateCollection("Pets");
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
         collection.Variables.Add(new Variable { Key = "baseUrl", Value = "https://api.example.com" });
         var folder = new FolderModel { Name = "Dogs" };
-        temp.Workspace.AddNode(collection, null, folder);
+        await temp.Workspace.AddNodeAsync(collection, null, folder);
         var model = new HttpRequestModel { Name = "List", Url = url, Headers = [new KeyValueItem("X-Trace", "1")] };
-        temp.Workspace.AddNode(collection, folder, model);
+        await temp.Workspace.AddNodeAsync(collection, folder, model);
 
         var request = new EditableRequest(temp.Workspace, model);
         var urlEditor = new RequestUrlEditorViewModel();
@@ -55,11 +55,11 @@ public class RequestPreviewViewModelTests
     }
 
     [AvaloniaFact]
-    public void Refresh_resolves_the_url_with_the_variables_where_the_request_is()
+    public async Task Refresh_resolves_the_url_with_the_variables_where_the_request_is()
     {
         using var temp = new TempWorkspace();
-        var (_, _, headersEditor, preview) = Open(temp, "{{baseUrl}}/pets");
-        var environment = temp.Workspace.CreateEnvironment("Staging");
+        var (_, _, headersEditor, preview) = await OpenAsync(temp, "{{baseUrl}}/pets");
+        var environment = await temp.Workspace.CreateEnvironmentAsync("Staging");
         temp.Workspace.ActiveEnvironment = environment;
         var announced = new List<string?>();
         preview.PropertyChanged += (_, e) => announced.Add(e.PropertyName);
@@ -73,10 +73,10 @@ public class RequestPreviewViewModelTests
     }
 
     [AvaloniaFact]
-    public void A_request_that_cannot_be_previewed_shows_the_url_as_typed_and_no_header_preview()
+    public async Task A_request_that_cannot_be_previewed_shows_the_url_as_typed_and_no_header_preview()
     {
         using var temp = new TempWorkspace();
-        var (request, _, headersEditor, preview) = Open(temp, "{{baseUrl}}/pets");
+        var (request, _, headersEditor, preview) = await OpenAsync(temp, "{{baseUrl}}/pets");
         preview.Refresh();
         Assert.True(headersEditor.HasAutomaticRows);
 
@@ -88,10 +88,10 @@ public class RequestPreviewViewModelTests
     }
 
     [AvaloniaFact]
-    public void Refreshing_the_location_follows_where_the_request_lives()
+    public async Task Refreshing_the_location_follows_where_the_request_lives()
     {
         using var temp = new TempWorkspace();
-        var (request, _, _, preview) = Open(temp, "{{baseUrl}}/pets");
+        var (request, _, _, preview) = await OpenAsync(temp, "{{baseUrl}}/pets");
 
         preview.RefreshLocation();
 
@@ -112,7 +112,7 @@ public class RequestPreviewViewModelTests
         using var temp = new TempWorkspace();
         var window = new Window { Width = 800, Height = 600 };
         window.Show();
-        var (_, _, _, preview) = Open(temp, "{{baseUrl}}/pets", new DialogService { Owner = window });
+        var (_, _, _, preview) = await OpenAsync(temp, "{{baseUrl}}/pets", new DialogService { Owner = window });
 
         var showing = preview.ShowCodeCommand.ExecuteAsync(null);
         await UiTestHelpers.WaitUntil(() => window.OwnedWindows.OfType<CodeSnippetDialog>().Any());

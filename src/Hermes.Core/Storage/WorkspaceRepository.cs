@@ -189,12 +189,8 @@ public sealed class WorkspaceRepository(string root, SecretStore? secrets = null
     }
 
     public void SaveSession(SessionState session) =>
-        JsonFileStore.Write(SessionFile, WithoutSecrets(session, CloneSession, SecretFields.Strip, SessionOwner),
+        JsonFileStore.Write(SessionFile, WithoutSecrets(session, ModelCloner.Clone, SecretFields.Strip, SessionOwner),
             HermesJsonContext.Default.SessionState);
-
-    private static SessionState CloneSession(SessionState session) =>
-        JsonSerializer.Deserialize(JsonSerializer.Serialize(session, HermesJsonContext.Default.SessionState),
-            HermesJsonContext.Default.SessionState)!;
 
     // ---- secrets ----
 

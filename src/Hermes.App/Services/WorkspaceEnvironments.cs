@@ -1,9 +1,13 @@
 using Hermes.Core.Models;
+using Hermes.Core.Serialization;
 using Hermes.Core.Storage;
 
 namespace Hermes.App.Services;
 
-/// <summary>The environments of the workspace, the global variables and which environment is active.</summary>
+/// <summary>
+/// The environments of the workspace, the global variables and which environment is active. Like collections, an
+/// environment is written off the UI thread from a copy taken when the write is asked for.
+/// </summary>
 internal sealed class WorkspaceEnvironments
 {
     private readonly WorkspaceRepository _repository;
@@ -41,23 +45,21 @@ internal sealed class WorkspaceEnvironments
 
     public EnvironmentModel? Find(Guid id) => id == Globals.Id ? Globals : Items.FirstOrDefault(e => e.Id == id);
 
-    /// <inheritdoc cref="WorkspaceService.CreateEnvironment"/>
-    public EnvironmentModel Create(string name)
+    /// <inheritdoc cref="WorkspaceService.CreateEnvironmentAsync"/>
+    public async Task<EnvironmentModel> CreateAsync(string name)
     {
         var environment = new EnvironmentModel { Name = name };
-        Add(environment);
+        await AddAsync(environment);
         return environment;
     }
 
-    /// <inheritdoc cref="WorkspaceService.AddEnvironment"/>
-    public bool Add(EnvironmentModel environment) => !_storage.Report(TryAdd(environment));
+    /// <inheritdoc cref="WorkspaceService.AddEnvironmentAsync"/>
+    public async Task<bool> AddAsync(EnvironmentModel environment) => !_storage.Report(await TryAddAsync(environment));
 
-    /// <inheritdoc cref="WorkspaceService.TryAddEnvironment"/>
-    public StorageError? TryAdd(EnvironmentModel environment)
+    /// <inheritdoc cref="WorkspaceService.TryAddEnvironmentAsync"/>
+    public async Task<StorageError?> TryAddAsync(EnvironmentModel environment)
     {
-        var error = WorkspaceStorage.Attempt(() => _repository.SaveEnvironment(environment),
-            _repository.EnvironmentFile(environment.Id), StorageSubjects.Environment(environment), StorageOperation.Write);
-        if (error is not null)
+        if (await TrySaveFileAsync(environment) is { } error)
             return error;
         Items.Add(environment);
         Items.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase));
@@ -65,17 +67,13 @@ internal sealed class WorkspaceEnvironments
         return null;
     }
 
-    /// <inheritdoc cref="WorkspaceService.SaveEnvironment"/>
-    public bool Save(EnvironmentModel environment) => !_storage.Report(TrySave(environment));
+    /// <inheritdoc cref="WorkspaceService.SaveEnvironmentAsync"/>
+    public async Task<bool> SaveAsync(EnvironmentModel environment) => !_storage.Report(await TrySaveAsync(environment));
 
-    /// <inheritdoc cref="WorkspaceService.TrySaveEnvironment"/>
-    public StorageError? TrySave(EnvironmentModel environment)
+    /// <inheritdoc cref="WorkspaceService.TrySaveEnvironmentAsync"/>
+    public async Task<StorageError?> TrySaveAsync(EnvironmentModel environment)
     {
-        var error = environment == Globals
-            ? WorkspaceStorage.Attempt(() => _repository.SaveGlobals(environment), _repository.GlobalsFile,
-                "Global variables", StorageOperation.Write)
-            : WorkspaceStorage.Attempt(() => _repository.SaveEnvironment(environment),
-                _repository.EnvironmentFile(environment.Id), StorageSubjects.Environment(environment), StorageOperation.Write);
+        var error = environment == Globals ? await TrySaveGlobalsAsync() : await TrySaveFileAsync(environment);
         if (error is not null)
             return error;
         EnvironmentsChanged?.Invoke();
@@ -83,11 +81,12 @@ internal sealed class WorkspaceEnvironments
         return null;
     }
 
-    /// <inheritdoc cref="WorkspaceService.DeleteEnvironment"/>
-    public bool Delete(EnvironmentModel environment)
+    /// <inheritdoc cref="WorkspaceService.DeleteEnvironmentAsync"/>
+    public async Task<bool> DeleteAsync(EnvironmentModel environment)
     {
-        var error = WorkspaceStorage.Attempt(() => _repository.DeleteEnvironment(environment.Id),
-            _repository.EnvironmentFile(environment.Id), StorageSubjects.Environment(environment), StorageOperation.Delete);
+        var id = environment.Id;
+        var error = await _storage.AttemptAsync(() => _repository.DeleteEnvironment(id),
+            _repository.EnvironmentFile(id), StorageSubjects.Environment(environment), StorageOperation.Delete);
         if (_storage.Report(error))
             return false;
         Items.Remove(environment);
@@ -95,5 +94,20 @@ internal sealed class WorkspaceEnvironments
             Active = null;
         EnvironmentsChanged?.Invoke();
         return true;
+    }
+
+    // The copies are taken here, on the UI thread; the queue writes them later.
+    private Task<StorageError?> TrySaveFileAsync(EnvironmentModel environment)
+    {
+        var snapshot = ModelCloner.Clone(environment);
+        return _storage.AttemptAsync(() => _repository.SaveEnvironment(snapshot), _repository.EnvironmentFile(environment.Id),
+            StorageSubjects.Environment(environment), StorageOperation.Write);
+    }
+
+    private Task<StorageError?> TrySaveGlobalsAsync()
+    {
+        var snapshot = ModelCloner.Clone(Globals);
+        return _storage.AttemptAsync(() => _repository.SaveGlobals(snapshot), _repository.GlobalsFile,
+            "Global variables", StorageOperation.Write);
     }
 }

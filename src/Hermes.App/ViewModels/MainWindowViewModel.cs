@@ -645,10 +645,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
         // Ones that can't be written are left out of the workspace and listed with the import's own errors.
         var errors = result.Errors.ToList();
         foreach (var collection in result.Collections)
-            if (Workspace.TryAddCollection(collection) is { } error)
+            if (await Workspace.TryAddCollectionAsync(collection) is { } error)
                 errors.Add(error);
         foreach (var environment in result.Environments)
-            if (Workspace.TryAddEnvironment(environment) is { } error)
+            if (await Workspace.TryAddEnvironmentAsync(environment) is { } error)
                 errors.Add(error);
         foreach (var request in result.Requests)
         {
@@ -699,15 +699,22 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
 
     [ObservableProperty] public partial double SidebarWidth { get; set; } = 300;
 
-    /// <summary>Persists open tabs (including unsaved drafts), the active environment and layout.</summary>
-    public void SaveSession() => Workspace.SaveSession(CurrentSession());
+    /// <summary>
+    /// Persists open tabs (including unsaved drafts), the active environment and layout. Only the snapshot is taken
+    /// here; the file is written off the UI thread.
+    /// </summary>
+    public Task SaveSessionAsync() => Workspace.SaveSessionAsync(CurrentSession());
 
     /// <summary>
     /// Saves the session as the app quits. Returns the error only when the write failed while a tab has unsaved edits
     /// kept as a draft in the session, so quitting would lose them; null otherwise.
+    /// It waits for the write, and so for every write queued before it: the window is closing, also on an OS shutdown
+    /// that won't wait for a second close, and the session has to be on disk before the process ends. The write never
+    /// needs the UI thread, so waiting can't deadlock.
     /// </summary>
     public StorageError? SaveSessionBeforeQuit() =>
-        Workspace.TrySaveSession(CurrentSession()) is { } error && Tabs.Any(t => t.IsDirty && t.KeepsDraftInSession)
+        Workspace.TrySaveSessionAsync(CurrentSession()).GetAwaiter().GetResult() is { } error
+        && Tabs.Any(t => t.IsDirty && t.KeepsDraftInSession)
             ? error
             : null;
 

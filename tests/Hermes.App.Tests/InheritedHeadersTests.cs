@@ -29,22 +29,22 @@ public class InheritedHeadersTests
     /// </summary>
     private sealed record Setup(CollectionModel Collection, FolderModel Folder, HttpRequestModel Request);
 
-    private static Setup CreateSetup(Action<Setup>? customize = null)
+    private static async Task<Setup> CreateSetupAsync(Action<Setup>? customize = null)
     {
-        var collection = Workspace.CreateCollection("Shop " + Guid.NewGuid());
+        var collection = await Workspace.CreateCollectionAsync("Shop " + Guid.NewGuid());
         collection.Headers = [new("X-Api-Version", "1"), new("X-Tenant", "shop")];
         var folder = new FolderModel { Name = "Users", Headers = [new("X-Tenant", "users"), new("X-Trace", "folder")] };
-        Workspace.AddNode(collection, null, folder);
+        await Workspace.AddNodeAsync(collection, null, folder);
         var request = new HttpRequestModel
         {
             Name = "List",
             Url = "https://example.test/users",
             Headers = [new("X-Trace", "mine"), new("X-Mine", "yes")],
         };
-        Workspace.AddNode(collection, folder, request);
+        await Workspace.AddNodeAsync(collection, folder, request);
         var setup = new Setup(collection, folder, request);
         customize?.Invoke(setup);
-        Workspace.SaveCollection(collection);
+        await Workspace.SaveCollectionAsync(collection);
         return setup;
     }
 
@@ -66,7 +66,7 @@ public class InheritedHeadersTests
     public async Task Inherited_rows_are_outermost_first_and_match_the_sent_order()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var setup = CreateSetup();
+        var setup = await CreateSetupAsync();
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
@@ -79,7 +79,7 @@ public class InheritedHeadersTests
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }
@@ -88,7 +88,7 @@ public class InheritedHeadersTests
     public async Task Summary_counts_own_inherited_and_automatic_headers_and_leaves_out_zero_parts()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var setup = CreateSetup();
+        var setup = await CreateSetupAsync();
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
@@ -104,7 +104,7 @@ public class InheritedHeadersTests
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }
@@ -113,7 +113,7 @@ public class InheritedHeadersTests
     public async Task Skipping_a_header_marks_the_tab_unsaved_changes_the_request_and_is_saved()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var setup = CreateSetup();
+        var setup = await CreateSetupAsync();
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
@@ -141,7 +141,7 @@ public class InheritedHeadersTests
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }
@@ -150,7 +150,7 @@ public class InheritedHeadersTests
     public async Task Toggling_a_checkbox_with_the_keyboard_keeps_the_focus_on_it()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var setup = CreateSetup();
+        var setup = await CreateSetupAsync();
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
@@ -173,7 +173,7 @@ public class InheritedHeadersTests
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }
@@ -182,7 +182,7 @@ public class InheritedHeadersTests
     public async Task Skipping_an_inherited_authorization_header_brings_the_auth_header_back()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var setup = CreateSetup(s =>
+        var setup = await CreateSetupAsync(s =>
         {
             s.Collection.Headers.Add(new("Authorization", "Token x"));
             s.Request.Auth = new AuthConfig { Type = AuthType.Bearer, Bearer = new BearerAuth { Token = "t" } };
@@ -204,7 +204,7 @@ public class InheritedHeadersTests
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }
@@ -213,7 +213,7 @@ public class InheritedHeadersTests
     public async Task An_inherited_content_type_the_form_data_body_replaces_is_shown_as_not_sent()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var setup = CreateSetup(s =>
+        var setup = await CreateSetupAsync(s =>
         {
             s.Collection.Headers.Add(new("Content-Type", "text/plain"));
             s.Request.Body = new RequestBody { Mode = BodyMode.FormData };
@@ -231,7 +231,7 @@ public class InheritedHeadersTests
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }
@@ -240,7 +240,7 @@ public class InheritedHeadersTests
     public async Task A_skipped_header_is_still_skipped_when_the_request_is_reopened()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var setup = CreateSetup(s => s.Request.SkippedInheritedHeaders = ["x-api-version"]);
+        var setup = await CreateSetupAsync(s => s.Request.SkippedInheritedHeaders = ["x-api-version"]);
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
@@ -251,7 +251,7 @@ public class InheritedHeadersTests
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }
@@ -260,7 +260,7 @@ public class InheritedHeadersTests
     public async Task Headers_set_again_nearer_are_overridden_and_the_nearer_row_says_so()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var setup = CreateSetup();
+        var setup = await CreateSetupAsync();
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
@@ -279,7 +279,7 @@ public class InheritedHeadersTests
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }
@@ -288,7 +288,7 @@ public class InheritedHeadersTests
     public async Task A_header_named_like_the_auth_header_gets_a_warning()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var setup = CreateSetup(s =>
+        var setup = await CreateSetupAsync(s =>
         {
             s.Request.Headers.Add(new("authorization", "Basic abc"));
             s.Request.Auth = new AuthConfig { Type = AuthType.Bearer, Bearer = new BearerAuth { Token = "t" } };
@@ -303,11 +303,11 @@ public class InheritedHeadersTests
             Assert.DoesNotContain(tab.HeadersEditor.AutomaticRows, h => h.TagText == "from auth");
 
             // An inherited header that replaces the auth header is warned about on its own row.
-            var inheritedSetup = CreateSetup(s => s.Collection.Headers.Add(new("Authorization", "Token x")));
+            var inheritedSetup = await CreateSetupAsync(s => s.Collection.Headers.Add(new("Authorization", "Token x")));
             try
             {
                 inheritedSetup.Request.Auth = new AuthConfig { Type = AuthType.Bearer, Bearer = new BearerAuth { Token = "t" } };
-                Workspace.SaveCollection(inheritedSetup.Collection);
+                await Workspace.SaveCollectionAsync(inheritedSetup.Collection);
                 var inheritedTab = await OpenRequestAsync(vm, inheritedSetup.Request);
                 var row = inheritedTab.HeadersEditor.InheritedRows.Single(h => h.Key == "Authorization");
                 Assert.True(row.IsTagWarning);
@@ -315,12 +315,12 @@ public class InheritedHeadersTests
             }
             finally
             {
-                Workspace.DeleteCollection(inheritedSetup.Collection);
+                await Workspace.DeleteCollectionAsync(inheritedSetup.Collection);
             }
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }
@@ -329,7 +329,7 @@ public class InheritedHeadersTests
     public async Task The_source_chip_opens_the_folder_or_collection_tab()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var setup = CreateSetup();
+        var setup = await CreateSetupAsync();
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
@@ -344,7 +344,7 @@ public class InheritedHeadersTests
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }
@@ -353,21 +353,21 @@ public class InheritedHeadersTests
     public async Task Editing_a_collection_refreshes_the_inherited_rows()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var setup = CreateSetup();
+        var setup = await CreateSetupAsync();
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
             Assert.DoesNotContain(tab.HeadersEditor.InheritedRows, h => h.Key == "X-New");
 
             setup.Collection.Headers.Add(new("X-New", "1"));
-            Workspace.SaveCollection(setup.Collection);
+            await Workspace.SaveCollectionAsync(setup.Collection);
 
             Assert.Contains(tab.HeadersEditor.InheritedRows, h => h.Key == "X-New");
             Assert.False(tab.IsDirty);
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }
@@ -376,7 +376,7 @@ public class InheritedHeadersTests
     public async Task Automatic_headers_say_whether_they_come_from_the_body_or_auth()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var setup = CreateSetup(s =>
+        var setup = await CreateSetupAsync(s =>
         {
             s.Collection.Auth = new AuthConfig { Type = AuthType.Bearer, Bearer = new BearerAuth { Token = "t" } };
             s.Request.Auth = AuthConfig.Inherit();
@@ -401,7 +401,7 @@ public class InheritedHeadersTests
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }
@@ -410,7 +410,7 @@ public class InheritedHeadersTests
     public async Task A_content_type_set_by_the_user_is_not_marked_as_from_the_body()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var setup = CreateSetup(s =>
+        var setup = await CreateSetupAsync(s =>
         {
             s.Request.Headers.Add(new("Content-Type", "text/plain"));
             s.Request.Body = new RequestBody { Mode = BodyMode.Raw, Raw = "x", RawLanguage = RawLanguage.Json };
@@ -422,7 +422,7 @@ public class InheritedHeadersTests
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }
@@ -498,9 +498,9 @@ public class InheritedHeadersTests
         window.RequestedThemeVariant = themeName == "Light" ? ThemeVariant.Light : ThemeVariant.Dark;
         // Tall enough for the whole Headers section above the response pane.
         window.Height = 1500;
-        var setup = CreateSetup(s => s.Request.Auth = new AuthConfig { Type = AuthType.Bearer, Bearer = new BearerAuth { Token = "t" } });
+        var setup = await CreateSetupAsync(s => s.Request.Auth = new AuthConfig { Type = AuthType.Bearer, Bearer = new BearerAuth { Token = "t" } });
         setup.Request.Headers.Add(new("Authorization", "Basic x"));
-        Workspace.SaveCollection(setup.Collection);
+        await Workspace.SaveCollectionAsync(setup.Collection);
         try
         {
             var tab = await OpenRequestAsync(vm, setup.Request);
@@ -514,7 +514,7 @@ public class InheritedHeadersTests
         }
         finally
         {
-            Workspace.DeleteCollection(setup.Collection);
+            await Workspace.DeleteCollectionAsync(setup.Collection);
             window.Close();
         }
     }

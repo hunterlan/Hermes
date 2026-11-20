@@ -157,7 +157,7 @@ public sealed partial class EnvironmentMatrixTabViewModel : TabViewModelBase
                         variable.Value = cell.Value;
                 }
             }
-            if (!await WriteWithRetryAsync(() => Services.Workspace.TrySaveEnvironment(column.Model)))
+            if (!await WriteWithRetryAsync(() => Services.Workspace.TrySaveEnvironmentAsync(column.Model)))
             {
                 // Not on disk, so not in the environment either. Columns before it are saved; the edits stay in the grid.
                 column.Model.Variables = backup.Select(entry => entry.Restore()).ToList();

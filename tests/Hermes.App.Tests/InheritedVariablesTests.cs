@@ -19,9 +19,9 @@ public class InheritedVariablesTests
     public async Task Collection_auth_field_sees_collection_and_environment_variables()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var collection = CreateCollectionWithVariable("collectionVar");
-        var stagingEnvironment = CreateEnvironment("stagingVar");
-        var productionEnvironment = CreateEnvironment("productionVar");
+        var collection = await CreateCollectionWithVariableAsync("collectionVar");
+        var stagingEnvironment = await CreateEnvironmentAsync("stagingVar");
+        var productionEnvironment = await CreateEnvironmentAsync("productionVar");
         try
         {
             vm.SelectedEnvironment = vm.EnvironmentOptions.Single(o => o.Model == stagingEnvironment);
@@ -45,7 +45,7 @@ public class InheritedVariablesTests
         }
         finally
         {
-            Cleanup(collection, stagingEnvironment, productionEnvironment);
+            await CleanupAsync(collection, stagingEnvironment, productionEnvironment);
             window.Close();
         }
     }
@@ -54,11 +54,11 @@ public class InheritedVariablesTests
     public async Task Folder_auth_field_sees_collection_and_environment_variables()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var collection = CreateCollectionWithVariable("collectionVar");
+        var collection = await CreateCollectionWithVariableAsync("collectionVar");
         var folder = new FolderModel { Name = "Users" };
-        Workspace.AddNode(collection, null, folder);
-        var stagingEnvironment = CreateEnvironment("stagingVar");
-        var productionEnvironment = CreateEnvironment("productionVar");
+        await Workspace.AddNodeAsync(collection, null, folder);
+        var stagingEnvironment = await CreateEnvironmentAsync("stagingVar");
+        var productionEnvironment = await CreateEnvironmentAsync("productionVar");
         try
         {
             vm.SelectedEnvironment = vm.EnvironmentOptions.Single(o => o.Model == stagingEnvironment);
@@ -81,16 +81,16 @@ public class InheritedVariablesTests
         }
         finally
         {
-            Cleanup(collection, stagingEnvironment, productionEnvironment);
+            await CleanupAsync(collection, stagingEnvironment, productionEnvironment);
             window.Close();
         }
     }
 
     [AvaloniaFact]
-    public void Request_editors_get_the_request_scope()
+    public async Task Request_editors_get_the_request_scope()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var environment = CreateEnvironment("requestVar");
+        var environment = await CreateEnvironmentAsync("requestVar");
         try
         {
             vm.SelectedEnvironment = vm.EnvironmentOptions.Single(o => o.Model == environment);
@@ -111,16 +111,16 @@ public class InheritedVariablesTests
         }
         finally
         {
-            Cleanup(null, environment);
+            await CleanupAsync(null, environment);
             window.Close();
         }
     }
 
     [AvaloniaFact]
-    public void Request_editors_follow_the_active_environment()
+    public async Task Request_editors_follow_the_active_environment()
     {
         var (window, vm) = UiTestHelpers.ShowMainWindow();
-        var environment = CreateEnvironment("requestVar");
+        var environment = await CreateEnvironmentAsync("requestVar");
         try
         {
             var tab = Assert.IsType<RequestTabViewModel>(vm.ActiveTab);
@@ -136,7 +136,7 @@ public class InheritedVariablesTests
         }
         finally
         {
-            Cleanup(null, environment);
+            await CleanupAsync(null, environment);
             window.Close();
         }
     }
@@ -147,29 +147,29 @@ public class InheritedVariablesTests
     private static void SelectBearer(AuthEditorViewModel auth) =>
         auth.SelectedType = auth.Types.Single(type => type.Value == AuthType.Bearer);
 
-    private static CollectionModel CreateCollectionWithVariable(string key)
+    private static async Task<CollectionModel> CreateCollectionWithVariableAsync(string key)
     {
-        var collection = Workspace.CreateCollection("Inherited " + Guid.NewGuid());
+        var collection = await Workspace.CreateCollectionAsync("Inherited " + Guid.NewGuid());
         collection.Variables.Add(new Variable(key, "from collection"));
-        Workspace.SaveCollection(collection);
+        await Workspace.SaveCollectionAsync(collection);
         return collection;
     }
 
-    private static EnvironmentModel CreateEnvironment(string variableKey)
+    private static async Task<EnvironmentModel> CreateEnvironmentAsync(string variableKey)
     {
-        var environment = Workspace.CreateEnvironment("Inherited " + Guid.NewGuid());
+        var environment = await Workspace.CreateEnvironmentAsync("Inherited " + Guid.NewGuid());
         environment.Variables.Add(new Variable(variableKey, "from environment"));
-        Workspace.SaveEnvironment(environment);
+        await Workspace.SaveEnvironmentAsync(environment);
         return environment;
     }
 
     /// <summary>An environment left active would change how later tests resolve variables.</summary>
-    private static void Cleanup(CollectionModel? collection, params EnvironmentModel[] environments)
+    private static async Task CleanupAsync(CollectionModel? collection, params EnvironmentModel[] environments)
     {
         Workspace.ActiveEnvironment = null;
         foreach (var environment in environments)
-            Workspace.DeleteEnvironment(environment);
+            await Workspace.DeleteEnvironmentAsync(environment);
         if (collection is not null)
-            Workspace.DeleteCollection(collection);
+            await Workspace.DeleteCollectionAsync(collection);
     }
 }
