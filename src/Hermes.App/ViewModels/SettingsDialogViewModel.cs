@@ -145,7 +145,7 @@ public sealed partial class SettingsDialogViewModel : ObservableObject
         }
 
         var current = _settings.Current;
-        var error = _settings.Update(new AppSettings
+        var error = await _settings.UpdateAsync(new AppSettings
         {
             Theme = SelectedTheme.Value,
             Layout = SelectedLayout.Value,

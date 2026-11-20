@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Hermes.App.Tests;
 
-public class HistoryRetentionSettingsTests : IDisposable
+public class HistoryRetentionSettingsTests : IAsyncDisposable
 {
     // Resolved inside the test, once the headless app is running.
     private SettingsService _settings = null!;
@@ -46,7 +46,7 @@ public class HistoryRetentionSettingsTests : IDisposable
     [InlineData("1", 1)]
     [InlineData(" 30 ", 30)]
     [InlineData("36500", 36500)]
-    public void Valid_retention_is_saved(string text, int expectedDays)
+    public async Task Valid_retention_is_saved(string text, int expectedDays)
     {
         var dialog = CreateDialog();
 
@@ -54,7 +54,7 @@ public class HistoryRetentionSettingsTests : IDisposable
 
         Assert.Null(dialog.HistoryRetentionError);
         Assert.True(dialog.SaveCommand.CanExecute(null));
-        dialog.SaveCommand.Execute(null);
+        await dialog.SaveCommand.ExecuteAsync(null);
         Assert.Equal(expectedDays, _settings.Current.HistoryRetentionDays);
     }
 
@@ -95,10 +95,11 @@ public class HistoryRetentionSettingsTests : IDisposable
         Assert.True(canExecuteChanges >= 2);
     }
 
-    public void Dispose()
+    // Settings are shared, so the test puts them back, waiting until they are written and current again.
+    public async ValueTask DisposeAsync()
     {
         if (_originalSettings is not null)
-            _settings.Update(_originalSettings);
+            await _settings.UpdateAsync(_originalSettings);
     }
 
     private SettingsDialogViewModel CreateDialog()

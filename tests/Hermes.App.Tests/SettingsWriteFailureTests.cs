@@ -30,13 +30,13 @@ public class SettingsWriteFailureTests : IDisposable
     private void RestoreWritableFile() => Directory.Delete(AppPaths.SettingsFile, true);
 
     [AvaloniaFact]
-    public void Update_returns_the_error_and_changes_nothing()
+    public async Task Update_returns_the_error_and_changes_nothing()
     {
         var settings = new AppSettings { Layout = ResponseLayout.Horizontal };
         var changes = 0;
         _settings.Changed += () => changes++;
 
-        var error = _settings.Update(settings);
+        var error = await _settings.UpdateAsync(settings);
 
         Assert.NotNull(error);
         Assert.StartsWith("Settings couldn't be saved", error.Summary);
@@ -46,26 +46,57 @@ public class SettingsWriteFailureTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void An_in_place_change_that_cannot_be_written_is_reported_once()
+    public async Task An_in_place_change_that_cannot_be_written_is_reported_once()
     {
         var problems = new List<StorageError>();
         _settings.StorageProblem += problems.Add;
 
         _settings.Current.Layout = ResponseLayout.Horizontal;
-        _settings.SaveCurrent();
-        _settings.SaveCurrent();
-        _settings.SaveCurrent();
+        await _settings.SaveCurrentAsync();
+        await _settings.SaveCurrentAsync();
+        await _settings.SaveCurrentAsync();
 
         Assert.Single(problems);
         Assert.Equal(ResponseLayout.Horizontal, _settings.Current.Layout);
 
         // Once a write works the next failure is news again.
         RestoreWritableFile();
-        _settings.SaveCurrent();
+        await _settings.SaveCurrentAsync();
         File.Delete(AppPaths.SettingsFile);
         Directory.CreateDirectory(AppPaths.SettingsFile);
-        _settings.SaveCurrent();
+        await _settings.SaveCurrentAsync();
         Assert.Equal(2, problems.Count);
+    }
+
+    [AvaloniaFact]
+    public async Task An_in_place_change_takes_effect_at_once_and_is_written_from_a_copy()
+    {
+        RestoreWritableFile();
+        var changes = 0;
+        _settings.Changed += () => changes++;
+
+        _settings.Current.RequestTimeoutMs = 2468;
+        var saving = _settings.SaveCurrentAsync();
+        // A change after the call isn't in what is written: the write has its own copy.
+        _settings.Current.RequestTimeoutMs = 4321;
+
+        Assert.Equal(1, changes);
+        await saving;
+        var written = File.ReadAllText(AppPaths.SettingsFile);
+        Assert.Contains("2468", written);
+        Assert.DoesNotContain("4321", written);
+    }
+
+    [AvaloniaFact]
+    public void Disposing_waits_for_the_settings_still_being_written()
+    {
+        RestoreWritableFile();
+
+        _settings.Current.RequestTimeoutMs = 1234;
+        _settings.SaveCurrent();
+        _settings.Dispose();
+
+        Assert.Contains("1234", File.ReadAllText(AppPaths.SettingsFile));
     }
 
     [AvaloniaFact]
@@ -90,6 +121,8 @@ public class SettingsWriteFailureTests : IDisposable
 
     public void Dispose()
     {
+        // Nothing this test queued may land after the original file is put back.
+        _settings.Dispose();
         if (Directory.Exists(AppPaths.SettingsFile))
             Directory.Delete(AppPaths.SettingsFile, true);
         if (_originalText is not null)
