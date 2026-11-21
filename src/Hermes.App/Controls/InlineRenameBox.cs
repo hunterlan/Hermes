@@ -36,7 +36,7 @@ public sealed class InlineRenameBox : TextBox
     {
         if (DataContext is IRenamable renamable && e.Key is Key.Enter or Key.Escape)
         {
-            renamable.CommitRename(e.Key == Key.Enter ? Text : null);
+            renamable.CommitRenameCommand.Execute(e.Key == Key.Enter ? Text : null);
             e.Handled = true;
             return;
         }
@@ -48,7 +48,7 @@ public sealed class InlineRenameBox : TextBox
     {
         base.OnLostFocus(e);
         if (DataContext is IRenamable { IsRenaming: true } renamable)
-            renamable.CommitRename(Text);
+            renamable.CommitRenameCommand.Execute(Text);
     }
 
     private void BeginEditing()

@@ -224,20 +224,20 @@ public class ResponseCollapseViewTests
     }
 
     [AvaloniaFact]
-    public void A_settings_change_keeps_the_split_and_the_collapse()
+    public async Task A_settings_change_keeps_the_split_and_the_collapse()
     {
         var shown = Show();
         try
         {
             shown.Tab.Response.Pane.ResponseSplitRatio = 0.3;
             UiTestHelpers.Pump();
-            Settings.ToggleTheme();
+            await Settings.ToggleThemeAsync();
             UiTestHelpers.Pump();
             Assert.Equal(0.3, ResponseShare(shown.View), 3);
 
             shown.Tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
             UiTestHelpers.Pump();
-            Settings.ToggleTheme();
+            await Settings.ToggleThemeAsync();
             UiTestHelpers.Pump();
             Assert.True(shown.Tab.Response.Pane.IsResponseCollapsed);
             Assert.Equal(BarHeight, SplitGrid(shown.View).RowDefinitions[2].ActualHeight);

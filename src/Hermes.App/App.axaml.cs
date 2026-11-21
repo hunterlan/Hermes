@@ -96,8 +96,7 @@ public partial class App : Application
         SetMainWindow(desktop, dialog, showWindow);
     }
 
-    // An event handler, so async void: an unexpected error still reaches the app's handler, as a throw would.
-    private async void OnStartupProblemClosed(IClassicDesktopStyleApplicationLifetime desktop, StorageDialogResult? result)
+    private void OnStartupProblemClosed(IClassicDesktopStyleApplicationLifetime desktop, StorageDialogResult? result)
     {
         if (result is null)
         {
@@ -108,7 +107,9 @@ public partial class App : Application
         var chosenFolder = result.ChoiceId == StartupFolderChoices.ChooseFolder ? result.Folder : null;
         var changed = settings.Current.Copy();
         changed.DataDirectory = chosenFolder;
-        if (await settings.UpdateAsync(changed) is { } failure)
+        // Waits for the write: this runs in an event handler with no view model, and only this dialog is on screen.
+        // It can't deadlock: the write runs on SettingsService's background queue and never resumes on the UI thread.
+        if (settings.Update(changed) is { } failure)
         {
             var notice = new StorageErrorDialog("Hermes can't start", [failure], [], closeText: "Quit");
             notice.Closed += (_, _) => desktop.Shutdown();

@@ -23,11 +23,11 @@ public class RequestSettingsViewModelTests : IAsyncDisposable
     }
 
     /// <summary>Changes the app settings in place, the way the app does for a one-setting change.</summary>
-    private void SetAppSettings(bool followRedirects, bool verifySsl)
+    private async Task SetAppSettings(bool followRedirects, bool verifySsl)
     {
         _appSettings.Current.FollowRedirects = followRedirects;
         _appSettings.Current.VerifySsl = verifySsl;
-        _appSettings.SaveCurrent();
+        await _appSettings.SaveCurrentAsync();
     }
 
     // The app settings are shared, so they are put back, waiting until that is written.
@@ -108,7 +108,7 @@ public class RequestSettingsViewModelTests : IAsyncDisposable
     }
 
     [AvaloniaFact]
-    public void Effective_values_follow_an_app_settings_change_without_an_override()
+    public async Task Effective_values_follow_an_app_settings_change_without_an_override()
     {
         var vm = CreateSettings();
         var changed = new List<string?>();
@@ -116,7 +116,7 @@ public class RequestSettingsViewModelTests : IAsyncDisposable
         var followRedirects = !_originalFollowRedirects;
         var verifySsl = !_originalVerifySsl;
 
-        SetAppSettings(followRedirects, verifySsl);
+        await SetAppSettings(followRedirects, verifySsl);
         vm.OnAppSettingsChanged();
 
         Assert.Equal(followRedirects, vm.FollowRedirects);
@@ -126,12 +126,12 @@ public class RequestSettingsViewModelTests : IAsyncDisposable
     }
 
     [AvaloniaFact]
-    public void An_override_wins_over_the_app_settings()
+    public async Task An_override_wins_over_the_app_settings()
     {
         var vm = CreateSettings();
         vm.Load(new RequestSettings { FollowRedirects = false, VerifySsl = true });
 
-        SetAppSettings(followRedirects: true, verifySsl: false);
+        await SetAppSettings(followRedirects: true, verifySsl: false);
         vm.OnAppSettingsChanged();
 
         Assert.False(vm.FollowRedirects);

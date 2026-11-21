@@ -122,14 +122,11 @@ public partial class CollectionsPaneView : UserControl
         }
     }
 
-    // Async void, like any event handler: an unexpected error still reaches the UI thread's handler.
-    private async void OnDrop(object? sender, DragEventArgs e)
+    private void OnDrop(object? sender, DragEventArgs e)
     {
-        var drop = _dragged is { } dragged && ViewModel is { } vm && TargetRow(e) is { } targetRow
-            ? vm.DropAsync(dragged, targetRow.Node, PositionIn(targetRow.Row, targetRow.Node, e))
-            : Task.CompletedTask;
+        if (_dragged is { } dragged && ViewModel is { } vm && TargetRow(e) is { } targetRow)
+            vm.DropCommand.Execute(new TreeDrop(dragged, targetRow.Node, PositionIn(targetRow.Row, targetRow.Node, e)));
         SetDropTarget(null);
-        await drop;
     }
 
     private static DropTargetRow? TargetRow(DragEventArgs e)

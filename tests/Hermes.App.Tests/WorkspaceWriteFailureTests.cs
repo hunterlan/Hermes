@@ -247,6 +247,41 @@ public class WorkspaceWriteFailureTests
     }
 
     [AvaloniaFact]
+    public async Task A_rename_through_the_rename_command_that_cannot_be_saved_keeps_the_old_name()
+    {
+        using var temp = new TempWorkspace();
+        var collection = await temp.Workspace.CreateCollectionAsync("Pets");
+        var pane = new CollectionsPaneViewModel(temp.Workspace, new Hermes.App.Services.DialogService(), new NullTabHost());
+        var node = pane.Find(collection.Id)!;
+        node.IsRenaming = true;
+        using var locked = temp.Lock("collections");
+        Assert.SkipUnless(locked.IsEffective, TempWorkspace.NotEnforced);
+
+        await node.CommitRenameCommand.ExecuteAsync("Animals");
+
+        Assert.False(node.IsRenaming);
+        Assert.Equal("Pets", collection.Name);
+        Assert.Equal("Pets", node.Name);
+        Assert.StartsWith("Collection \"Pets\" couldn't be renamed to \"Animals\": ", Assert.Single(temp.Problems).Summary);
+    }
+
+    [AvaloniaFact]
+    public async Task An_environment_rename_through_the_rename_command_is_saved()
+    {
+        using var temp = new TempWorkspace();
+        var environment = await temp.Workspace.CreateEnvironmentAsync("Staging");
+        var pane = new EnvironmentsPaneViewModel(temp.Workspace, new Hermes.App.Services.DialogService(), new NullTabHost());
+        var item = pane.Items.Single(candidate => candidate.Model == environment);
+        item.IsRenaming = true;
+
+        await item.CommitRenameCommand.ExecuteAsync("Production");
+
+        Assert.False(item.IsRenaming);
+        Assert.Equal("Production", environment.Name);
+        Assert.Empty(temp.Problems);
+    }
+
+    [AvaloniaFact]
     public async Task An_environment_rename_that_cannot_be_saved_keeps_the_old_name()
     {
         using var temp = new TempWorkspace();
