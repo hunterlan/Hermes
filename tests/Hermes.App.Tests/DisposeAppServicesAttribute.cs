@@ -19,20 +19,24 @@ public sealed class DisposeAppServicesAttribute : BeforeAfterTestAttribute
 {
     public override void After(MethodInfo methodUnderTest, IXunitTest test)
     {
-        // No Avalonia test has started an app yet. Don't touch Dispatcher.UIThread here: doing so
-        // from a plain [Fact] before the headless platform exists breaks the next Avalonia test.
+        // No Avalonia test has started an app yet.
         if (App.Services is not IDisposable services)
             return;
 
-        // Avalonia tests run After on the headless UI thread. Plain [Fact] tests run in parallel on
-        // other threads and own no app, but App.Services still points at whichever Avalonia test is
-        // running at that moment, so they must not dispose it.
-        if (!Dispatcher.UIThread.CheckAccess())
+        // Avalonia tests run After on the headless UI thread, the only thread with a dispatcher.
+        // Plain [Fact] tests run in parallel on other threads and own no app, but App.Services
+        // still points at whichever Avalonia test is running at that moment, so they must not
+        // dispose it.
+        // Read Dispatcher.UIThread only from a thread that has a dispatcher: while the headless
+        // session sets up the next test's app there is none, and reading it from a plain [Fact]
+        // then makes that thread the UI thread, so the next Avalonia test fails to start
+        // ("a different thread owns it"). FromThread only looks; it never creates a dispatcher.
+        if (Dispatcher.FromThread(Thread.CurrentThread) is not { } uiThread || uiThread != Dispatcher.UIThread)
             return;
 
         // A layout pass still queued by the test attaches views that look the container up,
         // so run it before disposing.
-        Dispatcher.UIThread.RunJobs();
+        uiThread.RunJobs();
 
         // Disposing a provider twice is a no-op.
         services.Dispose();
