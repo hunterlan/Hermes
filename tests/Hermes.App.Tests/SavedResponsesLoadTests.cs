@@ -47,6 +47,21 @@ public class SavedResponsesLoadTests
     }
 
     [AvaloniaFact]
+    public async Task Showing_a_tab_starts_the_read_through_the_load_command()
+    {
+        using var temp = new TempWorkspace();
+        var request = await SavedRequestWithResponsesAsync(temp, 200, 201);
+        using var tab = new RequestTabViewModel(RequestTabTestServices.Create(temp), ModelCloner.Clone(request));
+        Assert.False(tab.Response.Saved.HasItems);
+
+        tab.IsActive = true;
+        await tab.LoadSavedResponsesCommand.ExecutionTask!;
+
+        Assert.Equal("Saved · 1 earlier response", tab.Response.Saved.Label);
+        Assert.Contains("201", tab.Response.StatusCodeText);
+    }
+
+    [AvaloniaFact]
     public async Task A_restored_tab_reads_its_saved_responses_only_once_it_is_shown()
     {
         using var temp = new TempWorkspace();

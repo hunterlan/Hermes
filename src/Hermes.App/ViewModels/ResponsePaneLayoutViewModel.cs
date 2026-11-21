@@ -50,12 +50,13 @@ public sealed partial class ResponsePaneLayoutViewModel : ObservableObject, IDis
     [RelayCommand]
     private void ToggleCollapsed() => IsResponseCollapsed = !IsResponseCollapsed;
 
-    [RelayCommand]
-    private void SetLayout(ResponseLayout layout)
+    // Concurrent runs allowed: the layout applies at once, and the buttons stay enabled while the setting is written.
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task SetLayout(ResponseLayout layout)
     {
         _settings.Current.Layout = layout;
         // Raises Changed, which updates IsSideBySide here and in the other tabs.
-        _settings.SaveCurrent();
+        return _settings.SaveCurrentAsync();
     }
 
     /// <summary>Opens the pane, for when a result arrives: a result is never hidden.</summary>

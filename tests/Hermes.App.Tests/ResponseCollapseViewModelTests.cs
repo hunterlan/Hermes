@@ -81,7 +81,7 @@ public class ResponseCollapseViewModelTests
     }
 
     [AvaloniaFact]
-    public void A_response_expands_the_pane_collapsed_to_a_strip_and_the_width_share_stays()
+    public async Task A_response_expands_the_pane_collapsed_to_a_strip_and_the_width_share_stays()
     {
         using var temp = new TempWorkspace();
         using var response = new ResponseViewModel(new DialogService(), temp.Settings);
@@ -102,12 +102,12 @@ public class ResponseCollapseViewModelTests
         finally
         {
             temp.Settings.Current.Layout = ResponseLayout.Vertical;
-            temp.Settings.SaveCurrent();
+            await temp.Settings.SaveCurrentAsync();
         }
     }
 
     [AvaloniaFact]
-    public void The_collapse_is_a_bar_when_stacked_and_a_strip_when_side_by_side()
+    public async Task The_collapse_is_a_bar_when_stacked_and_a_strip_when_side_by_side()
     {
         using var temp = new TempWorkspace();
         using var response = new ResponseViewModel(new DialogService(), temp.Settings);
@@ -130,12 +130,12 @@ public class ResponseCollapseViewModelTests
         finally
         {
             temp.Settings.Current.Layout = ResponseLayout.Vertical;
-            temp.Settings.SaveCurrent();
+            await temp.Settings.SaveCurrentAsync();
         }
     }
 
     [AvaloniaFact]
-    public void A_layout_change_from_settings_reaches_every_tab()
+    public async Task A_layout_change_from_settings_reaches_every_tab()
     {
         using var temp = new TempWorkspace();
         using var response = new ResponseViewModel(new DialogService(), temp.Settings);
@@ -144,7 +144,7 @@ public class ResponseCollapseViewModelTests
         try
         {
             temp.Settings.Current.Layout = ResponseLayout.Horizontal;
-            temp.Settings.SaveCurrent();
+            await temp.Settings.SaveCurrentAsync();
 
             Assert.Contains(nameof(ResponsePaneLayoutViewModel.IsSideBySide), changed);
             Assert.True(response.Pane.IsSideBySide);
@@ -152,7 +152,7 @@ public class ResponseCollapseViewModelTests
         finally
         {
             temp.Settings.Current.Layout = ResponseLayout.Vertical;
-            temp.Settings.SaveCurrent();
+            await temp.Settings.SaveCurrentAsync();
         }
     }
 }

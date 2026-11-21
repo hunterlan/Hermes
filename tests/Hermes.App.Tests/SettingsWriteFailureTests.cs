@@ -88,12 +88,12 @@ public class SettingsWriteFailureTests : IDisposable
     }
 
     [AvaloniaFact]
-    public void Disposing_waits_for_the_settings_still_being_written()
+    public async Task Disposing_waits_for_the_settings_still_being_written()
     {
         RestoreWritableFile();
 
         _settings.Current.RequestTimeoutMs = 1234;
-        _settings.SaveCurrent();
+        await _settings.SaveCurrentAsync();
         _settings.Dispose();
 
         Assert.Contains("1234", File.ReadAllText(AppPaths.SettingsFile));

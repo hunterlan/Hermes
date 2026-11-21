@@ -31,10 +31,21 @@ public sealed class SettingsService : IDisposable
     {
         if (await TryWriteAsync(settings.Copy()) is { } error)
             return error;
-        _failureReported = false;
-        Current = settings;
-        ApplyTheme();
-        Changed?.Invoke();
+        MakeCurrent(settings);
+        return null;
+    }
+
+    /// <summary>
+    /// <see cref="UpdateAsync"/> for the one caller that has to wait for the write, at startup: writes
+    /// <paramref name="settings"/> on the queue and blocks until that is done, then makes them current on the calling
+    /// thread. Waiting is safe because the write never resumes on the UI thread (see <see cref="TryWriteAsync"/>);
+    /// only the part that touches the UI runs here, after the wait.
+    /// </summary>
+    public StorageError? Update(AppSettings settings)
+    {
+        if (TryWriteAsync(settings.Copy()).GetAwaiter().GetResult() is { } error)
+            return error;
+        MakeCurrent(settings);
         return null;
     }
 
@@ -62,12 +73,6 @@ public sealed class SettingsService : IDisposable
         }
     }
 
-    /// <summary>
-    /// <see cref="SaveCurrentAsync"/> for a UI handler that can't wait. An unexpected error still reaches the app's
-    /// handler, as a throw would.
-    /// </summary>
-    public async void SaveCurrent() => await SaveCurrentAsync();
-
     /// <summary>Completes when the writes queued so far have run (or have failed).</summary>
     public Task FlushAsync() => _writes.FlushAsync();
 
@@ -76,11 +81,21 @@ public sealed class SettingsService : IDisposable
     /// </summary>
     public void Dispose() => _writes.FlushAsync().Wait();
 
+    private void MakeCurrent(AppSettings settings)
+    {
+        _failureReported = false;
+        Current = settings;
+        ApplyTheme();
+        Changed?.Invoke();
+    }
+
+    // ConfigureAwait(false): nothing after the write needs the UI thread, and Update blocks the UI thread on this
+    // task, so its continuation must not wait to be posted back to it.
     private async Task<StorageError?> TryWriteAsync(AppSettings snapshot)
     {
         try
         {
-            await _writes.EnqueueAsync(() => SettingsStore.Save(snapshot));
+            await _writes.EnqueueAsync(() => SettingsStore.Save(snapshot)).ConfigureAwait(false);
             return null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -100,10 +115,10 @@ public sealed class SettingsService : IDisposable
             };
     }
 
-    public void ToggleTheme()
+    public Task ToggleThemeAsync()
     {
         var isDark = Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
         Current.Theme = isDark ? ThemePreference.Light : ThemePreference.Dark;
-        SaveCurrent();
+        return SaveCurrentAsync();
     }
 }

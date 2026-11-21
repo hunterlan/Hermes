@@ -129,6 +129,58 @@ public class SidebarTests
     }
 
     [AvaloniaFact]
+    public async Task The_drop_command_moves_request_into_folder()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var collection = await CreateCollectionAsync(vm, "Drop command test " + Guid.NewGuid());
+        await vm.Collections.AddFolderCommand.ExecuteAsync(collection);
+        await vm.Collections.AddRequestCommand.ExecuteAsync(vm.Collections.Find(collection.Id));
+        var root = vm.Collections.Find(collection.Id)!;
+        var folder = root.Children.OfType<FolderNodeViewModel>().Single();
+        var request = root.Children.OfType<RequestNodeViewModel>().Single();
+
+        await vm.Collections.DropCommand.ExecuteAsync(new TreeDrop(request, folder, DropPosition.Inside));
+
+        Assert.Equal(folder.Id, Workspace.Find(request.Id)!.Parent!.Id);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task The_rename_command_saves_the_new_name_of_a_collection_and_a_request()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var collection = await CreateCollectionAsync(vm, "Rename command test " + Guid.NewGuid());
+        await vm.Collections.AddRequestCommand.ExecuteAsync(vm.Collections.Find(collection.Id));
+        var request = vm.Collections.Find(collection.Id)!.Children.OfType<RequestNodeViewModel>().Single();
+        var newCollectionName = "Renamed " + Guid.NewGuid();
+        collection.IsRenaming = true;
+
+        await collection.CommitRenameCommand.ExecuteAsync(newCollectionName);
+        await request.CommitRenameCommand.ExecuteAsync("Fetch");
+
+        Assert.False(collection.IsRenaming);
+        Assert.Equal(newCollectionName, Workspace.FindCollection(collection.Id)!.Name);
+        Assert.Equal("Fetch", Workspace.Find(request.Id)!.Node.Name);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public async Task Cancelling_the_rename_command_keeps_the_name()
+    {
+        var (window, vm) = UiTestHelpers.ShowMainWindow();
+        var name = "Cancel rename test " + Guid.NewGuid();
+        var collection = await CreateCollectionAsync(vm, name);
+        collection.IsRenaming = true;
+
+        await collection.CommitRenameCommand.ExecuteAsync(null);
+
+        Assert.False(collection.IsRenaming);
+        Assert.Equal(name, collection.Name);
+        Assert.Equal(name, Workspace.FindCollection(collection.Id)!.Name);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public async Task Environment_variables_resolve_and_history_is_recorded()
     {
         using var server = new JsonServer();

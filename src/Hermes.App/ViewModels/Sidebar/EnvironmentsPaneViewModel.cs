@@ -36,9 +36,9 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
     {
         var selected = SelectedItem?.Model.Id;
         Items.Clear();
-        Items.Add(new EnvironmentItemViewModel(_workspace.Globals, isGlobals: true, isActive: false, CommitRenameFromItem));
+        Items.Add(new EnvironmentItemViewModel(_workspace.Globals, isGlobals: true, isActive: false, CommitRenameAsync));
         foreach (var env in _workspace.Environments)
-            Items.Add(new EnvironmentItemViewModel(env, isGlobals: false, isActive: env == _workspace.ActiveEnvironment, CommitRenameFromItem));
+            Items.Add(new EnvironmentItemViewModel(env, isGlobals: false, isActive: env == _workspace.ActiveEnvironment, CommitRenameAsync));
         ApplyFilter();
         SelectedItem = Items.FirstOrDefault(i => i.Model.Id == selected);
     }
@@ -76,11 +76,6 @@ public sealed partial class EnvironmentsPaneViewModel : ObservableObject
         if (item is { IsGlobals: false })
             item.IsRenaming = true;
     }
-
-    // The rename box can't wait for the save. Async void, like an event handler, so an unexpected error still
-    // reaches the UI thread's handler.
-    private async void CommitRenameFromItem(EnvironmentItemViewModel item, string? name) =>
-        await CommitRenameAsync(item, name);
 
     /// <summary>Ends an inline rename: saves the new name, or puts the old one back when that fails.</summary>
     public async Task CommitRenameAsync(EnvironmentItemViewModel item, string? name)

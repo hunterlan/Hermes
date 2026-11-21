@@ -52,7 +52,7 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         Collections.Clear();
         foreach (var collection in _workspace.Collections)
         {
-            var node = new CollectionNodeViewModel(collection) { RenameCommitter = CommitRenameFromTree };
+            var node = new CollectionNodeViewModel(collection) { RenameCommitter = CommitRenameAsync };
             foreach (var n in node.SelfAndDescendants())
                 n.IsExpanded = expanded.Contains(n.Id);
             Collections.Add(node);
@@ -188,11 +188,6 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
         if (node is not null)
             node.IsRenaming = true;
     }
-
-    // The rename box can't wait for the save. Async void, like an event handler, so an unexpected error still
-    // reaches the UI thread's handler.
-    private async void CommitRenameFromTree(TreeNodeViewModel node, string? newName) =>
-        await CommitRenameAsync(node, newName);
 
     /// <summary>Ends an inline rename: saves the new name, or puts the old one back everywhere when that fails.</summary>
     public async Task CommitRenameAsync(TreeNodeViewModel node, string? newName)
@@ -330,6 +325,9 @@ public sealed partial class CollectionsPaneViewModel : ObservableObject
                 return false;
         return true;
     }
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task Drop(TreeDrop drop) => DropAsync(drop.Dragged, drop.Target, drop.Position);
 
     /// <summary>Moves <paramref name="dragged"/> to where it was dropped and saves; it goes back when that fails.</summary>
     public async Task DropAsync(TreeNodeViewModel dragged, TreeNodeViewModel target, DropPosition position)

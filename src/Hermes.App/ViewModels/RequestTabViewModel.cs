@@ -233,14 +233,14 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable, 
             show: Response.IsEmpty);
     }
 
-    // Activation can't wait; async void so an unexpected error still reaches the app's handler, as a throw would.
-    private async void StartLoadingSavedResponses() => await LoadSavedResponsesAsync();
+    [RelayCommand]
+    private Task LoadSavedResponses() => LoadSavedResponsesAsync();
 
     protected override void OnActiveChanged(bool isActive)
     {
         if (isActive)
         {
-            StartLoadingSavedResponses();
+            LoadSavedResponsesCommand.Execute(null);
             return;
         }
         HeadersEditor.HideRevealedValues();
@@ -297,12 +297,13 @@ public sealed partial class RequestTabViewModel : TabViewModelBase, IRenamable, 
     private void StartRename() => IsRenaming = true;
 
     /// <summary>Ends the in-place rename. A null name cancels it and keeps the current one.</summary>
-    public void CommitRename(string? newName)
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task CommitRename(string? newName)
     {
         IsRenaming = false;
-        if (newName is null)
-            return;
-        Name = string.IsNullOrWhiteSpace(newName) ? "Untitled Request" : newName;
+        if (newName is not null)
+            Name = string.IsNullOrWhiteSpace(newName) ? "Untitled Request" : newName;
+        return Task.CompletedTask;
     }
 
     /// <summary>The request was renamed from the sidebar. A clean tab stays clean.</summary>

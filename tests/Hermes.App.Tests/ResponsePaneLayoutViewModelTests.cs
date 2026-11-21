@@ -8,14 +8,14 @@ namespace Hermes.App.Tests;
 public class ResponsePaneLayoutViewModelTests
 {
     [AvaloniaFact]
-    public void Side_by_side_can_be_toggled_and_shows_the_strip()
+    public async Task Side_by_side_can_be_toggled_and_shows_the_strip()
     {
         using var temp = new TempWorkspace();
         using var pane = new ResponsePaneLayoutViewModel(temp.Settings);
         try
         {
             temp.Settings.Current.Layout = ResponseLayout.Horizontal;
-            temp.Settings.SaveCurrent();
+            await temp.Settings.SaveCurrentAsync();
 
             Assert.True(pane.IsSideBySide);
             Assert.True(pane.ToggleCollapsedCommand.CanExecute(null));
@@ -28,7 +28,7 @@ public class ResponsePaneLayoutViewModelTests
         finally
         {
             temp.Settings.Current.Layout = ResponseLayout.Vertical;
-            temp.Settings.SaveCurrent();
+            await temp.Settings.SaveCurrentAsync();
         }
     }
 
@@ -69,7 +69,7 @@ public class ResponsePaneLayoutViewModelTests
     }
 
     [AvaloniaFact]
-    public void A_disposed_pane_no_longer_follows_the_settings()
+    public async Task A_disposed_pane_no_longer_follows_the_settings()
     {
         using var temp = new TempWorkspace();
         var pane = new ResponsePaneLayoutViewModel(temp.Settings);
@@ -79,14 +79,14 @@ public class ResponsePaneLayoutViewModelTests
         try
         {
             temp.Settings.Current.Layout = ResponseLayout.Horizontal;
-            temp.Settings.SaveCurrent();
+            await temp.Settings.SaveCurrentAsync();
 
             Assert.Empty(changed);
         }
         finally
         {
             temp.Settings.Current.Layout = ResponseLayout.Vertical;
-            temp.Settings.SaveCurrent();
+            await temp.Settings.SaveCurrentAsync();
         }
     }
 }

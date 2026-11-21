@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace Hermes.App.ViewModels.Sidebar;
 
@@ -29,7 +30,9 @@ public abstract partial class TreeNodeViewModel : ObservableObject, IRenamable
     public CollectionNodeViewModel Root => this as CollectionNodeViewModel ?? Parent!.Root;
 
     /// <summary>Hands the edit to the tree's owner (through the root), which renames the model and saves.</summary>
-    public void CommitRename(string? newName) => Root.RenameCommitter?.Invoke(this, newName);
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task CommitRename(string? newName) =>
+        Root.RenameCommitter?.Invoke(this, newName) ?? Task.CompletedTask;
 
     /// <summary>Applies a search filter; returns whether this node (or a descendant) matches.</summary>
     public bool ApplyFilter(string filter)

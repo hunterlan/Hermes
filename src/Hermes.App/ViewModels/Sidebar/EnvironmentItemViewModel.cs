@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Hermes.Core.Models;
 
 namespace Hermes.App.ViewModels.Sidebar;
@@ -7,7 +8,7 @@ public sealed partial class EnvironmentItemViewModel(
     EnvironmentModel model,
     bool isGlobals,
     bool isActive,
-    Action<EnvironmentItemViewModel, string?> renameCommitter) : ObservableObject, IRenamable
+    EnvironmentRenameCommitter renameCommitter) : ObservableObject, IRenamable
 {
     public EnvironmentModel Model { get; } = model;
     public string Name => Model.Name;
@@ -21,5 +22,6 @@ public sealed partial class EnvironmentItemViewModel(
     [ObservableProperty] public partial bool IsRenaming { get; set; }
 
     /// <summary>Hands the edit to the pane that owns this item, which renames the model and saves.</summary>
-    public void CommitRename(string? newName) => renameCommitter(this, newName);
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task CommitRename(string? newName) => renameCommitter(this, newName);
 }

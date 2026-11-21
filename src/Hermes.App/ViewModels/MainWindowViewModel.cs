@@ -124,7 +124,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
         yield return new PaletteItem("Show collections", null, null, null, () => ShowPane(SidebarPane.Collections));
         yield return new PaletteItem("Show environments", null, null, null, () => ShowPane(SidebarPane.Environments));
         yield return new PaletteItem("Show history", null, null, null, () => ShowPane(SidebarPane.History));
-        yield return new PaletteItem("Toggle light / dark theme", null, null, null, () => _services.Settings.ToggleTheme());
+        yield return new PaletteItem("Toggle light / dark theme", null, null, null, () => ToggleThemeCommand.Execute(null));
         yield return new PaletteItem("Manage cookies", null, null, null, () => _ = OpenCookies());
         yield return new PaletteItem("Settings", null, null, "Ctrl ,", () => _ = OpenSettings());
         yield return new PaletteItem("Open manual", null, null, "F1", () => OpenManualCommand.Execute(null));
@@ -620,8 +620,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
             tab.Response.Pane.ToggleCollapsedCommand.Execute(null);
     }
 
-    [RelayCommand]
-    private void ToggleTheme() => _services.Settings.ToggleTheme();
+    // Concurrent runs allowed: the theme applies at once, and the button stays enabled while the setting is written.
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task ToggleTheme() => _services.Settings.ToggleThemeAsync();
 
     [RelayCommand]
     private void ToggleSidebar() => IsSidebarVisible = !IsSidebarVisible;
@@ -704,6 +705,10 @@ public sealed partial class MainWindowViewModel : ObservableObject, ITabHost, ID
     /// here; the file is written off the UI thread.
     /// </summary>
     public Task SaveSessionAsync() => Workspace.SaveSessionAsync(CurrentSession());
+
+    /// <summary>Saves the session on the timer's tick.</summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task SaveSession() => SaveSessionAsync();
 
     /// <summary>
     /// Saves the session as the app quits. Returns the error only when the write failed while a tab has unsaved edits
